@@ -55,10 +55,18 @@ int assembler(int argc, const char **argv, const Command& command) {
     int baseKmerSize = 14;
     par.kmerSize = baseKmerSize;
     par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
+    cmd.addVariable("KMER_PER_SEQ", SSTR(par.kmersPerSequence).c_str());
+    std::vector<MMseqsParameter> kmerMatcherrWithoutKmerPerseq;
+    for(size_t i = 0; i < par.kmermatcher.size(); i++){
+        if(par.kmermatcher[i].uniqid != par.PARAM_KMER_PER_SEQ.uniqid ){
+           kmerMatcherrWithoutKmerPerseq.push_back(par.kmermatcher[i]);
+        }
+    }
+
     for(size_t i = 0; i < par.numIterations; i++){
         std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
     //    par.kmerSize = baseKmerSize - i;
-        cmd.addVariable(key.c_str(), par.createParameterString(par.kmermatcher).c_str());
+        cmd.addVariable(key.c_str(), par.createParameterString(kmerMatcherrWithoutKmerPerseq).c_str());
     }
     par.alphabetSize = alphabetSize;
     par.kmerSize = kmerSize;
@@ -66,6 +74,7 @@ int assembler(int argc, const char **argv, const Command& command) {
     par.filterHits = false;
     par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
+    cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
     FileUtil::writeFile(par.db3 + "/assembler.sh", assembler_sh, assembler_sh_len);
     std::string program(par.db3 + "/assembler.sh");
     cmd.execProgram(program.c_str(), 3, argv);

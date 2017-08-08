@@ -85,11 +85,16 @@ int doassembly(Parameters &par) {
             SeqIdQueue alnQueue;
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
                 alnQueue.push(alignments[alnIdx]);
+                if(alignments.size() > 1)
+                  __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(alignments[alnIdx].dbKey)], static_cast<unsigned char>(0x40));
             }
 
-            bool queryCouldBeExtended = false;
+            bool queryCouldBeExtendedLeft = false;
+            bool queryCouldBeExtendedRight = false;
             Matcher::result_t besttHitToExtend;
+            float bestSeqId;
             while( (besttHitToExtend = selectBestExtentionFragment(alnQueue, queryId)).dbKey != UINT_MAX) {
+                bestSeqId = (queryCouldBeExtendedRight==false && queryCouldBeExtendedLeft==false)? besttHitToExtend.seqId : bestSeqId;
                 querySeqLen = query.size();
                 querySeq = (char *) query.c_str();
 
@@ -136,12 +141,20 @@ int doassembly(Parameters &par) {
                     dbStartPos = alignment.startPos + dist;
                     dbEndPos = alignment.endPos + dist;
                 }
+                int idCnt = 0;
+                for(int i = qStartPos; i < qEndPos; i++){
+                    idCnt += (querySeq[i] == targetSeq[dbStartPos+(i-qStartPos)]) ? 1 : 0;
+                }
+                float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos));
+                if(seqId < par.seqIdThr){
+                    continue;
+                }
 
 //                std::cout << "\t" << besttHitToExtend.dbKey << std::endl;
                 //std::cout << "Query : " << query << std::endl;
                 //std::cout << "Target: " << std::string(dbSeq, targetSeq.L)  << std::endl;
 
-                if (dbStartPos == 0 && qEndPos == (querySeqLen -1)  ) {
+                if (dbStartPos == 0 && qEndPos == (querySeqLen -1)  && (queryCouldBeExtendedRight==false || seqId > bestSeqId) ) {
                     size_t dbFragLen = (targetSeqLen - dbEndPos) - 1; // -1 get not aligned element
                     std::string fragment = std::string(targetSeq + dbEndPos + 1, dbFragLen);
                     if (fragment.size() + query.size() >= par.maxSeqLen) {
@@ -151,11 +164,11 @@ int doassembly(Parameters &par) {
                     }
                     //update that dbKey was used in assembly
                     __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
-                    queryCouldBeExtended = true;
+                    queryCouldBeExtendedRight = true;
                     query += fragment;
                     rightQueryOffset += dbFragLen;
 
-                } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
+                } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1) && (queryCouldBeExtendedLeft==false || seqId > bestSeqId)) {
                     std::string fragment = std::string(targetSeq, dbStartPos); // +1 get not aligned element
                     if (fragment.size() + query.size() >= par.maxSeqLen) {
                         Debug(Debug::WARNING) << "Sequence too long in query id: " << queryId << ". "
@@ -164,15 +177,18 @@ int doassembly(Parameters &par) {
                     }
                     // update that dbKey was used in assembly
                     __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
-                    queryCouldBeExtended = true;
+                    queryCouldBeExtendedLeft = true;
                     query = fragment + query;
                     leftQueryOffset += dbStartPos;
                 }
-
+                if(queryCouldBeExtendedRight==true && queryCouldBeExtendedLeft==true){
+                   break;
+                }
             }
+            bool queryCouldBeExtended = (queryCouldBeExtendedRight || queryCouldBeExtendedLeft);
             if (queryCouldBeExtended == true) {
                 query.push_back('\n');
-                __sync_or_and_fetch(&wasExtended[queryId], static_cast<unsigned char>(0x80));
+                __sync_or_and_fetch(&wasExtended[id], static_cast<unsigned char>(0x80));
                 resultWriter.writeData(query.c_str(), query.size(), queryId, thread_idx);
             }
         }
@@ -184,13 +200,12 @@ int doassembly(Parameters &par) {
 #ifdef OPENMP
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
-        if(wasExtended[id] == 0){
+        if((wasExtended[id] & 0x40) && !(wasExtended[id] & 0x80)){
             char *querySeqData = sequenceDbr->getData(id);
             unsigned int queryLen = sequenceDbr->getSeqLens(id) - 1; //skip null byte
             resultWriter.writeData(querySeqData, queryLen, sequenceDbr->getDbKey(id), thread_idx);
         }
     }
-
 // cleanup
     resultWriter.close();
     alnReader->close();

@@ -215,13 +215,13 @@ int rescorediagonal(int argc, const char **argv, const Command &command) {
                                 //seqId = (alignment.score1 / static_cast<float>(std::max(qAlnLength, dbAlnLength)))  * 0.1656 + 0.1141;
                                 seqId = Matcher::estimateSeqIdByScorePerCol(distance, qAlnLen, dbAlnLen);
                                 // compute seq.id if hit fulfills e-value but not by seqId criteria
-                                if(evalue <= par.evalThr && seqId > par.seqIdThr - 0.15){
+                                //if(evalue <= par.evalThr && seqId < par.seqIdThr ){
                                     int idCnt = 0;
                                     for(size_t i = qStartPos; i < qEndPos; i++){
                                         idCnt += (querySeq[i] == targetSeq[dbStartPos+(i-qStartPos)]);
                                     }
                                     seqId = static_cast<double>(idCnt) / (static_cast<double>(qEndPos) - static_cast<double>(qStartPos));
-                                }
+                                //}
                                 result = Matcher::result_t(results[entryIdx].seqId, bitScore, queryCov, targetCov, seqId, evalue, alnLen,
                                                            qStartPos, qEndPos, queryLen, dbStartPos, dbEndPos, targetLen, std::string());
                             }

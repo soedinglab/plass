@@ -215,7 +215,7 @@ static struct Command commands[] = {
                 "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
                 "<i:sequenceDB> <i:resultDB> <o:reprSeqDB>",
                 CITATION_MMSEQS2},
-        {"assembleresults",       assembleresult,      &par.onlyverbosity,          COMMAND_HIDDEN,
+        {"assembleresults",       assembleresult,      &par.assembleresults,          COMMAND_HIDDEN,
                 "Extending representative sequence to the left and right side using ungapped alignments.",
                 NULL,
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",

@@ -492,9 +492,13 @@ Parameters::Parameters():
     linclustworkflow.push_back(PARAM_REMOVE_TMP_FILES);
     linclustworkflow.push_back(PARAM_RUNNER);
 
+    // assembleresult
+    assembleresults.push_back(PARAM_MIN_SEQ_ID);
+    assembleresults.push_back(PARAM_V);
 
     // assembler workflow
     assemblerworkflow = combineList(rescorediagonal, kmermatcher);
+    assemblerworkflow = combineList(assemblerworkflow, assembleresults);
     assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
     assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
     assemblerworkflow.push_back(PARAM_RUNNER);
