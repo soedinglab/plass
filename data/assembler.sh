@@ -22,6 +22,7 @@ STEP=0
 [ -z "$NUM_IT" ] && NUM_IT=1;
 TOTAL_INPUT_CNT=$(wc -l ${INPUT}".index"|awk '{print $1}')
 M=$KMER_PER_SEQ
+MERGEDBSTR=""
 while [ $STEP -lt $NUM_IT ]; do
     echo "STEP: "$STEP
     # 1. Finding exact $k$-mer matches.
@@ -34,22 +35,29 @@ while [ $STEP -lt $NUM_IT ]; do
     notExists "$3/assembly_$STEP"         && $MMSEQS assembleresults "$INPUT" "$3/aln_$STEP" "$3/assembly_$STEP" ${ASSEMBLE_RESULT_PAR}  && checkReturnCode "Assembly step died"
     CNT=$(wc -l "$3/assembly_${STEP}.index"|awk '{print $1}')
     M=$(calc $TOTAL_INPUT_CNT/$CNT*$KMER_PER_SEQ)
-    echo $M
-    echo $TOTAL_INPUT_CNT
-    echo $CNT
-    echo $KMER_PER_SEQ
     INPUT="$3/assembly_$STEP"
+    MERGEDBSTR=" $3/assembly_$STEP"$MERGEDBSTR
     let STEP=STEP+1
 done
+
 let STEP=STEP-1
+echo $MERGEDBSTR 
+# merge databases 
+notExists "$3/assembly_${STEP}_merge" && mmseqs mergedbs $1 "$3/assembly_${STEP}_merge" $MERGEDBSTR && checkReturnCode "Merge databases step died"
+# first line should be the longest assembled sequence
+notExists "$3/assembly_${STEP}_filter" && mmseqs filterdb "$3/assembly_${STEP}_merge" "$3/assembly_${STEP}_filter" --extract-lines 1 && checkReturnCode "Filter database step died"
+# remove entries with just null bytes
+awk '$3 > 3 {print $0}' $3/assembly_${STEP}_filter.index > $3/assembly_${STEP}_filter.nonull.index
+mv $3/assembly_${STEP}_filter.nonull.index $3/assembly_${STEP}_filter.index
 # post processing
-mv -f "$3/assembly_$STEP" "$2"
-mv -f "$3/assembly_$STEP.index" "$2.index"
+mv -f "$3/assembly_${STEP}_filter" "$2"
 checkReturnCode "Could not move result to $2"
+mv -f "$3/assembly_${STEP}_filter.index" "$2.index"
+checkReturnCode "Could not move result to $2.index"
 
 if [ -n "$REMOVE_TMP" ]; then
  echo "Remove temporary files"
- rm -f "$3/pref" "$3/pref.index"
- rm -f "$3/aln" "$3/aln.index"
- rm -f "$3/assembly" "$3/assembly.index"
+ rm -f "$3/pref_*" 
+ rm -f "$3/aln_*" 
+ rm -f "$3/assembly*"
 fi
