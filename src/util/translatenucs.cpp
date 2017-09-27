@@ -2,6 +2,7 @@
 #include <string>
 #include <limits.h>
 #include <stdlib.h>
+#include <Orf.h>
 
 #include "Parameters.h"
 #include "DBReader.h"
@@ -33,16 +34,51 @@ int translatenucs(int argc, const char **argv, const Command& command) {
     DBReader<unsigned int> reader(par.db1.c_str(), par.db1Index.c_str());
     reader.open(DBReader<unsigned int>::NOSORT);
 
+    bool addOrfStop = par.addOrfStop;
+    DBReader<unsigned int> * header;
+    if(addOrfStop == true) {
+        header=new DBReader<unsigned int>((par.db1 + "_h").c_str(), (par.db1 + "_h.index").c_str());
+        header->open(DBReader<unsigned int>::NOSORT);
+    }
     DBWriter writer(par.db2.c_str(), par.db2Index.c_str());
     writer.open();
-
     size_t entries = reader.getSize();
     TranslateNucl translateNucl(static_cast<TranslateNucl::GenCode>(par.translationTable));
-    char* aa = new char[par.maxSeqLen/3 + 1];
+    char* aa = new char[par.maxSeqLen/3 + 3 + 1];
     for (size_t i = 0; i < entries; ++i) {
         unsigned int key = reader.getDbKey(i);
         char* data = reader.getData(i);
+        bool addStopAtStart = false;
+        bool addStopAtEnd = false;
+        if(addOrfStop == true){
+            char* headData = header->getData(i);
+            char * entry[255];
+            size_t columns = Util::getWordsOfLine(headData, entry, 255);
+            size_t col;
+            bool found = false;
+            for(col = 0; col < columns; col++){
+                if(entry[col][0] == '[' && entry[col][1] == 'O' && entry[col][2] == 'r' && entry[col][3] == 'f' & entry[col][4] == ':'){
+                    found=true;
+                    break;
+                }
+            }
+            if(found==false ){
+                Debug(Debug::ERROR) << "Could not find Orf information in header.\n";
+                EXIT(EXIT_FAILURE);
+            }
+            Orf::SequenceLocation loc;
+            int strand;
+            int retCode = sscanf(entry[col], "[Orf: %zu, %zu, %d, %d, %d]", &loc.from, &loc.to, &strand, &loc.hasIncompleteStart, &loc.hasIncompleteEnd);
+            if(retCode < 5){
+                Debug(Debug::ERROR) << "Could not parse Orf " << entry[col] << ".\n";
+                EXIT(EXIT_FAILURE);
+            }
+            loc.strand =  static_cast<Orf::Strand>(strand);
+            addStopAtStart=!(loc.hasIncompleteStart);
+            addStopAtEnd=!(loc.hasIncompleteEnd);
+        }
 
+        //190344_chr1_1_129837240_129837389_3126_JFOA01000125.1 Prochlorococcus sp. scB245a_521M10 contig_244, whole genome shotgun sequence  [Orf: 1, 202, -1, 1, 0]
         // ignore null char at the end
         // needs to be int in order to be able to check
         int length = reader.getSeqLens(i) - 1;
@@ -57,16 +93,34 @@ int translatenucs(int argc, const char **argv, const Command& command) {
             continue;
         }
 //        std::cout << data << std::endl;
-        translateNucl.translate(aa, data, length);
-        aa[length/3] = '\n';
+        char * writeAA;
+        if(addStopAtStart){
+            aa[0]='*';
+            writeAA = aa + 1;
+        }else{
+            writeAA = aa;
+        }
+        translateNucl.translate(writeAA, data, length);
+
+        if(addStopAtEnd){
+            writeAA[length/3] = '*';
+            writeAA[length/3+1] = '\n';
+        }else{
+            writeAA[length/3] = '\n';
+        }
+
 //        std::cout << aa << std::endl;
-        writer.writeData(aa, (length / 3) + 1, key);
+        writer.writeData(aa, (length / 3) + 1 + addStopAtStart + addStopAtEnd, key);
     }
     delete[] aa;
 
     writer.close();
+    if(addOrfStop == true) {
+        header->close();
+    }
     reader.close();
 
     return EXIT_SUCCESS;
 }
+
 

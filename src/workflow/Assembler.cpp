@@ -27,14 +27,14 @@ int assembler(int argc, const char **argv, const Command& command) {
     }
     bool targetCov = false;
     bool cov = false;
-    for (size_t i = 0; i < par.linclustworkflow.size(); i++) {
-        if (par.linclustworkflow[i].uniqid == par.PARAM_TARGET_COV.uniqid && par.linclustworkflow[i].wasSet) {
+    for (size_t i = 0; i < par.assemblerworkflow.size(); i++) {
+        if (par.assemblerworkflow[i].uniqid == par.PARAM_TARGET_COV.uniqid && par.assemblerworkflow[i].wasSet) {
             if(par.targetCovThr > 0.0 ){
                 targetCov = true;
                 par.covThr = 0.0;
             }
         }
-        if (par.linclustworkflow[i].uniqid == par.PARAM_C.uniqid && par.linclustworkflow[i].wasSet) {
+        if (par.assemblerworkflow[i].uniqid == par.PARAM_C.uniqid && par.assemblerworkflow[i].wasSet) {
             cov = true;
         }
     }
@@ -53,8 +53,22 @@ int assembler(int argc, const char **argv, const Command& command) {
     size_t kmerSize = par.kmerSize;
     // # 1. Finding exact $k$-mer matches.
     int baseKmerSize = 14;
-    par.kmerSize = baseKmerSize;
-    par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
+    bool kmerSizeWasSet = false;
+    bool alphabetSizeWasSet = false;
+    for (size_t i = 0; i < par.assemblerworkflow.size(); i++) {
+        if (par.assemblerworkflow[i].uniqid == par.PARAM_K.uniqid && par.assemblerworkflow[i].wasSet) {
+            kmerSizeWasSet = true;
+        }
+        if (par.assemblerworkflow[i].uniqid == par.PARAM_ALPH_SIZE.uniqid && par.assemblerworkflow[i].wasSet) {
+            alphabetSizeWasSet = true;
+        }
+    }
+    if(kmerSizeWasSet==false){
+       par.kmerSize = baseKmerSize;
+    }
+    if(alphabetSizeWasSet == false){
+       par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
+    }
     cmd.addVariable("KMER_PER_SEQ", SSTR(par.kmersPerSequence).c_str());
     std::vector<MMseqsParameter> kmerMatcherrWithoutKmerPerseq;
     for(size_t i = 0; i < par.kmermatcher.size(); i++){
@@ -65,7 +79,7 @@ int assembler(int argc, const char **argv, const Command& command) {
 
     for(size_t i = 0; i < par.numIterations; i++){
         std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
-    //    par.kmerSize = baseKmerSize - i;
+        par.hashShift = i+1;
         cmd.addVariable(key.c_str(), par.createParameterString(kmerMatcherrWithoutKmerPerseq).c_str());
     }
     par.alphabetSize = alphabetSize;

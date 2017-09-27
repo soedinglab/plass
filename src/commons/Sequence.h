@@ -12,7 +12,8 @@
 #include <utility>
 
 struct ScoreMatrix;
-
+const int8_t seed_2[]        = {1, 1};
+const int8_t seed_2_spaced[] = {1, 0, 1};
 const int8_t seed_4[]        = {1, 1, 1, 1};
 const int8_t seed_4_spaced[] = {1, 1, 1, 0, 1};
 const int8_t seed_5[]        = {1, 1, 1, 1, 1};

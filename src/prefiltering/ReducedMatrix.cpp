@@ -3,7 +3,7 @@
 #include "Util.h"
 
 ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reducedAlphabetSize, float bitFactor){
-    if(reducedAlphabetSize >= alphabetSize) {
+    if(static_cast<int>(reducedAlphabetSize) >= alphabetSize) {
         Debug(Debug::ERROR) << "Reduced alphabet has to be smaller than the original one!";
         EXIT(EXIT_FAILURE);
     }
@@ -84,10 +84,11 @@ ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reduc
 
     // map big index to new small index
     Debug(Debug::INFO) << "Reduced amino acid alphabet:\n";
-    int* aa2int_new = new int['Z'+1];
-    for (int i = 0; i <= 'Z'; ++i)
+    int* aa2int_new = new int['z'+1];
+    for (int i = 0; i <= 'z'; ++i){
         aa2int_new[i] = -1;
-    char* int2aa_new = new char[alphabetSize];
+    }
+    char* int2aa_new = new char[origAlphabetSize];
     for(size_t i = 0; i<reducedAlphabet->size(); i++){
         const char representative_aa = reducedAlphabet->at(i);
         Debug(Debug::INFO) << representative_aa << " ";
@@ -99,8 +100,6 @@ ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reduc
         int2aa_new[i] = representative_aa;
     }
     Debug(Debug::INFO) << "\n";
-
-
 
     this->subMatrix = new short*[alphabetSize];
     for (int i = 0; i<alphabetSize; i++)
@@ -118,7 +117,7 @@ ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reduc
     computeBackground(probMatrix, origpBack, origAlphabetSize, true);
     // copy old X state
     for (int i = 0; i < this->alphabetSize; i++) {
-        int oldIndex = aa2int[int2aa_new[i]];
+        int oldIndex = aa2int[(int)int2aa_new[i]];
         double Pab = probMatrix[oldIndex][origAlphabetSize-1] / ( origpBack[oldIndex] * origpBack[origAlphabetSize-1]);
         probMatrix_new[alphabetSize-1][i] = Pab * pBack[i] * pBack[alphabetSize-1];
         probMatrix_new[i][alphabetSize-1] = Pab * pBack[alphabetSize-1] * pBack[i];
@@ -133,6 +132,8 @@ ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reduc
     this->int2aa = int2aa_new;
     this->aa2int = aa2int_new;
 
+
+    setupLetterMapping();
     for (size_t i = 0; i < origAlphabetSize-1; i++)
     {
         delete[]probMatrix_new[i];
@@ -286,3 +287,4 @@ void ReducedMatrix::addTwoRows(double ** input, double ** output, size_t size, s
     for (size_t j = 0; j < size; j++)
         output[size-1][j] = 0.0;
 }
+

@@ -35,6 +35,7 @@ set(COMPILED_RESOURCES
         blosum100.out
         CovSeqidQscPercMinDiag.out
         CovSeqidQscPercMinDiagTargetCov.out
+        predict_coding_acc9260_56x96.model
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

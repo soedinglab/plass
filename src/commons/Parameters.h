@@ -245,6 +245,7 @@ public:
 
     // linearcluster
     int kmersPerSequence;
+    int hashShift;
 
     // createindex
     bool includeHeader;
@@ -264,6 +265,7 @@ public:
 
     // translate nucleotide
     int translationTable;
+    bool addOrfStop;
 
     // createseqfiledb
     int minSequences;
@@ -433,6 +435,7 @@ public:
 
     // linearcluster
     PARAMETER(PARAM_KMER_PER_SEQ)
+    PARAMETER(PARAM_HASH_SHIFT)
 
     // workflow
     PARAMETER(PARAM_RUNNER)
@@ -468,6 +471,7 @@ public:
 
     // translate_nucleotide
     PARAMETER(PARAM_TRANSLATION_TABLE)
+    PARAMETER(PARAM_ADD_ORF_STOP)
 
     // createseqfiledb
     PARAMETER(PARAM_MIN_SEQUENCES)

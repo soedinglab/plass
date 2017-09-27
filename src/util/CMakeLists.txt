@@ -35,8 +35,10 @@ set(util_source_files
         result2repseq.cpp
         assembleresult.cpp
         msa2profile.cpp
+        findassemblystart.cpp
+        filternonecoding.cpp
         )
 
 add_library(util ${util_source_files} )
 
-target_link_libraries(util prefiltering commons)
+target_link_libraries(util kerasify prefiltering commons)

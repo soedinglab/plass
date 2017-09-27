@@ -86,6 +86,13 @@ std::pair<const char *, unsigned int> Sequence::getSpacedPattern(bool spaced, un
         case 0: // if no kmer iterator support
             return std::make_pair<const char *, unsigned int>(NULL, 0);
             break;
+        case 2:
+            if(spaced){
+                return std::make_pair<const char *, unsigned int>((const char *) &seed_2_spaced, ARRAY_SIZE(seed_4_spaced));
+            }else{
+                return std::make_pair<const char *, unsigned int>((const char *) &seed_2, ARRAY_SIZE(seed_4));
+            }
+            break;
         case 4:
             if(spaced){
                 return std::make_pair<const char *, unsigned int>((const char *) &seed_4_spaced, ARRAY_SIZE(seed_4_spaced));

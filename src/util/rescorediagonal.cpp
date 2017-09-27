@@ -142,6 +142,9 @@ int rescorediagonal(int argc, const char **argv, const Command &command) {
                     char * targetSeq = tdbr->getData(targetId);
                     int targetLen = std::max(0, static_cast<int>(tdbr->getSeqLens(targetId)) - 2);
                     short diagonal = results[entryIdx].diagonal;
+                   // if(diagonal > 0 && (diagonal <= (queryLen - targetLen))){
+                   //      continue;
+                   // }
                     unsigned short distanceToDiagonal = abs(diagonal);
                     unsigned int diagonalLen = 0;
                     unsigned int distance = 0;
