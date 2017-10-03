@@ -106,6 +106,8 @@ Parameters::Parameters():
         PARAM_ORF_MAX_LENGTH(PARAM_ORF_MAX_LENGTH_ID, "--max-length", "Max codons in length", "maximum codon number in open reading frames",typeid(int),(void *) &orfMaxLength, "^[1-9]{1}[0-9]*$"),
         PARAM_ORF_MAX_GAP(PARAM_ORF_MAX_GAP_ID, "--max-gaps", "Max orf gaps", "maximum number of codons with gaps or unknown residues before an open reading frame is rejected",typeid(int),(void *) &orfMaxGaps, "^(0|[1-9]{1}[0-9]*)$"),
         PARAM_ORF_SKIP_INCOMPLETE(PARAM_ORF_SKIP_INCOMPLETE_ID,"--skip-incomplete", "Skip incomplete orfs", "Skip orfs that have only an end or only a start codon or neither of those",typeid(bool),(void *) &orfSkipIncomplete, ""),
+        PARAM_ORF_SKIP_INCOMPLETE_START(PARAM_ORF_SKIP_INCOMPLETE_START_ID,"--skip-incomplete-start", "Skip incomplete start orfs", "Skip orfs that have a start codon without stop before",typeid(bool),(void *) &orfSkipIncompleteStart, ""),
+        PARAM_ORF_SKIP_COMPLETE_END(PARAM_ORF_SKIP_COMPLETE_END_ID,"--skip-complete-end", "Skip complete end orfs", "Skip orfs that have a complete end codon ",typeid(bool),(void *) &orfSkipCompleteEnd, ""),
         PARAM_ORF_LONGEST(PARAM_ORF_LONGEST_ID,"--longest-orf", "Find longest orf", "does the first found start codon start an orf (results in the longst possible orf)",typeid(bool),(void *) &orfLongest, ""),
         PARAM_ORF_EXTENDMIN(PARAM_ORF_EXTENDMIN_ID,"--extend-min", "Extend short orfs", "if an orf would be rejected because of the min length threshold, allow it to be extended to the next stop codon",typeid(bool),(void *) &orfExtendMin, ""),
         PARAM_ORF_FORWARD_FRAMES(PARAM_ORF_FORWARD_FRAMES_ID, "--forward-frames", "Forward Frames", "comma-seperated list of ORF frames on the forward strand to be extracted", typeid(std::string), (void *) &forwardFrames, ""),
@@ -313,6 +315,8 @@ Parameters::Parameters():
     extractorfs.push_back(PARAM_ORF_MAX_LENGTH);
     extractorfs.push_back(PARAM_ORF_MAX_GAP);
     extractorfs.push_back(PARAM_ORF_SKIP_INCOMPLETE);
+    extractorfs.push_back(PARAM_ORF_SKIP_INCOMPLETE_START);
+    extractorfs.push_back(PARAM_ORF_SKIP_COMPLETE_END);
     extractorfs.push_back(PARAM_ORF_LONGEST);
     extractorfs.push_back(PARAM_ORF_EXTENDMIN);
     extractorfs.push_back(PARAM_ORF_FORWARD_FRAMES);
@@ -1000,6 +1004,8 @@ void Parameters::setDefaults() {
     orfMaxLength = INT_MAX;
     orfMaxGaps = INT_MAX;
     orfSkipIncomplete = false;
+    orfSkipIncompleteStart = false;
+    orfSkipCompleteEnd = false;
     orfLongest = false;
     orfExtendMin = false;
     forwardFrames = "1,2,3";

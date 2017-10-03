@@ -79,7 +79,7 @@ int extractorfs(int argc, const char **argv, const Command& command) {
         extendMode |= Orf::EXTEND_END;
 
     unsigned int total = 0;
-    #pragma omp parallel for schedule(static) shared(total) 
+    #pragma omp parallel for schedule(dynamic, 10) shared(total) 
 
     for (unsigned int i = 0; i < reader.getSize(); ++i){
         unsigned int id;
@@ -105,17 +105,23 @@ int extractorfs(int argc, const char **argv, const Command& command) {
 
         std::vector<Orf::SequenceLocation> res;
         orf.findAll(res, par.orfMinLength, par.orfMaxLength, par.orfMaxGaps, forwardFrames, reverseFrames, extendMode);
+        bool orfSkipIncompleteStart = false;
+
         for (std::vector<Orf::SequenceLocation>::const_iterator it = res.begin(); it != res.end(); ++it) {
             Orf::SequenceLocation loc = *it;
 
-            #pragma omp critical
-            {
-                total++;
-                id = total + par.identifierOffset;
-            }
 
-            if (par.orfSkipIncomplete && (loc.hasIncompleteStart || loc.hasIncompleteEnd))
+            size_t offset = __sync_fetch_and_add(&total, 1);
+            id = offset + par.identifierOffset;
+            if (par.orfSkipIncomplete && (loc.hasIncompleteStart || loc.hasIncompleteEnd)){
                 continue;
+            }
+            if(par.orfSkipIncompleteStart && loc.hasIncompleteStart){
+                continue;
+            }
+            if(par.orfSkipCompleteEnd && (loc.hasIncompleteEnd == false) ){
+                continue;
+            }          
 
             char buffer[LINE_MAX];
             snprintf(buffer, LINE_MAX, "%s [Orf: %zu, %zu, %d, %d, %d]\n", header.c_str(), loc.from, loc.to, loc.strand, loc.hasIncompleteStart, loc.hasIncompleteEnd);
@@ -124,6 +130,9 @@ int extractorfs(int argc, const char **argv, const Command& command) {
 
             std::string sequence = orf.view(loc);
             sequence.append("\n");
+//            if(loc.hasIncompleteStart == false){
+//                sequence.insert (0, "TAG");
+//            }
             sequenceWriter.writeData(sequence.c_str(), sequence.length(), id, thread_idx);
         }
     }
@@ -136,3 +145,4 @@ int extractorfs(int argc, const char **argv, const Command& command) {
     
     return EXIT_SUCCESS;
 }
+

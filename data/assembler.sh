@@ -19,17 +19,12 @@ export OMP_PROC_BIND=TRUE
 
 INPUT="$1"
 
-notExists "$3/nucl_6f"  && mmseqs extractorfs ${INPUT} "$3/nucl_6f" --longest-orf --min-length 20 --max-gaps 0 && checkReturnCode "extractorfs step died"
-notExists "$3/aa_6f"  && mmseqs translatenucs "$3/nucl_6f" "$3/aa_6f" --add-orf-stop && checkReturnCode "translatenucs step died"
-awk '$3 < 60 { print $1 }' "$3/aa_6f.index" > "$3/aa_6f.short.ids"
-notExists "$3/aa_6f_short" && mmseqs createsubdb "$3/aa_6f.short.ids" "$3/aa_6f" "$3/aa_6f_short" && checkReturnCode "createsubdb step died"
-notExists "$3/aa_6f_short_start_codon" && mmseqs filterdb "$3/aa_6f_short" "$3/aa_6f_short_start_codon" --filter-regex "^\*M[A-Z]+[^\*]$" && checkReturnCode "filterdb step died"
-awk '$3 >= 60 { print $1 }' "$3/aa_6f.index" > "$3/aa_6f.long.ids"
-notExists "$3/aa_6f_long" && mmseqs createsubdb "$3/aa_6f.long.ids" "$3/aa_6f" "$3/aa_6f_long" && checkReturnCode "createsubdb step died"
-notExists "$3/aa_6f_short_and_long" && mmseqs mergedbs "$3/aa_6f" "$3/aa_6f_short_and_long" "$3/aa_6f_long" "$3/aa_6f_short_start_codon" && checkReturnCode "mergedbs step died"
-awk '$3 > 1 { print }' "$3/aa_6f_short_and_long.index" > "$3/aa_6f_short_and_long.gt1.ids"
-notExists "$3/aa_6f_short_and_long_clean" && mmseqs createsubdb "$3/aa_6f_short_and_long.gt1.ids" "$3/aa_6f_short_and_long" "$3/aa_6f_short_and_long_clean" && checkReturnCode "createsubdb step died"
-INPUT="$3/aa_6f_short_and_long_clean"
+notExists "$3/nucl_6f_start"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_start" --skip-incomplete-start --skip-complete-end --min-length 20 --max-length 70 --max-gaps 0 && checkReturnCode "extractorfs start step died"
+notExists "$3/aa_6f_start"  && $MMSEQS translatenucs "$3/nucl_6f_start" "$3/aa_6f_start" --add-orf-stop && checkReturnCode "translatenucs start step died"
+notExists "$3/nucl_6f_long"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_long" --longest-orf --min-length 70 --max-gaps 0 && checkReturnCode "extractorfs longest step died"
+notExists "$3/aa_6f_long"  && $MMSEQS translatenucs "$3/nucl_6f_long" "$3/aa_6f_long" --add-orf-stop && checkReturnCode "translatenucs long step died"
+notExists "$3/aa_6f_start_and_long"  && $MMSEQS concatdbs "$3/aa_6f_long" "$3/aa_6f_start" "$3/aa_6f_start_and_long" && checkReturnCode "concatdbs long step died"
+INPUT="$3/aa_6f_start_and_long"
 
 STEP=0
 [ -z "$NUM_IT" ] && NUM_IT=1;
@@ -64,9 +59,9 @@ done
 let STEP=STEP-1
 echo $MERGEDBSTR 
 # merge databases 
-#$notExists "$3/assembly_${STEP}_merge" && mmseqs mergedbs $1 "$3/assembly_${STEP}_merge" $MERGEDBSTR && checkReturnCode "Merge databases step died"
+#$notExists "$3/assembly_${STEP}_merge" && $MMSEQS mergedbs $1 "$3/assembly_${STEP}_merge" $MERGEDBSTR && checkReturnCode "Merge databases step died"
 # first line should be the longest assembled sequence
-#notExists "$3/assembly_${STEP}_filter" && mmseqs filterdb "$3/assembly_${STEP}_merge" "$3/assembly_${STEP}_filter" --extract-lines 1 && checkReturnCode "Filter database step died"
+#notExists "$3/assembly_${STEP}_filter" && $MMSEQS filterdb "$3/assembly_${STEP}_merge" "$3/assembly_${STEP}_filter" --extract-lines 1 && checkReturnCode "Filter database step died"
 # remove entries with just null bytes
 #awk '$3 > 3 {print $0}' $3/assembly_${STEP}_filter.index > $3/assembly_${STEP}_filter.nonull.index
 #mv $3/assembly_${STEP}_filter.nonull.index $3/assembly_${STEP}_filter.index
