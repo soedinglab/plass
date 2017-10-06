@@ -19,9 +19,9 @@ export OMP_PROC_BIND=TRUE
 
 INPUT="$1"
 
-notExists "$3/nucl_6f_start"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_start" --skip-incomplete-start --skip-complete-end --min-length 20 --max-length 70 --max-gaps 0 && checkReturnCode "extractorfs start step died"
+notExists "$3/nucl_6f_start"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_start" --skip-incomplete-start --skip-complete-end --min-length 20 --max-length 50 --max-gaps 0 && checkReturnCode "extractorfs start step died"
 notExists "$3/aa_6f_start"  && $MMSEQS translatenucs "$3/nucl_6f_start" "$3/aa_6f_start" --add-orf-stop && checkReturnCode "translatenucs start step died"
-notExists "$3/nucl_6f_long"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_long" --longest-orf --min-length 70 --max-gaps 0 && checkReturnCode "extractorfs longest step died"
+notExists "$3/nucl_6f_long"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_long" --longest-orf --min-length 50 --max-gaps 0 && checkReturnCode "extractorfs longest step died"
 notExists "$3/aa_6f_long"  && $MMSEQS translatenucs "$3/nucl_6f_long" "$3/aa_6f_long" --add-orf-stop && checkReturnCode "translatenucs long step died"
 notExists "$3/aa_6f_start_and_long"  && $MMSEQS concatdbs "$3/aa_6f_long" "$3/aa_6f_start" "$3/aa_6f_start_and_long" && checkReturnCode "concatdbs long step died"
 INPUT="$3/aa_6f_start_and_long"
