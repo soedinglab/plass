@@ -55,7 +55,7 @@ int filternonecoding(int argc, const char **argv, const Command& command)  {
             unsigned int dbKey = seqDb.getDbKey(id);
             seq.mapSequence(id, dbKey, seqData);
 
-            printf("%5d ", seq.L);
+            //printf("%5d ", seq.L);
             float totalAACnt = 0;
             for (size_t pos = 0; pos < seq.L; pos++) {
                 if (seq.int_sequence[pos] < subMat.alphabetSize - 1) {
@@ -66,7 +66,7 @@ int filternonecoding(int argc, const char **argv, const Command& command)  {
             for (size_t aa = 0; aa < subMat.alphabetSize - 1; aa++) {
                 data.push_back(counter[aa] / (totalAACnt + subMat.alphabetSize - 1));
                 counter[aa] = 1.0;
-                printf("%.4f ", data.back());
+                //printf("%.4f ", data.back());
             }
 
             rseq.mapSequence(id, dbKey, seqData);
@@ -88,10 +88,10 @@ int filternonecoding(int argc, const char **argv, const Command& command)  {
                     continue;
                 }
                 data.push_back(diAACnt[raa] / (totalDiAACnt + (redMat.alphabetSize - 1) * (redMat.alphabetSize - 1)));
-                printf("%.4f ", data.back());
+                //printf("%.4f ", data.back());
                 diAACnt[raa] = 1.0;
             }
-            printf("\n");
+            //printf("\n");
             //printf("%d\n", data.size());
             in.data_ = data;
             // Run prediction.

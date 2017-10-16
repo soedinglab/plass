@@ -783,6 +783,13 @@ void Prefiltering::writePrefilterOutput(DBReader<unsigned int> *qdbr, DBWriter *
         }
         res->seqId = tdbr->getDbKey(targetSeqId);
         int len = QueryMatcher::prefilterHitToBuffer(buffer, *res);
+
+        /*int queryLen = qdbr->getSeqLens(id);
+        int targetLen = tdbr->getSeqLens(targetSeqId);
+        short diagonal = res->diagonal;
+        if(diagonal > 0 && (diagonal <= (queryLen - targetLen))){
+           continue;
+        }*/
         // TODO: error handling for len
         prefResultsOutString.append(buffer, len);
         l++;
