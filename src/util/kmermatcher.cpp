@@ -21,7 +21,7 @@
 #include "MathUtil.h"
 #include "FileUtil.h"
 #include <tantan.h>
-#include <unordered_map>
+#include <queue>
 #include "QueryMatcher.h"
 #include "FileUtil.h"
 
@@ -39,7 +39,7 @@ struct KmerPosition {
     short pos;
     KmerPosition(){}
     KmerPosition(size_t kmer, unsigned int id, unsigned short seqLen, short pos):
-    kmer(kmer), id(id), seqLen(seqLen), pos(pos) {}
+            kmer(kmer), id(id), seqLen(seqLen), pos(pos) {}
     static bool compareRepSequenceAndIdAndPos(const KmerPosition &first, const KmerPosition &second){
         if(first.kmer < second.kmer )
             return true;
@@ -59,7 +59,7 @@ struct KmerPosition {
             return false;
         return false;
     }
-    
+
     static bool compareRepSequenceAndIdAndDiag(const KmerPosition &first, const KmerPosition &second){
         if(first.kmer < second.kmer)
             return true;
@@ -69,7 +69,7 @@ struct KmerPosition {
             return true;
         if(second.id < first.id)
             return false;
-        
+
         //        const short firstDiag  = (first.pos < 0)  ? -first.pos : first.pos;
         //        const short secondDiag = (second.pos  < 0) ? -second.pos : second.pos;
         if(first.pos < second.pos)
@@ -93,7 +93,7 @@ struct SequencePosition{
             return true;
         if(second.kmer < first.kmer)
             return false;
-        
+
         return false;
     }
 };
@@ -173,8 +173,8 @@ size_t fillKmerPositionArray(KmerPosition * hashSeqPair, DBReader<unsigned int> 
             }
         }
     }
-    
-    
+
+
 #pragma omp parallel
     {
         Sequence seq(par.maxSeqLen, subMat->aa2int, subMat->int2aa, Sequence::AMINO_ACIDS, KMER_SIZE, false, false);
@@ -184,79 +184,96 @@ size_t fillKmerPositionArray(KmerPosition * hashSeqPair, DBReader<unsigned int> 
         size_t bufferPos = 0;
         KmerPosition * threadKmerBuffer = new KmerPosition[BUFFER_SIZE];
         SequencePosition * kmers = new SequencePosition[par.maxSeqLen];
+
+        const size_t flushSize = 100000000;
+        size_t iterations = static_cast<size_t>(ceil(static_cast<double>(seqDbr.getSize()) / static_cast<double>(flushSize)));
+        for (size_t i = 0; i < iterations; i++) {
+            size_t start = (i * flushSize);
+            size_t bucketSize = std::min(seqDbr.getSize() - (i * flushSize), flushSize);
+
 #pragma omp for schedule(dynamic, 100)
-        for(size_t id = 0; id < seqDbr.getSize(); id++){
-            Debug::printProgress(id);
-            seq.mapSequence(id, id, seqDbr.getData(id));
-            
-            // mask using tantan
-            if (par.maskMode == 1) {
-                for (int i = 0; i < seq.L; i++) {
-                    charSequence[i] = (char) seq.int_sequence[i];
+            for (size_t id = start; id < (start + bucketSize); id++) {
+                Debug::printProgress(id);
+                seq.mapSequence(id, id, seqDbr.getData(id));
+
+                // mask using tantan
+                if (par.maskMode == 1) {
+                    for (int i = 0; i < seq.L; i++) {
+                        charSequence[i] = (char) seq.int_sequence[i];
+                    }
+                    tantan::maskSequences(charSequence,
+                                          charSequence + seq.L,
+                                          50 /*options.maxCycleLength*/,
+                                          probMatrixPointers,
+                                          0.005 /*options.repeatProb*/,
+                                          0.05 /*options.repeatEndProb*/,
+                                          0.5 /*options.repeatOffsetProbDecay*/,
+                                          0, 0,
+                                          0.5 /*options.minMaskProb*/, hardMaskTable);
+                    for (int i = 0; i < seq.L; i++) {
+                        seq.int_sequence[i] = charSequence[i];
+                    }
                 }
-                tantan::maskSequences(charSequence,
-                                      charSequence + seq.L,
-                                      50 /*options.maxCycleLength*/,
-                                      probMatrixPointers,
-                                      0.005 /*options.repeatProb*/,
-                                      0.05 /*options.repeatEndProb*/,
-                                      0.5 /*options.repeatOffsetProbDecay*/,
-                                      0, 0,
-                                      0.5 /*options.minMaskProb*/, hardMaskTable);
-                for (int i = 0; i < seq.L; i++) {
-                    seq.int_sequence[i] = charSequence[i];
+
+                int seqKmerCount = 0;
+                unsigned int seqId = seq.getId();
+                unsigned short prevHash = 0;
+                unsigned int prevFirstRes = 0;
+                if (seq.hasNextKmer()) {
+                    const int *kmer = seq.nextKmer();
+                    prevHash = circ_hash(kmer, KMER_SIZE, par.hashShift);
+                    prevFirstRes = kmer[0];
+                }
+                while (seq.hasNextKmer()) {
+                    const int *kmer = seq.nextKmer();
+                    //float kmerScore = 1.0;
+                    prevHash = circ_hash_next(kmer, KMER_SIZE, prevFirstRes, prevHash, par.hashShift);
+                    prevFirstRes = kmer[0];
+                    size_t xCount = 0;
+                    for (size_t kpos = 0; kpos < KMER_SIZE; kpos++) {
+                        xCount += (kmer[kpos] == subMat->aa2int[(int) 'X']);
+                    }
+                    if (xCount > 0) {
+                        continue;
+                    }
+                    (kmers + seqKmerCount)->score = prevHash;
+                    size_t kmerIdx = idxer.int2index(kmer, 0, KMER_SIZE);
+                    (kmers + seqKmerCount)->kmer = kmerIdx;
+                    (kmers + seqKmerCount)->pos = seq.getCurrentPosition();
+                    seqKmerCount++;
+                }
+                if (seqKmerCount > 1) {
+                    std::stable_sort(kmers, kmers + seqKmerCount, SequencePosition::compareByScore);
+                }
+                size_t kmerConsidered = std::min(static_cast<int>(chooseTopKmer), seqKmerCount);
+                for (size_t topKmer = 0; topKmer < kmerConsidered; topKmer++) {
+                    size_t splitIdx = (kmers + topKmer)->kmer % splits;
+                    if (splitIdx != split) {
+                        continue;
+                    }
+                    threadKmerBuffer[bufferPos].kmer = (kmers + topKmer)->kmer;
+                    threadKmerBuffer[bufferPos].id = seqId;
+                    threadKmerBuffer[bufferPos].pos = (kmers + topKmer)->pos;
+                    threadKmerBuffer[bufferPos].seqLen = seq.L;
+                    bufferPos++;
+                    if (bufferPos >= BUFFER_SIZE) {
+                        size_t writeOffset = __sync_fetch_and_add(&offset, bufferPos);
+                        memcpy(hashSeqPair + writeOffset, threadKmerBuffer, sizeof(KmerPosition) * bufferPos);
+                        bufferPos = 0;
+                    }
                 }
             }
-            
-            int seqKmerCount = 0;
-            unsigned int seqId = seq.getId();
-            unsigned short prevHash=0;
-            unsigned int prevFirstRes = 0;
-            if(seq.hasNextKmer()){
-                const int *kmer = seq.nextKmer();
-                prevHash = circ_hash(kmer, KMER_SIZE, par.hashShift);
-                prevFirstRes = kmer[0];
+#pragma omp barrier
+            unsigned int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
+            if (thread_idx == 0) {
+                seqDbr.remapData();
             }
-            while(seq.hasNextKmer()) {
-                const int *kmer = seq.nextKmer();
-                //float kmerScore = 1.0;
-                prevHash = circ_hash_next(kmer, KMER_SIZE, prevFirstRes, prevHash, par.hashShift);
-                prevFirstRes = kmer[0];
-                size_t xCount = 0;
-                for (size_t kpos = 0; kpos < KMER_SIZE; kpos++) {
-                    xCount += (kmer[kpos] == subMat->aa2int[(int)'X']);
-                }
-                if(xCount > 0){
-                    continue;
-                }
-                (kmers+seqKmerCount)->score = prevHash;
-                size_t kmerIdx = idxer.int2index(kmer, 0, KMER_SIZE);
-                (kmers+seqKmerCount)->kmer = kmerIdx;
-                (kmers+seqKmerCount)->pos = seq.getCurrentPosition();
-                seqKmerCount++;
-            }
-            if(seqKmerCount > 1){
-                std::stable_sort(kmers, kmers+seqKmerCount, SequencePosition::compareByScore);
-            }
-            size_t kmerConsidered = std::min(static_cast<int>(chooseTopKmer), seqKmerCount);
-            for(size_t topKmer = 0; topKmer < kmerConsidered; topKmer++){
-                size_t splitIdx = (kmers + topKmer)->kmer % splits;
-                if(splitIdx != split) {
-                    continue;
-                }
-                threadKmerBuffer[bufferPos].kmer  = (kmers + topKmer)->kmer;
-                threadKmerBuffer[bufferPos].id    = seqId;
-                threadKmerBuffer[bufferPos].pos   = (kmers + topKmer)->pos;
-                threadKmerBuffer[bufferPos].seqLen  = seq.L;
-                bufferPos++;
-                if(bufferPos >= BUFFER_SIZE){
-                    size_t writeOffset = __sync_fetch_and_add(&offset, bufferPos);
-                    memcpy(hashSeqPair+writeOffset, threadKmerBuffer, sizeof(KmerPosition) * bufferPos);
-                    bufferPos = 0;
-                }
-            }
+#pragma omp barrier
         }
-        
+
         if(bufferPos > 0){
             size_t writeOffset = __sync_fetch_and_add(&offset, bufferPos);
             memcpy(hashSeqPair+writeOffset, threadKmerBuffer, sizeof(KmerPosition) * bufferPos);
@@ -269,23 +286,44 @@ size_t fillKmerPositionArray(KmerPosition * hashSeqPair, DBReader<unsigned int> 
 }
 
 
+struct KmerComparision {
+    static const int nBytes = 7;
+    int kth_byte(const KmerPosition &x, int k) {
+        return x.kmer >> (k * 8) & 0xFF;
+    }
+    bool compare(const KmerPosition &x, const KmerPosition &y) {
+        return x.kmer <  y.kmer;
+    }
+};
+
+struct SequenceComparision {
+    static const int nBytes = 4;
+    int kth_byte(const KmerPosition &x, int k) {
+        return x.kmer >> (k * 8) & 0xFF;
+    }
+    bool compare(const KmerPosition &first, const KmerPosition &second) {
+        return first.kmer <  first.kmer;
+
+    }
+};
+
 int kmermatcher(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
     setLinearFilterDefault(&par);
     par.parseParameters(argc, argv, command, 2, true, false, MMseqsParameter::COMMAND_CLUSTLINEAR);
-    
+
     if (par.maskMode == 2) {
         Debug(Debug::ERROR) << "kmermatcher does not support mask mode 2.\n";
         EXIT(EXIT_FAILURE);
     }
-    
+
     setKmerLengthAndAlphabet(par);
 #ifdef OPENMP
     omp_set_num_threads(par.threads);
 #endif
     struct timeval start, end;
     gettimeofday(&start, NULL);
-    
+
     BaseMatrix *subMat;
     if (par.alphabetSize == 21) {
         subMat = new SubstitutionMatrix(par.scoringMatrixFile.c_str(), 2.0, 0.0);
@@ -293,20 +331,20 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
         SubstitutionMatrix sMat(par.scoringMatrixFile.c_str(), 2.0, 0.0);
         subMat = new ReducedMatrix(sMat.probMatrix, sMat.subMatrixPseudoCounts, par.alphabetSize, 2.0);
     }
-    
+
     DBReader<unsigned int> seqDbr(par.db1.c_str(), (par.db1 + ".index").c_str());
     seqDbr.open(DBReader<unsigned int>::NOSORT);
     //seqDbr.readMmapedDataInMemory();
     const size_t KMER_SIZE = par.kmerSize;
     size_t chooseTopKmer = par.kmersPerSequence;
-    DBWriter dbw(par.db2.c_str(), std::string(par.db2 + ".index").c_str(), 1);
+    DBWriter dbw(par.db2.c_str(), std::string(par.db2 + ".index").c_str(), par.threads);
     dbw.open();
     size_t totalMemoryInByte = Util::getTotalSystemMemory();
     Debug(Debug::WARNING) << "Check requirements\n";
     size_t totalKmers = computeKmerCount(seqDbr, KMER_SIZE, chooseTopKmer);
     size_t totalSizeNeeded = computeMemoryNeededLinearfilter(totalKmers);
     Debug(Debug::INFO) << "Needed memory (" << totalSizeNeeded << " byte) of total memory (" << totalMemoryInByte
-    << " byte)\n";
+                       << " byte)\n";
     // compute splits
     size_t splits = static_cast<int>(std::ceil(static_cast<float>(totalSizeNeeded)/ (static_cast<float>(totalMemoryInByte)*0.9)));
     if(splits > 1){
@@ -316,64 +354,96 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
     Debug(Debug::WARNING) << "Generate k-mers list ... \n";
     std::vector<std::string> splitFiles;
     KmerPosition *hashSeqPair=NULL;
-    
+
     for(size_t split = 0; split < splits; split++){
         size_t splitKmerCount = (splits > 1) ? static_cast<size_t >(static_cast<double>(totalKmers/splits) * 1.2) : totalKmers;
-        Debug(Debug::INFO) << "Allocate " << splitKmerCount << " elements. Total memory " << computeMemoryNeededLinearfilter(splitKmerCount) << ".\n";
         hashSeqPair = new KmerPosition[splitKmerCount + 1];
         Util::checkAllocation(hashSeqPair, "Could not allocat memory");
 #pragma omp parallel for
         for (size_t i = 0; i < splitKmerCount + 1; i++) {
             hashSeqPair[i].kmer = SIZE_T_MAX;
         }
-        
+
+        struct timeval starttmp;
+        gettimeofday(&starttmp, NULL);
         size_t elementsToSort = fillKmerPositionArray(hashSeqPair, seqDbr, par, subMat, KMER_SIZE, chooseTopKmer, splits, split);
+        gettimeofday(&end, NULL);
+        time_t sec = end.tv_sec - starttmp.tv_sec;
+        Debug(Debug::WARNING) << "\nTime for fill: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
         if(splits == 1){
             seqDbr.unmapData();
         }
         Debug(Debug::WARNING) << "Done." << "\n";
         Debug(Debug::WARNING) << "Sort kmer ... ";
+        gettimeofday(&starttmp, NULL);
         omptl::sort(hashSeqPair, hashSeqPair + elementsToSort, KmerPosition::compareRepSequenceAndIdAndPos);
         Debug(Debug::WARNING) << "Done." << "\n";
+        gettimeofday(&end, NULL);
+        sec = end.tv_sec - starttmp.tv_sec;
+        Debug(Debug::WARNING) << "Time for sort: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
         // assign rep. sequence to same kmer members
         // The longest sequence is the first since we sorted by kmer, seq.Len and id
-        size_t prevHash = hashSeqPair[0].kmer;
-        size_t repSeqId = hashSeqPair[0].id;
-        unsigned int repSeq_i_pos = hashSeqPair[0].pos;
-        size_t prevHashStart = 0;
-        size_t prevSetSize = 0;
-        size_t elementIdx = 0;
-        for (elementIdx = 0; elementIdx < splitKmerCount + 1; elementIdx++) {
-            if (prevHash != hashSeqPair[elementIdx].kmer) {
-                for (size_t i = prevHashStart; i < elementIdx; i++) {
-                    hashSeqPair[i].kmer = (hashSeqPair[i].kmer != SIZE_T_MAX) ? ((prevSetSize == 1) ? SIZE_T_MAX : repSeqId)
-                    : SIZE_T_MAX;
-                    short diagonal = repSeq_i_pos - hashSeqPair[i].pos;
-                    hashSeqPair[i].pos = diagonal;
+        size_t writePos = 0;
+        {
+            size_t prevHash = hashSeqPair[0].kmer;
+            size_t repSeqId = hashSeqPair[0].id;
+            size_t prevHashStart = 0;
+            size_t prevSetSize = 0;
+            size_t queryLen;
+            unsigned int repSeq_i_pos = hashSeqPair[0].pos;
+            for (size_t elementIdx = 0; elementIdx < splitKmerCount+1; elementIdx++) {
+                if (prevHash != hashSeqPair[elementIdx].kmer) {
+                    for (size_t i = prevHashStart; i < elementIdx; i++) {
+                        size_t rId =  (hashSeqPair[i].kmer != SIZE_T_MAX) ? ((prevSetSize == 1) ? SIZE_T_MAX
+                                                                                                        : repSeqId) : SIZE_T_MAX;
+
+                        hashSeqPair[i].kmer = SIZE_T_MAX;
+                        // remove single tones from set
+                        if(rId != SIZE_T_MAX){
+                            short diagonal = repSeq_i_pos - hashSeqPair[i].pos;
+                            // include only sequences that leads to an extend (needed by PLASS)
+                            // par.includeOnlyExtendable
+                            bool canBeExtended =  diagonal < 0 || (diagonal > (queryLen - hashSeqPair[i].seqLen));
+                            if(par.includeOnlyExtendable == false || (canBeExtended && par.includeOnlyExtendable ==true )){
+                                hashSeqPair[writePos].kmer = rId;
+                                hashSeqPair[writePos].pos = diagonal;
+                                hashSeqPair[writePos].seqLen = hashSeqPair[i].seqLen;
+                                hashSeqPair[writePos].id = hashSeqPair[i].id;
+                                writePos++;
+                            }
+                        }
+                    }
+                    prevSetSize = 0;
+                    prevHashStart = elementIdx;
+                    repSeqId = hashSeqPair[elementIdx].id;
+                    queryLen = hashSeqPair[elementIdx].seqLen;
+
+                    repSeq_i_pos = hashSeqPair[elementIdx].pos;
                 }
-                prevSetSize = 0;
-                prevHashStart = elementIdx;
-                repSeqId = hashSeqPair[elementIdx].id;
-                repSeq_i_pos = hashSeqPair[elementIdx].pos;
+                if (hashSeqPair[elementIdx].kmer == SIZE_T_MAX) {
+                    break;
+                }
+                prevSetSize++;
+                prevHash = hashSeqPair[elementIdx].kmer;
             }
-            if (hashSeqPair[elementIdx].kmer == SIZE_T_MAX) {
-                break;
-            }
-            prevSetSize++;
-            prevHash = hashSeqPair[elementIdx].kmer;
         }
         // sort by rep. sequence (stored in kmer) and sequence id
         Debug(Debug::WARNING) << "Sort by rep. sequence ... ";
-        omptl::sort(hashSeqPair, hashSeqPair + elementsToSort, KmerPosition::compareRepSequenceAndIdAndDiag);
+        gettimeofday(&starttmp, NULL);
+        omptl::sort(hashSeqPair, hashSeqPair + writePos, KmerPosition::compareRepSequenceAndIdAndDiag);
+        gettimeofday(&end, NULL);
+        sec = end.tv_sec - starttmp.tv_sec;
         Debug(Debug::WARNING) << "Done\n";
+        Debug(Debug::WARNING) << "Time for sort: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
+
         if(splits > 1){
             std::string splitFile = par.db2 + "_split_" +SSTR(split);
             splitFiles.push_back(splitFile);
-            writeKmersToDisk(splitFile, hashSeqPair, splitKmerCount + 1);
+            writeKmersToDisk(splitFile, hashSeqPair, writePos + 1);
             delete [] hashSeqPair;
         }
     }
-    
+
     if(splits > 1){
         seqDbr.unmapData();
         std::pair<KmerPosition *, size_t> ret = mergeKmerFiles(splitFiles);
@@ -386,86 +456,109 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
     }
     std::vector<bool> repSequence(seqDbr.getSize());
     std::fill(repSequence.begin(), repSequence.end(), false);
-    size_t repSeqId = SIZE_T_MAX;
-    size_t lastTargetId = SIZE_T_MAX;
-    unsigned int writeSets = 0;
-    unsigned int queryLength = 0;
     // write result
-    std::string prefResultsOutString;
-    prefResultsOutString.reserve(1000000000);
-    char buffer[100];
-    size_t kmerPos=0;
-    size_t reduced=0;
-    size_t members = 0;
-    size_t repSeqs = 0;
-    for(kmerPos = 0; kmerPos < totalKmers && hashSeqPair[kmerPos].kmer != SIZE_T_MAX; kmerPos++){
-        if(repSeqId != hashSeqPair[kmerPos].kmer) {
-            if (writeSets > 0) {
-                repSequence[repSeqId] = true;
-                dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), seqDbr.getDbKey(repSeqId), 0);
-            }else{
-                if(repSeqId != SIZE_T_MAX) {
-                    repSequence[repSeqId] = false;
-                }
+    struct timeval starttmp;
+    gettimeofday(&starttmp, NULL);
+    std::vector<size_t> threadOffsets;
+    size_t splitSize = totalKmers/par.threads;
+    threadOffsets.push_back(0);
+    for(size_t thread = 1; thread < par.threads; thread++){
+        unsigned int repSeqId = static_cast<unsigned int>(hashSeqPair[thread*splitSize].kmer);
+        for(size_t pos = thread*splitSize; pos < totalKmers; pos++){
+            if(repSeqId != hashSeqPair[pos].kmer){
+                threadOffsets.push_back(pos);
+                break;
             }
-            lastTargetId = SIZE_T_MAX;
-            prefResultsOutString.clear();
-            repSeqId = hashSeqPair[kmerPos].kmer;
-            queryLength = hashSeqPair[kmerPos].seqLen;
-            hit_t h;
-            h.seqId = seqDbr.getDbKey(repSeqId);
-            h.pScore = 0;
-            h.diagonal = 0;
-            int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
-            // TODO: error handling for len
-            prefResultsOutString.append(buffer, len);
-            repSeqs++;
         }
-        unsigned int targetId = hashSeqPair[kmerPos].id;
-        unsigned int targetLength = hashSeqPair[kmerPos].seqLen;
-        unsigned short diagonal = hashSeqPair[kmerPos].pos;
-        // remove similar double sequence hit
-        if(targetId != repSeqId && lastTargetId != targetId ){
-           if(par.covThr > 0.0 ) {
-               if ((((float) queryLength) / ((float) targetLength) < par.covThr) ||
+    }
+    threadOffsets.push_back(totalKmers);
+#pragma omp parallel for schedule(dynamic, 1)
+    for(size_t thread = 0; thread < par.threads; thread++){
+        std::string prefResultsOutString;
+        prefResultsOutString.reserve(100000000);
+        char buffer[100];
+        size_t lastTargetId = SIZE_T_MAX;
+        unsigned int writeSets = 0;
+        unsigned int queryLength = 0;
+        size_t kmerPos=0;
+        size_t repSeqId = SIZE_T_MAX;
+        for(kmerPos = threadOffsets[thread]; kmerPos < threadOffsets[thread+1] && hashSeqPair[kmerPos].kmer != SIZE_T_MAX; kmerPos++){
+            if(repSeqId != hashSeqPair[kmerPos].kmer) {
+                if (writeSets > 0) {
+                    repSequence[repSeqId] = true;
+                    dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), seqDbr.getDbKey(repSeqId), thread);
+                }else{
+                    if(repSeqId != SIZE_T_MAX) {
+                        repSequence[repSeqId] = false;
+                    }
+                }
+                lastTargetId = SIZE_T_MAX;
+                prefResultsOutString.clear();
+                repSeqId = hashSeqPair[kmerPos].kmer;
+                queryLength = hashSeqPair[kmerPos].seqLen;
+                hit_t h;
+                h.seqId = seqDbr.getDbKey(repSeqId);
+                h.pScore = 0;
+                h.diagonal = 0;
+                int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
+                // TODO: error handling for len
+                prefResultsOutString.append(buffer, len);
+            }
+            unsigned int targetId = hashSeqPair[kmerPos].id;
+            unsigned int targetLength = hashSeqPair[kmerPos].seqLen;
+            unsigned short diagonal = hashSeqPair[kmerPos].pos;
+            // remove similar double sequence hit
+            if(targetId != repSeqId && lastTargetId != targetId ){
+               if(par.covThr > 0.0 ) {
+                  if ((((float) queryLength) / ((float) targetLength) < par.covThr) ||
                     (((float) targetLength) / ((float) queryLength) < par.covThr)) {
                    lastTargetId = targetId;
                    continue;
+                  }
                }
-           }
-        }else{
-            reduced++;
+            }else{
+                lastTargetId = targetId;
+                continue;
+            }
+            hit_t h;
+            h.seqId = seqDbr.getDbKey(targetId);
+            h.pScore = 0;
+            h.diagonal = diagonal;
+            int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
+            prefResultsOutString.append(buffer, len);
             lastTargetId = targetId;
-            continue;
+            writeSets++;
         }
-        hit_t h;
-        h.seqId = seqDbr.getDbKey(targetId);
-        h.pScore = 0;
-        h.diagonal = diagonal;
-        int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
-        prefResultsOutString.append(buffer, len);
-        members++;
-        lastTargetId = targetId;
-        writeSets++;
-    }
-    if (writeSets > 0) {
-        repSequence[repSeqId] = true;
-        dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), seqDbr.getDbKey(repSeqId), 0);
-    }else{
-        if(repSeqId != SIZE_T_MAX) {
-            repSequence[repSeqId] = false;
+        if (writeSets > 0) {
+            repSequence[repSeqId] = true;
+            dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), seqDbr.getDbKey(repSeqId), thread);
+        }else{
+            if(repSeqId != SIZE_T_MAX) {
+                repSequence[repSeqId] = false;
+            }
         }
     }
-    std::cout << kmerPos << " " << totalKmers << " " << repSeqs  << " " << reduced << " "  << members << std::endl;
+    gettimeofday(&end, NULL);
+    time_t sec = end.tv_sec - starttmp.tv_sec;
+    Debug(Debug::WARNING) << "Time for fill: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
     // add missing entries to the result (needed for clustering)
     hit_t h;
     h.pScore = 0;
     h.diagonal = 0;
-    for(size_t id = 0; id < seqDbr.getSize(); id++){
-        if(repSequence[id] == false){
-            h.seqId =  seqDbr.getDbKey(id);
-            int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
-            dbw.writeData(buffer, len, seqDbr.getDbKey(id), 0);
+    if(par.includeOnlyExtendable == false)
+    {
+#pragma omp parallel for
+        for (size_t id = 0; id < seqDbr.getSize(); id++) {
+            char buffer[100];
+            int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = omp_get_thread_num();
+#endif
+            if (repSequence[id] == false) {
+                h.seqId = seqDbr.getDbKey(id);
+                int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
+                dbw.writeData(buffer, len, seqDbr.getDbKey(id), thread_idx);
+            }
         }
     }
     // free memory
@@ -473,9 +566,9 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
     delete [] hashSeqPair;
     seqDbr.close();
     dbw.close();
-    
+
     gettimeofday(&end, NULL);
-    time_t sec = end.tv_sec - start.tv_sec;
+    sec = end.tv_sec - start.tv_sec;
     Debug(Debug::WARNING) << "Time for processing: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
     return 0;
 }
@@ -505,7 +598,7 @@ std::pair<KmerPosition *, size_t> mergeKmerFiles(std::vector<std::string> tmpFil
     size_t readSize1 = fread(entry1, sizeof(KmerEntry), entrySize1, file1);
     if(readSize1 != entrySize1){
         Debug(Debug::ERROR) << "Error reading " << tmpFiles[0] << " readSize1 "
-        << readSize1 << " != entrySize1 " << entrySize1 << "\n";
+                            << readSize1 << " != entrySize1 " << entrySize1 << "\n";
         EXIT(EXIT_FAILURE);
     }
     size_t repSeq = entry1[0].seqId;
@@ -531,7 +624,7 @@ std::pair<KmerPosition *, size_t> mergeKmerFiles(std::vector<std::string> tmpFil
         size_t readSize2 = fread(entry2, sizeof(KmerEntry), entrySize2, file2);
         if(readSize2 != entrySize2){
             Debug(Debug::ERROR) << "Error reading "<< tmpFiles[fileIdx] << " entrySize2 "
-            << entrySize2 <<" != entrySize2 " << entrySize2 << "\n";
+                                << entrySize2 <<" != entrySize2 " << entrySize2 << "\n";
             EXIT(EXIT_FAILURE);
         }
         mergeFilePair(data1.data(), data1.size(), entry2, entrySize2, data2);
@@ -547,7 +640,7 @@ std::pair<KmerPosition *, size_t> mergeKmerFiles(std::vector<std::string> tmpFil
     KmerPosition * returnData = new KmerPosition[returnSize+1];
     std::copy(data1.begin(), data1.end(), returnData);
     data1.size();
-    returnData[returnSize].id=SIZE_MAX;
+    returnData[returnSize].kmer=SIZE_MAX;
     return std::make_pair(returnData, returnSize);
 }
 
@@ -581,8 +674,8 @@ void mergeFilePair(const KmerPosition *entry1, size_t entrySize1, KmerEntry *ent
                     j++;
                 }
             }
-            
-            
+
+
             while (i < entrySize1 && entry1[i].kmer == id1){
                 out.push_back(entry1[i]);
                 i++;
@@ -621,7 +714,7 @@ void mergeFilePair(const KmerPosition *entry1, size_t entrySize1, KmerEntry *ent
     while (j < entrySize2 - 1){ // last element is UINT_MAX
         unsigned int id = entry2[j].seqId;
         short diagonal  = entry2[j].diagonal;
-        out.emplace_back(repSeq2, id, 0, diagonal); 
+        out.emplace_back(repSeq2, id, 0, diagonal);
         j++;
         if(entry2[j].seqId==UINT_MAX){
             if(j+1 < entrySize2){
@@ -703,5 +796,6 @@ void setKmerLengthAndAlphabet(Parameters &parameters) {
 }
 
 #undef SIZE_T_MAX
+
 
 

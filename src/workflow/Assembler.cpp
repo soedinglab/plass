@@ -13,7 +13,12 @@ void setAssemblerWorkflowDefaults(Parameters *p) {
     p->maskMode = 1;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.95;
+    p->seqIdThr = 0.9;
+    p->alphabetSize = 21;
+    p->kmersPerSequence = 60;
+    p->numIterations = 12;
+    p->maskMode = 0;
+    p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 
@@ -23,23 +28,6 @@ int assembler(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, 3);
     if(FileUtil::directoryExists(par.db3.c_str())==false){
         Debug(Debug::ERROR) << "Tmp " << par.db3 << " folder does not exist or is not a directory.\n";
-        EXIT(EXIT_FAILURE);
-    }
-    bool targetCov = false;
-    bool cov = false;
-    for (size_t i = 0; i < par.assemblerworkflow.size(); i++) {
-        if (par.assemblerworkflow[i].uniqid == par.PARAM_TARGET_COV.uniqid && par.assemblerworkflow[i].wasSet) {
-            if(par.targetCovThr > 0.0 ){
-                targetCov = true;
-                par.covThr = 0.0;
-            }
-        }
-        if (par.assemblerworkflow[i].uniqid == par.PARAM_C.uniqid && par.assemblerworkflow[i].wasSet) {
-            cov = true;
-        }
-    }
-    if(cov && targetCov){
-        Debug(Debug::ERROR) << "The paramter -c can not be combined with --target-cov.\n";
         EXIT(EXIT_FAILURE);
     }
     CommandCaller cmd;

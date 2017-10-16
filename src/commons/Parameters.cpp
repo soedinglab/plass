@@ -93,6 +93,7 @@ Parameters::Parameters():
         PARAM_STAT(PARAM_STAT_ID, "--stat", "Statistics to be computed", "can be one of: linecount, mean, doolittle, charges, seqlen, firstline.", typeid(std::string), (void*) &stat, ""),
         // linearcluster
         PARAM_KMER_PER_SEQ(PARAM_KMER_PER_SEQ_ID, "--kmer-per-seq", "Kmer per sequence", "kmer per sequence", typeid(int), (void*) &kmersPerSequence, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR),
+        PARAM_INCLUDE_ONLY_EXTENDABLE(PARAM_INCLUDE_ONLY_EXTENDABLE_ID, "--inlude-only-extendable", "Include only extendable", "Include only extendable", typeid(bool), (void*) &includeOnlyExtendable, "", MMseqsParameter::COMMAND_CLUSTLINEAR),
         PARAM_HASH_SHIFT(PARAM_HASH_SHIFT_ID, "--hash-shift", "Shift hash", "Shift k-mer hash", typeid(int), (void*) &hashShift, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_CLUSTLINEAR),
 
         // workflow
@@ -422,6 +423,7 @@ Parameters::Parameters():
     kmermatcher.push_back(PARAM_ALPH_SIZE);
     kmermatcher.push_back(PARAM_MIN_SEQ_ID);
     kmermatcher.push_back(PARAM_KMER_PER_SEQ);
+    kmermatcher.push_back(PARAM_INCLUDE_ONLY_EXTENDABLE);
     kmermatcher.push_back(PARAM_MASK_RESIDUES);
     kmermatcher.push_back(PARAM_TARGET_COV);
     kmermatcher.push_back(PARAM_K);
@@ -1081,6 +1083,7 @@ void Parameters::setDefaults() {
     // linearcluster
     kmersPerSequence = 20;
     hashShift = 5;
+    includeOnlyExtendable = false;
     // result2stats
     stat = "";
 
