@@ -98,19 +98,30 @@ struct SequencePosition{
     }
 };
 
-void setKmerLengthAndAlphabet(Parameters &parameters);
-
-void writeKmersToDisk(std::string tmpFile, KmerPosition *kmers, size_t totalKmers);
-
-std::pair<KmerPosition *, size_t> mergeKmerFiles(std::vector<std::string> tmpFiles);
-
 struct __attribute__((__packed__)) KmerEntry {
     unsigned int seqId;
     short diagonal;
 };
 
-void mergeFilePair(const KmerPosition *entry1, size_t entrySize1, KmerEntry *entry2, size_t entrySize2,
-                   std::vector<KmerPosition> & out);
+void setKmerLengthAndAlphabet(Parameters &parameters);
+
+void writeKmersToDisk(std::string tmpFile, KmerPosition *kmers, size_t totalKmers);
+
+std::pair<KmerEntry *, size_t> mergeKmerFiles(std::vector<std::string> tmpFiles);
+
+size_t mergeFilePair(KmerEntry *entry1, size_t entrySize1,
+                     KmerEntry *entry2, size_t entrySize2,
+                     KmerEntry * out);
+
+void writeMergedKmerMatcherResult(DBReader<unsigned int> & seqDbr, DBWriter & dbw,
+                            KmerEntry *hashSeqPair, size_t totalKmers,
+                            std::vector<bool> &repSequence, float covThr,
+                            size_t threads);
+
+void writeKmerMatcherResult(DBReader<unsigned int> & seqDbr, DBWriter & dbw,
+                            KmerPosition *hashSeqPair, size_t totalKmers,
+                            std::vector<bool> &repSequence, float covThr,
+                            size_t threads);
 
 void setLinearFilterDefault(Parameters *p) {
     p->spacedKmer = false;
@@ -337,8 +348,7 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
     //seqDbr.readMmapedDataInMemory();
     const size_t KMER_SIZE = par.kmerSize;
     size_t chooseTopKmer = par.kmersPerSequence;
-    DBWriter dbw(par.db2.c_str(), std::string(par.db2 + ".index").c_str(), par.threads);
-    dbw.open();
+
     size_t totalMemoryInByte = Util::getTotalSystemMemory();
     Debug(Debug::WARNING) << "Check requirements\n";
     size_t totalKmers = computeKmerCount(seqDbr, KMER_SIZE, chooseTopKmer);
@@ -357,6 +367,13 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
 
     for(size_t split = 0; split < splits; split++){
         size_t splitKmerCount = (splits > 1) ? static_cast<size_t >(static_cast<double>(totalKmers/splits) * 1.2) : totalKmers;
+        if(splits > 1){
+            std::string splitFile = par.db2 + "_split_" +SSTR(split);
+            if(FileUtil::fileExists(splitFile.c_str())){
+                splitFiles.push_back(splitFile);
+                continue;
+            }
+        }
         hashSeqPair = new KmerPosition[splitKmerCount + 1];
         Util::checkAllocation(hashSeqPair, "Could not allocat memory");
 #pragma omp parallel for
@@ -377,6 +394,7 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
         Debug(Debug::WARNING) << "Sort kmer ... ";
         gettimeofday(&starttmp, NULL);
         omptl::sort(hashSeqPair, hashSeqPair + elementsToSort, KmerPosition::compareRepSequenceAndIdAndPos);
+        //kx::radix_sort(hashSeqPair, hashSeqPair + elementsToSort, KmerComparision());
         Debug(Debug::WARNING) << "Done." << "\n";
         gettimeofday(&end, NULL);
         sec = end.tv_sec - starttmp.tv_sec;
@@ -398,7 +416,7 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
                                                                                                         : repSeqId) : SIZE_T_MAX;
 
                         hashSeqPair[i].kmer = SIZE_T_MAX;
-                        // remove single tones from set
+                        // remove singletones from set
                         if(rId != SIZE_T_MAX){
                             short diagonal = repSeq_i_pos - hashSeqPair[i].pos;
                             // include only sequences that leads to an extend (needed by PLASS)
@@ -431,6 +449,7 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
         Debug(Debug::WARNING) << "Sort by rep. sequence ... ";
         gettimeofday(&starttmp, NULL);
         omptl::sort(hashSeqPair, hashSeqPair + writePos, KmerPosition::compareRepSequenceAndIdAndDiag);
+        //kx::radix_sort(hashSeqPair, hashSeqPair + elementsToSort, SequenceComparision());
         gettimeofday(&end, NULL);
         sec = end.tv_sec - starttmp.tv_sec;
         Debug(Debug::WARNING) << "Done\n";
@@ -443,26 +462,68 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
             delete [] hashSeqPair;
         }
     }
-
-    if(splits > 1){
-        seqDbr.unmapData();
-        std::pair<KmerPosition *, size_t> ret = mergeKmerFiles(splitFiles);
-        totalKmers = ret.second;
-        hashSeqPair = ret.first;
-#pragma omp parallel for schedule(static)
-        for(size_t pos = 0; pos < totalKmers; pos++){
-            hashSeqPair[pos].seqLen = seqDbr.getSeqLens(hashSeqPair[pos].id) - 2;
-        }
-    }
     std::vector<bool> repSequence(seqDbr.getSize());
     std::fill(repSequence.begin(), repSequence.end(), false);
+
+
     // write result
+    DBWriter dbw(par.db2.c_str(), std::string(par.db2 + ".index").c_str(), par.threads);
+    dbw.open();
     struct timeval starttmp;
     gettimeofday(&starttmp, NULL);
+    if(splits > 1) {
+        seqDbr.unmapData();
+        std::pair<KmerEntry *, size_t> ret = mergeKmerFiles(splitFiles);
+        writeMergedKmerMatcherResult(seqDbr, dbw, ret.first, ret.second, repSequence, par.cov, par.threads);
+        hashSeqPair = NULL;
+        delete [] ret.first;
+    } else {
+        writeKmerMatcherResult(seqDbr, dbw, hashSeqPair, totalKmers, repSequence, par.cov, par.threads);
+    }
+    gettimeofday(&end, NULL);
+    time_t sec = end.tv_sec - starttmp.tv_sec;
+    Debug(Debug::WARNING) << "Time for fill: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
+    // add missing entries to the result (needed for clustering)
+    hit_t h;
+    h.pScore = 0;
+    h.diagonal = 0;
+    {
+#pragma omp parallel for
+        for (size_t id = 0; id < seqDbr.getSize(); id++) {
+            char buffer[100];
+            int thread_idx = 0;
+#ifdef OPENMP
+            thread_idx = omp_get_thread_num();
+#endif
+            if (repSequence[id] == false) {
+                h.seqId = seqDbr.getDbKey(id);
+                int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
+                dbw.writeData(buffer, len, seqDbr.getDbKey(id), thread_idx);
+            }
+        }
+    }
+    // free memory
+    delete subMat;
+    if(hashSeqPair){
+        delete [] hashSeqPair;
+    }
+    seqDbr.close();
+    dbw.close();
+
+    gettimeofday(&end, NULL);
+    sec = end.tv_sec - start.tv_sec;
+    Debug(Debug::WARNING) << "Time for processing: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
+    return 0;
+}
+
+void writeKmerMatcherResult(DBReader<unsigned int> & seqDbr, DBWriter & dbw,
+                            KmerPosition *hashSeqPair, size_t totalKmers,
+                            std::vector<bool> &repSequence, float covThr,
+                            size_t threads) {
     std::vector<size_t> threadOffsets;
-    size_t splitSize = totalKmers/par.threads;
+    size_t splitSize = totalKmers/threads;
     threadOffsets.push_back(0);
-    for(size_t thread = 1; thread < par.threads; thread++){
+    for(size_t thread = 1; thread < threads; thread++){
         unsigned int repSeqId = static_cast<unsigned int>(hashSeqPair[thread*splitSize].kmer);
         for(size_t pos = thread*splitSize; pos < totalKmers; pos++){
             if(repSeqId != hashSeqPair[pos].kmer){
@@ -473,7 +534,7 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
     }
     threadOffsets.push_back(totalKmers);
 #pragma omp parallel for schedule(dynamic, 1)
-    for(size_t thread = 0; thread < par.threads; thread++){
+    for(size_t thread = 0; thread < threads; thread++){
         std::string prefResultsOutString;
         prefResultsOutString.reserve(100000000);
         char buffer[100];
@@ -509,13 +570,13 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
             unsigned short diagonal = hashSeqPair[kmerPos].pos;
             // remove similar double sequence hit
             if(targetId != repSeqId && lastTargetId != targetId ){
-               if(par.covThr > 0.0 ) {
-                  if ((((float) queryLength) / ((float) targetLength) < par.covThr) ||
-                    (((float) targetLength) / ((float) queryLength) < par.covThr)) {
-                   lastTargetId = targetId;
-                   continue;
-                  }
-               }
+                if(covThr > 0.0 ) {
+                    if ((((float) queryLength) / ((float) targetLength) < covThr) ||
+                        (((float) targetLength) / ((float) queryLength) < covThr)) {
+                        lastTargetId = targetId;
+                        continue;
+                    }
+                }
             }else{
                 lastTargetId = targetId;
                 continue;
@@ -538,41 +599,94 @@ int kmermatcher(int argc, const char **argv, const Command &command) {
             }
         }
     }
-    gettimeofday(&end, NULL);
-    time_t sec = end.tv_sec - starttmp.tv_sec;
-    Debug(Debug::WARNING) << "Time for fill: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
-    // add missing entries to the result (needed for clustering)
-    hit_t h;
-    h.pScore = 0;
-    h.diagonal = 0;
-    if(par.includeOnlyExtendable == false)
-    {
-#pragma omp parallel for
-        for (size_t id = 0; id < seqDbr.getSize(); id++) {
-            char buffer[100];
-            int thread_idx = 0;
-#ifdef OPENMP
-            thread_idx = omp_get_thread_num();
-#endif
-            if (repSequence[id] == false) {
-                h.seqId = seqDbr.getDbKey(id);
-                int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
-                dbw.writeData(buffer, len, seqDbr.getDbKey(id), thread_idx);
+}
+
+void writeMergedKmerMatcherResult(DBReader<unsigned int> & seqDbr, DBWriter & dbw,
+                            KmerEntry *hashSeqPair, size_t totalKmers,
+                            std::vector<bool> &repSequence, float covThr,
+                            size_t threads) {
+    std::vector<size_t> threadOffsets;
+    size_t splitSize = totalKmers/threads;
+    threadOffsets.push_back(0);
+    for(size_t thread = 1; thread < threads; thread++){
+        for(size_t pos = thread*splitSize; pos < totalKmers; pos++){
+            if( hashSeqPair[pos].seqId == UINT_MAX){
+                if(pos+1 < totalKmers) {
+                    threadOffsets.push_back(pos + 1);
+                }else{
+                    threadOffsets.push_back(SIZE_T_MAX);
+                }
+                break;
             }
         }
     }
-    // free memory
-    delete subMat;
-    delete [] hashSeqPair;
-    seqDbr.close();
-    dbw.close();
-
-    gettimeofday(&end, NULL);
-    sec = end.tv_sec - start.tv_sec;
-    Debug(Debug::WARNING) << "Time for processing: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
-    return 0;
+    threadOffsets.push_back(totalKmers);
+#pragma omp parallel for schedule(dynamic, 1)
+    for(size_t thread = 0; thread < threads; thread++){
+        std::string prefResultsOutString;
+        prefResultsOutString.reserve(100000000);
+        char buffer[100];
+        unsigned int writeSets = 0;
+        if(threadOffsets[thread] == SIZE_T_MAX){
+            continue;
+        }
+        size_t repSeqId = UINT_MAX;
+        unsigned int lastTargetId = UINT_MAX;
+        unsigned int queryLength = 0;
+        bool newElement = true;
+        for(size_t kmerPos = threadOffsets[thread]; kmerPos < threadOffsets[thread+1]; kmerPos++){
+            if(newElement) {
+                if (writeSets > 0) {
+                    repSequence[repSeqId] = true;
+                    dbw.writeData(prefResultsOutString.c_str(), prefResultsOutString.length(), seqDbr.getDbKey(repSeqId), thread);
+                }else{
+                    if(repSeqId != UINT_MAX) {
+                        repSequence[repSeqId] = false;
+                    }
+                }
+                prefResultsOutString.clear();
+                repSeqId = hashSeqPair[kmerPos].seqId;
+                queryLength = seqDbr.getSeqLens(repSeqId);
+                hit_t h;
+                h.seqId = seqDbr.getDbKey(repSeqId);
+                h.pScore = 0;
+                h.diagonal = 0;
+                int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
+                prefResultsOutString.append(buffer, len);
+                newElement = false;
+            }
+            unsigned int targetId = hashSeqPair[kmerPos].seqId;
+            if(targetId==UINT_MAX){
+                kmerPos++;
+                newElement = true;
+                continue;
+            }
+            unsigned short diagonal = hashSeqPair[kmerPos].diagonal;
+            // remove similar double sequence hit
+            if(targetId != repSeqId && lastTargetId != targetId ){
+                unsigned int targetLength = seqDbr.getSeqLens(targetId);
+                if(covThr > 0.0 ) {
+                    if ((((float) queryLength) / ((float) targetLength) < covThr) ||
+                        (((float) targetLength) / ((float) queryLength) < covThr)) {
+                        lastTargetId = targetId;
+                        continue;
+                    }
+                }
+            }else{
+                lastTargetId = targetId;
+                continue;
+            }
+            hit_t h;
+            h.seqId = seqDbr.getDbKey(targetId);
+            h.pScore = 0;
+            h.diagonal = diagonal;
+            int len = QueryMatcher::prefilterHitToBuffer(buffer, h);
+            prefResultsOutString.append(buffer, len);
+            lastTargetId = targetId;
+            writeSets++;
+        }
+    }
 }
-
 
 class CompareKmerEntryBySeqId {
 public:
@@ -591,7 +705,7 @@ public:
     }
 };
 
-std::pair<KmerPosition *, size_t> mergeKmerFiles(std::vector<std::string> tmpFiles) {
+std::pair<KmerEntry *, size_t> mergeKmerFiles(std::vector<std::string> tmpFiles) {
     size_t entrySize1 = FileUtil::getFileSize(tmpFiles[0])/sizeof(KmerEntry);
     FILE * file1   = FileUtil::openFileOrDie(tmpFiles[0].c_str(), "rb",true);
     KmerEntry * entry1 = new KmerEntry[entrySize1];
@@ -601,89 +715,75 @@ std::pair<KmerPosition *, size_t> mergeKmerFiles(std::vector<std::string> tmpFil
                             << readSize1 << " != entrySize1 " << entrySize1 << "\n";
         EXIT(EXIT_FAILURE);
     }
-    size_t repSeq = entry1[0].seqId;
-    std::vector<KmerPosition> data1;
-    data1.reserve(entrySize1);
-    for(size_t pos1 = 0; pos1 < entrySize1; pos1++ ){
-        if(entry1[pos1].seqId == UINT_MAX){
-            if(pos1+1 < entrySize1){
-                repSeq = entry1[pos1+1].seqId;
-            }
-            continue;
-        }
-        unsigned int id = entry1[pos1].seqId;
-        short diagonal = entry1[pos1].diagonal;
-        data1.emplace_back(repSeq, id, 0, diagonal);
-    }
-    std::vector<KmerPosition> data2;
-    data2.reserve(entrySize1);
+    KmerEntry * outData;
     for(size_t fileIdx = 1; fileIdx < tmpFiles.size(); fileIdx++){
         FILE * file2   = FileUtil::openFileOrDie(tmpFiles[fileIdx].c_str(), "rb",true);
+        Debug(Debug::WARNING) << "Merge split: " << tmpFiles[fileIdx].c_str() << " ... ";
         size_t entrySize2 = FileUtil::getFileSize(tmpFiles[fileIdx])/sizeof(KmerEntry);
         KmerEntry * entry2 = new KmerEntry[entrySize2];
+        Util::checkAllocation(entry2, "Could not allocate " + SSTR(entrySize2*sizeof(KmerPosition)) + " byte for entry2");
+        outData = new KmerEntry[entrySize1+entrySize2+1];
+        Util::checkAllocation(outData, "Could not allocate " + SSTR((entrySize1+entrySize2+1)*sizeof(KmerPosition)) + " byte for outData");
         size_t readSize2 = fread(entry2, sizeof(KmerEntry), entrySize2, file2);
         if(readSize2 != entrySize2){
             Debug(Debug::ERROR) << "Error reading "<< tmpFiles[fileIdx] << " entrySize2 "
                                 << entrySize2 <<" != entrySize2 " << entrySize2 << "\n";
             EXIT(EXIT_FAILURE);
         }
-        mergeFilePair(data1.data(), data1.size(), entry2, entrySize2, data2);
-        std::vector<KmerPosition> tmp = data1;
-        data1 = data2;
-        data2 = tmp;
-        data2.clear();
-        fclose(file2);
+        size_t outSize = mergeFilePair(entry1, entrySize1, entry2, entrySize2, outData);
+        delete [] entry1;
         delete [] entry2;
+        fclose(file2);
+        entry1 = outData;
+        entrySize1 = outSize;
+        Debug(Debug::WARNING) << "Done.\n";
     }
-    data2.clear();
-    size_t returnSize = data1.size();
-    KmerPosition * returnData = new KmerPosition[returnSize+1];
-    std::copy(data1.begin(), data1.end(), returnData);
-    data1.size();
-    returnData[returnSize].kmer=SIZE_MAX;
-    return std::make_pair(returnData, returnSize);
+    return std::make_pair(entry1, entrySize1);
 }
 
-void mergeFilePair(const KmerPosition *entry1, size_t entrySize1, KmerEntry *entry2, size_t entrySize2,
-                   std::vector<KmerPosition> & out) {
+size_t mergeFilePair(KmerEntry *entry1, size_t entrySize1,
+                     KmerEntry *entry2, size_t entrySize2,
+                     KmerEntry * out) {
     size_t i = 0, j = 0;
+    size_t writePos = 0;
+    unsigned int repSeq1 = entry1[0].seqId;
     unsigned int repSeq2 = entry2[0].seqId;
-    while ( i < entrySize1 && j < entrySize2 - 1) // last element of entry2 is UINT_MAX
+    while ( i < entrySize1 - 1 && j < entrySize2 - 1) // last element of entry2 is UINT_MAX
     {
         // remove duplicate elements in group
-        if (entry1[i].kmer == repSeq2){
-            size_t id1 = entry1[i].kmer;
-            while(i < entrySize1 && entry1[i].kmer == id1 && entry2[j].seqId != UINT_MAX){
-                if(entry1[i].id == entry2[j].seqId){
-                    if(entry1[i].pos <= entry2[j].diagonal ){
-                        out.push_back(entry1[i]);
+        if (repSeq1 == repSeq2){
+            while(entry1[i].seqId != UINT_MAX && entry2[j].seqId != UINT_MAX){
+                if(entry1[i].seqId == entry2[j].seqId){
+                    // take smallest diagonal
+                    if(entry1[i].diagonal <= entry2[j].diagonal ){
+                        out[writePos++] = entry1[i];
                     }else{
-                        unsigned int id = entry2[j].seqId;
-                        short diagonal  = entry2[j].diagonal;
-                        out.emplace_back(repSeq2, id, 0, diagonal);
+                        out[writePos++] = entry2[j];
                     }
                     i++;
                     j++;
-                } else if(entry1[i].id < entry2[j].seqId){
-                    out.push_back(entry1[i]);
+                } else if(entry1[i].seqId < entry2[j].seqId){
+                    out[writePos++] = entry1[i];
                     i++;
                 }else{
-                    unsigned int id = entry2[j].seqId;
-                    short diagonal  = entry2[j].diagonal;
-                    out.emplace_back(repSeq2, id, 0, diagonal);
+                    out[writePos++] = entry2[j];
                     j++;
                 }
             }
 
-
-            while (i < entrySize1 && entry1[i].kmer == id1){
-                out.push_back(entry1[i]);
+            while (entry1[i].seqId != UINT_MAX){
+                out[writePos++] = entry1[i];
                 i++;
             }
+            if(entry1[i].seqId==UINT_MAX){
+                if(i+1 < entrySize1){
+                    i++;
+                    repSeq1 = entry1[i].seqId;
+                }
+            }
+
             while (entry2[j].seqId != UINT_MAX){
-                unsigned int id = entry2[j].seqId;
-                short diagonal  = entry2[j].diagonal;
-                out.emplace_back(repSeq2, id, 0, diagonal);
+                out[writePos++] = entry2[j];
                 j++;
             }
             if(entry2[j].seqId==UINT_MAX){
@@ -692,14 +792,22 @@ void mergeFilePair(const KmerPosition *entry1, size_t entrySize1, KmerEntry *ent
                     repSeq2 = entry2[j].seqId;
                 }
             }
-        }else if (entry1[i].kmer < repSeq2){
-            out.push_back(entry1[i++]);
+            out[writePos++].seqId = UINT_MAX;
+        }else if (repSeq1 < repSeq2){
+            out[writePos++] = entry1[i];
+            i++;
+            if(entry1[i].seqId==UINT_MAX){
+                out[writePos++].seqId = UINT_MAX;
+                if(i+1 < entrySize1){
+                    i++;
+                    repSeq1 = entry1[i].seqId;
+                }
+            }
         }else{
-            unsigned int id = entry2[j].seqId;
-            short diagonal  = entry2[j].diagonal;
-            out.emplace_back(repSeq2, id, 0, diagonal);
+            out[writePos++] = entry2[j];
             j++;
             if(entry2[j].seqId==UINT_MAX){
+                out[writePos++].seqId = UINT_MAX;
                 if(j+1 < entrySize2){
                     j++;
                     repSeq2 = entry2[j].seqId;
@@ -707,24 +815,31 @@ void mergeFilePair(const KmerPosition *entry1, size_t entrySize1, KmerEntry *ent
             }
         }
     }
-    while (i < entrySize1){
-        out.push_back(entry1[i]);
+    while (i < entrySize1 - 1){
+        out[writePos++] = entry1[i];
         i++;
-    }
-    while (j < entrySize2 - 1){ // last element is UINT_MAX
-        unsigned int id = entry2[j].seqId;
-        short diagonal  = entry2[j].diagonal;
-        out.emplace_back(repSeq2, id, 0, diagonal);
-        j++;
-        if(entry2[j].seqId==UINT_MAX){
-            if(j+1 < entrySize2){
-                j++;
-                repSeq2 = entry2[j].seqId;
+        if(entry1[i].seqId==UINT_MAX){
+            out[writePos++].seqId = UINT_MAX;
+            if(i+1 < entrySize1){
+                i++;
             }else{
                 break;
             }
         }
     }
+    while (j < entrySize2 - 1){ // last element is UINT_MAX
+        out[writePos++] = entry2[j];
+        j++;
+        if(entry2[j].seqId==UINT_MAX){
+            out[writePos++].seqId = UINT_MAX;
+            if(j+1 < entrySize2){
+                j++;
+            }else{
+                break;
+            }
+        }
+    }
+    return writePos;
 }
 
 
@@ -736,13 +851,14 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition *hashSeqPair, size_t tot
     unsigned int writeSets = 0;
     const size_t BUFFER_SIZE = 2048;
     size_t bufferPos = 0;
+    size_t elemenetCnt = 0;
     KmerEntry writeBuffer[BUFFER_SIZE];
     KmerEntry nullEntry;
     nullEntry.seqId=UINT_MAX;
     nullEntry.diagonal=0;
     for(size_t kmerPos = 0; kmerPos < totalKmers && hashSeqPair[kmerPos].kmer != SIZE_T_MAX; kmerPos++){
         if(repSeqId != hashSeqPair[kmerPos].kmer) {
-            if (writeSets > 0 ) {
+            if (writeSets > 0 && elemenetCnt > 0) {
                 if(bufferPos > 0){
                     fwrite(writeBuffer, sizeof(KmerEntry), bufferPos, filePtr);
                 }
@@ -750,6 +866,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition *hashSeqPair, size_t tot
             }
             lastTargetId = SIZE_T_MAX;
             bufferPos=0;
+            elemenetCnt=0;
             repSeqId = hashSeqPair[kmerPos].kmer;
             writeBuffer[bufferPos].seqId = repSeqId;
             writeBuffer[bufferPos].diagonal = 0;
@@ -764,6 +881,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition *hashSeqPair, size_t tot
             lastTargetId = targetId;
             continue;
         }
+        elemenetCnt++;
         writeBuffer[bufferPos].seqId = targetId;
         writeBuffer[bufferPos].diagonal = diagonal;
         bufferPos++;
@@ -774,7 +892,7 @@ void writeKmersToDisk(std::string tmpFile, KmerPosition *hashSeqPair, size_t tot
         lastTargetId = targetId;
         writeSets++;
     }
-    if (writeSets > 0 && bufferPos > 0) {
+    if (writeSets > 0 && elemenetCnt > 0 && bufferPos > 0) {
         fwrite(writeBuffer, sizeof(KmerEntry), bufferPos, filePtr);
         fwrite(&nullEntry,  sizeof(KmerEntry), 1, filePtr);
     }
