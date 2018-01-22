@@ -30,4 +30,4 @@ PLASS was evaluated on illumina HiSeq 2500 150x2 paired end reads but should be 
        # create internal database
        mmseqs createdb all_merged_reads_nucl.fastq all_merged_reads_nucl
        # assemble
-       mmseqs assemble all_merged_reads_nucl all_merged_reads_aa_assembly tmp  
+       mmseqs assemble all_merged_reads_nucl all_merged_reads_aa_assembly tmp  --mask 0 --min-seq-id 0.9 --num-iterations 12
