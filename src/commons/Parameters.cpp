@@ -33,7 +33,7 @@ Parameters::Parameters():
         PARAM_K_SCORE(PARAM_K_SCORE_ID,"--k-score", "K-score", "k-mer threshold for generating similar-k-mer lists",typeid(int),(void *) &kmerScore,  "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER|MMseqsParameter::COMMAND_EXPERT),
         PARAM_MAX_SEQS(PARAM_MAX_SEQS_ID,"--max-seqs", "Max. results per query", "maximum result sequences per query (this parameter affects the sensitivity)",typeid(int),(void *) &maxResListLen, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_COMMON|MMseqsParameter::COMMAND_EXPERT),
         PARAM_SPLIT(PARAM_SPLIT_ID,"--split", "Split DB", "Splits input sets into N equally distributed chunks. The default value sets the best split automatically. createindex can only be used with split 1.",typeid(int),(void *) &split,  "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER|MMseqsParameter::COMMAND_EXPERT),
-        PARAM_SPLIT_MODE(PARAM_SPLIT_MODE_ID,"--split-mode", "Split mode", "0: split target db; 1: split query db;  2: auto, depending on main memory",typeid(int),(void *) &splitMode,  "^[0-2]{1}$", MMseqsParameter::COMMAND_PREFILTER|MMseqsParameter::COMMAND_EXPERT),
+        PARAM_SPLIT_MODE(PARAM_SPLIT_MODE_ID,"--split-mode", "Split mode", "0: split target db; 1: split query db; 2: auto, depending on main memory",typeid(int),(void *) &splitMode,  "^[0-2]{1}$", MMseqsParameter::COMMAND_PREFILTER|MMseqsParameter::COMMAND_EXPERT),
         PARAM_SPLIT_MEMORY_LIMIT(PARAM_SPLIT_MEMORY_LIMIT_ID, "--split-memory-limit", "Split Memory Limit", "Maximum system memory in megabyte that one split may use. Defaults (0) to all available system memory.", typeid(int), (void*) &splitMemoryLimit, "^(0|[1-9]{1}[0-9]*)$", MMseqsParameter::COMMAND_PREFILTER|MMseqsParameter::COMMAND_EXPERT),
         PARAM_SPLIT_AMINOACID(PARAM_SPLIT_AMINOACID_ID,"--split-aa", "Split by amino acid","Try to find the best split for the target database by amino acid count instead",typeid(bool), (void *) &splitAA, "$", MMseqsParameter::COMMAND_EXPERT),
         PARAM_SUB_MAT(PARAM_SUB_MAT_ID,"--sub-mat", "Sub Matrix", "amino acid substitution matrix file",typeid(std::string),(void *) &scoringMatrixFile, "", MMseqsParameter::COMMAND_COMMON|MMseqsParameter::COMMAND_EXPERT),
@@ -115,10 +115,9 @@ Parameters::Parameters():
         PARAM_ORF_MIN_LENGTH(PARAM_ORF_MIN_LENGTH_ID, "--min-length", "Min codons in orf", "minimum codon number in open reading frames",typeid(int),(void *) &orfMinLength, "^[1-9]{1}[0-9]*$"),
         PARAM_ORF_MAX_LENGTH(PARAM_ORF_MAX_LENGTH_ID, "--max-length", "Max codons in length", "maximum codon number in open reading frames",typeid(int),(void *) &orfMaxLength, "^[1-9]{1}[0-9]*$"),
         PARAM_ORF_MAX_GAP(PARAM_ORF_MAX_GAP_ID, "--max-gaps", "Max orf gaps", "maximum number of codons with gaps or unknown residues before an open reading frame is rejected",typeid(int),(void *) &orfMaxGaps, "^(0|[1-9]{1}[0-9]*)$"),
-        PARAM_ORF_SKIP_INCOMPLETE(PARAM_ORF_SKIP_INCOMPLETE_ID,"--skip-incomplete", "Skip incomplete orfs", "Skip orfs that have only an end or only a start codon or neither of those",typeid(bool),(void *) &orfSkipIncomplete, ""),
-        PARAM_ORF_SKIP_INCOMPLETE_START(PARAM_ORF_SKIP_INCOMPLETE_START_ID,"--skip-incomplete-start", "Skip incomplete start orfs", "Skip orfs that have a start codon without stop before",typeid(bool),(void *) &orfSkipIncompleteStart, ""),
-        PARAM_ORF_SKIP_COMPLETE_END(PARAM_ORF_SKIP_COMPLETE_END_ID,"--skip-complete-end", "Skip complete end orfs", "Skip orfs that have a complete end codon ",typeid(bool),(void *) &orfSkipCompleteEnd, ""),
-        PARAM_ORF_LONGEST(PARAM_ORF_LONGEST_ID,"--longest-orf", "Find longest orf", "does the first found start codon start an orf (results in the longst possible orf)",typeid(bool),(void *) &orfLongest, ""),
+        PARAM_ORF_START_STATE(PARAM_ORF_START_STATE_ID,"--orf-start-state", "Orf start state", "Orf start can be 0: incomplete, 1: complete, 2: both",typeid(int),(void *) &orfStartState, "^[0-2]{1}"),
+        PARAM_ORF_END_STATE(PARAM_ORF_END_STATE_ID,"--orf-end-state", "Orf end state", "Orf end can be 0: incomplete, 1: complete, 2: both ",typeid(int),(void *) &orfEndState, "^[0-2]{1}"),
+        PARAM_ORF_LONGEST(PARAM_ORF_LONGEST_ID,"--longest-orf", "Find longest orf", "does the first found start codon start an orf (results in the longest possible orf)",typeid(bool),(void *) &orfLongest, ""),
         PARAM_ORF_EXTENDMIN(PARAM_ORF_EXTENDMIN_ID,"--extend-min", "Extend short orfs", "if an orf would be rejected because of the min length threshold, allow it to be extended to the next stop codon",typeid(bool),(void *) &orfExtendMin, ""),
         PARAM_ORF_FORWARD_FRAMES(PARAM_ORF_FORWARD_FRAMES_ID, "--forward-frames", "Forward Frames", "comma-seperated list of ORF frames on the forward strand to be extracted", typeid(std::string), (void *) &forwardFrames, ""),
         PARAM_ORF_REVERSE_FRAMES(PARAM_ORF_REVERSE_FRAMES_ID, "--reverse-frames", "Reverse Frames", "comma-seperated list of ORF frames on the reverse strand to be extracted", typeid(std::string), (void *) &reverseFrames, ""),
@@ -354,10 +353,8 @@ Parameters::Parameters():
     extractorfs.push_back(PARAM_ORF_MIN_LENGTH);
     extractorfs.push_back(PARAM_ORF_MAX_LENGTH);
     extractorfs.push_back(PARAM_ORF_MAX_GAP);
-    extractorfs.push_back(PARAM_ORF_SKIP_INCOMPLETE);
-    extractorfs.push_back(PARAM_ORF_SKIP_INCOMPLETE_START);
-    extractorfs.push_back(PARAM_ORF_SKIP_COMPLETE_END);
-
+    extractorfs.push_back(PARAM_ORF_START_STATE);
+    extractorfs.push_back(PARAM_ORF_END_STATE);
     extractorfs.push_back(PARAM_ORF_LONGEST);
     extractorfs.push_back(PARAM_ORF_EXTENDMIN);
     extractorfs.push_back(PARAM_ORF_FORWARD_FRAMES);
@@ -1068,9 +1065,8 @@ void Parameters::setDefaults() {
     orfMinLength = 1;
     orfMaxLength = INT_MAX;
     orfMaxGaps = INT_MAX;
-    orfSkipIncomplete = false;
-    orfSkipIncompleteStart = false;
-    orfSkipCompleteEnd = false;
+    orfStartState = 2;
+    orfEndState = 2;
     orfLongest = false;
     orfExtendMin = false;
     forwardFrames = "1,2,3";

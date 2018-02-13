@@ -105,21 +105,16 @@ int extractorfs(int argc, const char **argv, const Command& command) {
 
         std::vector<Orf::SequenceLocation> res;
         orf.findAll(res, par.orfMinLength, par.orfMaxLength, par.orfMaxGaps, forwardFrames, reverseFrames, extendMode);
-        bool orfSkipIncompleteStart = false;
-
         for (std::vector<Orf::SequenceLocation>::const_iterator it = res.begin(); it != res.end(); ++it) {
             Orf::SequenceLocation loc = *it;
 
 
             size_t offset = __sync_fetch_and_add(&total, 1);
             id = offset + par.identifierOffset;
-            if (par.orfSkipIncomplete && (loc.hasIncompleteStart || loc.hasIncompleteEnd)){
+            if (par.orfStartState < 2 && (loc.hasIncompleteStart == par.orfStartState)) {
                 continue;
             }
-            if(par.orfSkipIncompleteStart && loc.hasIncompleteStart){
-                continue;
-            }
-            if(par.orfSkipCompleteEnd && (loc.hasIncompleteEnd == false) ){
+            if (par.orfEndState   < 2 && (loc.hasIncompleteEnd   == par.orfEndState)) {
                 continue;
             }
 

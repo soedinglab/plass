@@ -206,9 +206,8 @@ public:
     int orfMinLength;
     int orfMaxLength;
     int orfMaxGaps;
-    bool orfSkipIncomplete;
-    bool orfSkipIncompleteStart;
-    bool orfSkipCompleteEnd;
+    int orfStartState;
+    int orfEndState;
     bool orfLongest;
     bool orfExtendMin;
     std::string forwardFrames;
@@ -477,9 +476,8 @@ public:
     PARAMETER(PARAM_ORF_MIN_LENGTH)
     PARAMETER(PARAM_ORF_MAX_LENGTH)
     PARAMETER(PARAM_ORF_MAX_GAP)
-    PARAMETER(PARAM_ORF_SKIP_INCOMPLETE)
-    PARAMETER(PARAM_ORF_SKIP_INCOMPLETE_START)
-    PARAMETER(PARAM_ORF_SKIP_COMPLETE_END)
+    PARAMETER(PARAM_ORF_START_STATE)
+    PARAMETER(PARAM_ORF_END_STATE)
     PARAMETER(PARAM_ORF_LONGEST)
     PARAMETER(PARAM_ORF_EXTENDMIN)
     PARAMETER(PARAM_ORF_FORWARD_FRAMES)

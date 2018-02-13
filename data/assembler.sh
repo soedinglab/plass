@@ -1,7 +1,5 @@
 #!/bin/bash
 # Assembler workflow script
-calc() { awk "BEGIN{print int($*) }";}
-
 checkReturnCode () {
 	[ $? -ne 0 ] && echo "$1" && exit 1;
 }
@@ -19,7 +17,7 @@ export OMP_PROC_BIND=TRUE
 
 INPUT="$1"
 
-notExists "$3/nucl_6f_start"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_start" --skip-incomplete-start --skip-complete-end --longest-orf --min-length 30 --max-length 45 --max-gaps 0 && checkReturnCode "extractorfs start step died"
+notExists "$3/nucl_6f_start"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_start" --orf-start-state 1 --orf-end-state 0 --longest-orf --min-length 30 --max-length 45 --max-gaps 0 && checkReturnCode "extractorfs start step died"
 notExists "$3/aa_6f_start"  && $MMSEQS translatenucs "$3/nucl_6f_start" "$3/aa_6f_start" --add-orf-stop && checkReturnCode "translatenucs start step died"i
 notExists "$3/nucl_6f_long"  && $MMSEQS extractorfs ${INPUT} "$3/nucl_6f_long" --longest-orf --min-length 45 --max-gaps 0 && checkReturnCode "extractorfs longest step died"
 notExists "$3/aa_6f_long"  && $MMSEQS translatenucs "$3/nucl_6f_long" "$3/aa_6f_long" --add-orf-stop && checkReturnCode "translatenucs long step died"
@@ -30,7 +28,7 @@ INPUT="$3/aa_6f_start_long"
 
 STEP=0
 [ -z "$NUM_IT" ] && NUM_IT=1;
-TOTAL_INPUT_CNT=$(wc -l ${INPUT}".index"|awk '{print $1}')
+#TOTAL_INPUT_CNT=$(wc -l ${INPUT}".index"|awk '{print $1}')
 M=$KMER_PER_SEQ
 MERGEDBSTR=""
 while [ $STEP -lt $NUM_IT ]; do
@@ -53,7 +51,6 @@ while [ $STEP -lt $NUM_IT ]; do
       notExists "$3/assembly_$STEP"         && $MMSEQS assembleresults "$INPUT" "$3/aln_$STEP" "$3/assembly_$STEP" ${ASSEMBLE_RESULT_PAR}  && checkReturnCode "Assembly step died"
     fi
     #CNT=$(wc -l "$3/assembly_${STEP}.index"|awk '{print $1}')
-    #M=$(calc $TOTAL_INPUT_CNT/$CNT*$KMER_PER_SEQ)
     INPUT="$3/assembly_$STEP"
     MERGEDBSTR=" $3/assembly_$STEP"$MERGEDBSTR
     let STEP=STEP+1
