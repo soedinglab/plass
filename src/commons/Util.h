@@ -1,6 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <string>
 #include <cstddef>
 #include <cstring>
 #include <vector>
@@ -9,29 +10,22 @@
 #include <limits>
 
 #include "MMseqsMPI.h"
-#include "Sequence.h"
-#include "BaseMatrix.h"
+
 
 #ifndef EXIT
-#define EXIT(exitCode) exit(exitCode)
+#define EXIT(exitCode) do { int __status = (exitCode); std::cerr.flush(); std::cout.flush(); exit(__status); } while(0)
 #endif
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 
-#if __cplusplus <= 199711L
-#define SSTR( x ) \
-dynamic_cast< std::ostringstream& >( \
-( std::ostringstream().flush() << std::dec << (x) ).str()
-#else
-#ifndef TOSTRINGIDENTITY
-#define TOSTRINGIDENTITY
-namespace tostringidentity {
-    using std::to_string;
-    const std::string& to_string(const std::string& s);
+template<typename T>
+std::string SSTR(T x) {
+    std::string result;
+    std::ostringstream oss;
+    oss << std::dec << (x);
+    result.assign(oss.str());
+    return result;
 }
-#endif
-#define SSTR(x) tostringidentity::to_string((x))
-#endif
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -54,6 +48,9 @@ public:
     static void decomposeDomain(size_t domain_size, size_t world_rank,
                                 size_t world_size, size_t *subdomain_start,
                                 size_t *subdomain_size);
+
+    static void rankedDescSort32(short *val, unsigned int *index);
+
     static void rankedDescSort20(short *val, unsigned int *index);
     template <typename T>
     static void decomposeDomainByAminoAcid(size_t aaSize, T seqSizes, size_t count,
@@ -105,6 +102,22 @@ public:
     }
 
     static std::vector<std::string> split(const std::string &str, const std::string &sep);
+
+    static std::string& implode(const std::vector<std::string> &splits, char sep, std::string& str) {
+        for (std::vector<std::string>::const_iterator it = splits.begin(); it != splits.end(); ++it) {
+            str += (*it);
+            if (it + 1 != splits.end()) {
+                str += sep;
+            }
+        }
+        return str;
+    }
+
+    static std::string implode(const std::vector<std::string> &splits, char sep) {
+        std::string str;
+        implode(splits, sep, str);
+        return str;
+    }
 
     static inline char * skipLine(char * data){
         while( *data !='\n' ) { data++; }
@@ -212,7 +225,11 @@ public:
 
     static std::map<std::string, size_t> readMapping(const char *fastaFile);
 
-    static std::map<unsigned int, std::string> readLookup(const std::string& fastaFile);
+    static std::map<unsigned int, std::string> readLookup(const std::string& lookupFile,
+                                                          const bool removeSplit = false);
+
+    static std::map<std::string, unsigned int> readLookupReverse(const std::string& lookupFile,
+                                                                 const bool removeSplit = false);
 
     static void checkAllocation(void *pointer, std::string message);
 
@@ -235,12 +252,6 @@ public:
         return std::string(&result[0], &result[wp]);
     }
 
-    static size_t maskLowComplexity(BaseMatrix * mat, Sequence *sequence, int seqLen, int windowSize, int maxAAinWindow, int alphabetSize, int maskValue, bool repeates, bool score, bool ccoil, bool window);
-
-    static void filterRepeates(int *seq, int seqLen, char *mask, int p, int W, int MM);
-
-    static void filterByBiasCorrection(Sequence *s, int seqLen, BaseMatrix *m, char *mask, int scoreThr);
-
     static std::string removeAfterFirstSpace(std::string in) {
         in.erase(in.find_first_of(" "));
         return in;
@@ -251,8 +262,25 @@ public:
         return  (kmersPerSize >= 0) ? kmersPerSize + 1 :  0;
     }
 
+
+    template <typename T>
+    static size_t hash(T * x, size_t length){
+        const size_t INITIAL_VALUE = 0;
+        const size_t A = 31;
+        size_t h = INITIAL_VALUE;
+        for (size_t i = 0; i < length; ++i){
+            h = ((h*A) + x[i]);
+        }
+        return h;
+    }
+
+
     static int omp_thread_count();
 
     static std::string removeWhiteSpace(std::string in);
+
+    static bool canBeCovered(const float covThr, const int covMode, float queryLength, float targetLength);
+
+    static bool hasCoverage(float covThr, int covMode, float queryCov, float targetCov);
 };
 #endif

@@ -14,6 +14,14 @@ template <typename T>
 class DBReader {
 
 public:
+
+    static const int DBTYPE_AA = 0;
+    static const int DBTYPE_NUC = 1;
+    static const int DBTYPE_PROFILE = 2;
+    static const int DBTYPE_PROFILE_STATE = 3;
+    static const int PROFILE_STATE_PROFILE = 4; // it is not used but it matches the Sequence definition
+
+
     struct Index {
         T id;
         size_t offset;
@@ -53,6 +61,8 @@ public:
 
     size_t getSeqLens(size_t id);
 
+    size_t maxCount(char c);
+
     void remapData();
 
     size_t bsearch(const Index * index, size_t size, T value);
@@ -64,8 +74,9 @@ public:
     static const int NOSORT = 0;
     static const int SORT_BY_LENGTH = 1;
     static const int LINEAR_ACCCESS = 2;
-    static const int SORT_BY_ID = 3;
-    static const int SORT_BY_LINE = 4; // the local IDs correspond to the line number in the original index file
+    static const int SORT_BY_ID     = 3;
+    static const int SORT_BY_LINE   = 4; // the local IDs correspond to the line number in the original index file
+    static const int SHUFFLE        = 5;
 
     static const int USE_INDEX    = 0;
     static const int USE_DATA     = 1;
@@ -82,7 +93,7 @@ public:
 
     char *mmapData(FILE *file, size_t *dataSize);
 
-    bool readIndex(char *indexFileName, Index *index, char *data, unsigned int *entryLength);
+    bool readIndex(char *indexFileName, Index *index, unsigned int *entryLength);
 
     void readIndexId(T* id, char * line, char** cols);
 
@@ -93,10 +104,6 @@ public:
     void sortIndex(bool isSortedById);
 
     void unmapData();
-
-    FILE* getDatafile(){
-        return dataFile;
-    }
 
     size_t getDataOffset(T i);
 
@@ -115,7 +122,26 @@ public:
 
     static DBReader<unsigned int> *unserialize(const char* data);
 
-private:
+    static int parseDbType(const char *name);
+
+    int getDbtype(){
+        return dbtype;
+    }
+
+    const char* getDbTypeName() {
+        return getDbTypeName(dbtype);
+    }
+
+    static const char* getDbTypeName(int dbtype) {
+        switch(dbtype) {
+            case DBTYPE_AA: return "Aminoacid";
+            case DBTYPE_NUC: return "Nucleotide";
+            case DBTYPE_PROFILE: return "Profile";
+            case DBTYPE_PROFILE_STATE: return "Profile state";
+
+            default: return "Unknown";
+        }
+    }
 
     struct compareIndexLengthPairById {
         bool operator() (const std::pair<Index, unsigned  int>& lhs, const std::pair<Index, unsigned  int>& rhs) const{
@@ -141,6 +167,8 @@ private:
         }
     };
 
+private:
+
     void checkClosed();
 
     char* data;
@@ -151,8 +179,6 @@ private:
 
     char* indexFileName;
 
-    FILE* dataFile;
-
     // number of entries in the index
     size_t size;
     // size of all data stored in ffindex
@@ -161,6 +187,8 @@ private:
     size_t aaDbSize;
     // flag to check if db was closed
     int closed;
+    // stores the dbtype (if dbtype file exists)
+    int dbtype;
 
     Index * index;
 
@@ -179,6 +207,7 @@ private:
 
     // needed to prevent the compiler from optimizing away the loop
     char magicBytes;
+
 };
 
 #endif

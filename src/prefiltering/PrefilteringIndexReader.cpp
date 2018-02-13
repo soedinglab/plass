@@ -5,7 +5,7 @@
 #include "FileUtil.h"
 #include "tantan.h"
 
-const char*  PrefilteringIndexReader::CURRENT_VERSION="4.0.0";
+const char*  PrefilteringIndexReader::CURRENT_VERSION="5.0.0";
 unsigned int PrefilteringIndexReader::VERSION = 0;
 unsigned int PrefilteringIndexReader::META = 1;
 unsigned int PrefilteringIndexReader::SCOREMATRIXNAME = 2;
@@ -22,6 +22,9 @@ unsigned int PrefilteringIndexReader::SEQINDEXDATA = 11;
 unsigned int PrefilteringIndexReader::SEQINDEXDATASIZE = 12;
 unsigned int PrefilteringIndexReader::SEQINDEXSEQOFFSET = 13;
 unsigned int PrefilteringIndexReader::UNMASKEDSEQINDEXDATA = 14;
+unsigned int PrefilteringIndexReader::GENERATOR = 15;
+
+extern const char* version;
 
 bool PrefilteringIndexReader::checkIfIndexFile(DBReader<unsigned int>* reader) {
     char * version = reader->getDataByDBKey(VERSION);
@@ -42,27 +45,32 @@ void PrefilteringIndexReader::createIndexFile(std::string outDB, DBReader<unsign
     DBWriter writer(outIndexName.c_str(), std::string(outIndexName).append(".index").c_str(), 1, DBWriter::BINARY_MODE);
     writer.open();
 
-    if (seqType != Sequence::HMM_PROFILE) {
+    if (seqType != Sequence::HMM_PROFILE||seqType != Sequence::PROFILE_STATE_SEQ ) {
+        int alphabetSize = subMat->alphabetSize;
+        subMat->alphabetSize = subMat->alphabetSize-1;
         ScoreMatrix *s3 = ExtendedSubstitutionMatrix::calcScoreMatrix(*subMat, 3);
+        ScoreMatrix *s2 = ExtendedSubstitutionMatrix::calcScoreMatrix(*subMat, 2);
+        subMat->alphabetSize = alphabetSize;
         char* serialized3mer = ScoreMatrix::serialize(*s3);
         Debug(Debug::INFO) << "Write SCOREMATRIX3MER (" << SCOREMATRIX3MER << ")\n";
         writer.writeData(serialized3mer, ScoreMatrix::size(*s3), SCOREMATRIX3MER, 0);
+        writer.alignToPageSize();
         free(serialized3mer);
         ScoreMatrix::cleanup(s3);
 
-        writer.alignToPageSize();
-
-        ScoreMatrix *s2 = ExtendedSubstitutionMatrix::calcScoreMatrix(*subMat, 2);
         char* serialized2mer = ScoreMatrix::serialize(*s2);
         Debug(Debug::INFO) << "Write SCOREMATRIX2MER (" << SCOREMATRIX2MER << ")\n";
         writer.writeData(serialized2mer, ScoreMatrix::size(*s2), SCOREMATRIX2MER, 0);
+        writer.alignToPageSize();
         free(serialized2mer);
         ScoreMatrix::cleanup(s2);
     }
 
-    Sequence seq(maxSeqLen, subMat->aa2int, subMat->int2aa, seqType, kmerSize, hasSpacedKmer, compBiasCorrection);
-
-    IndexTable *indexTable = new IndexTable(alphabetSize, kmerSize, false);
+    Sequence seq(maxSeqLen, seqType, subMat, kmerSize, hasSpacedKmer, compBiasCorrection);
+    // remove x (not needed in index)
+    int adjustAlphabetSize = (seqType == Sequence::NUCLEOTIDES || seqType == Sequence::AMINO_ACIDS)
+                             ? alphabetSize -1: alphabetSize;
+    IndexTable *indexTable = new IndexTable(adjustAlphabetSize, kmerSize, false);
 
     SequenceLookup *unmaskedLookup = NULL;
     PrefilteringIndexReader::fillDatabase(dbr, &seq, indexTable, subMat,
@@ -76,6 +84,7 @@ void PrefilteringIndexReader::createIndexFile(std::string outDB, DBReader<unsign
     char *entries = (char *) indexTable->getEntries();
     size_t entriesSize = indexTable->getTableEntriesNum() * indexTable->getSizeOfEntry();
     writer.writeData(entries, entriesSize, ENTRIES, 0);
+    writer.alignToPageSize();
 
     // save the size
     Debug(Debug::INFO) << "Write ENTRIESOFFSETS (" << ENTRIESOFFSETS << ")\n";
@@ -83,15 +92,18 @@ void PrefilteringIndexReader::createIndexFile(std::string outDB, DBReader<unsign
     char *offsets = (char*)indexTable->getOffsets();
     size_t offsetsSize = (indexTable->getTableSize() + 1) * sizeof(size_t);
     writer.writeData(offsets, offsetsSize, ENTRIESOFFSETS, 0);
+    writer.alignToPageSize();
     indexTable->deleteEntries();
 
     SequenceLookup *lookup = indexTable->getSequenceLookup();
     Debug(Debug::INFO) << "Write SEQINDEXDATA (" << SEQINDEXDATA << ")\n";
     writer.writeData(lookup->getData(), (lookup->getDataSize() + 1) * sizeof(char), SEQINDEXDATA, 0);
+    writer.alignToPageSize();
 
     if (unmaskedLookup != NULL) {
         Debug(Debug::INFO) << "Write UNMASKEDSEQINDEXDATA (" << UNMASKEDSEQINDEXDATA << ")\n";
         writer.writeData(unmaskedLookup->getData(), (unmaskedLookup->getDataSize() + 1) * sizeof(char), UNMASKEDSEQINDEXDATA, 0);
+        writer.alignToPageSize();
         delete unmaskedLookup;
     }
 
@@ -99,11 +111,13 @@ void PrefilteringIndexReader::createIndexFile(std::string outDB, DBReader<unsign
     int64_t seqindexDataSize = lookup->getDataSize();
     char *seqindexDataSizePtr = (char *) &seqindexDataSize;
     writer.writeData(seqindexDataSizePtr, 1 * sizeof(int64_t), SEQINDEXDATASIZE, 0);
+    writer.alignToPageSize();
 
     size_t *sequenceOffsets = lookup->getOffsets();
     size_t sequenceCount = lookup->getSequenceCount();
     Debug(Debug::INFO) << "Write SEQINDEXSEQOFFSET (" << SEQINDEXSEQOFFSET << ")\n";
     writer.writeData((char *) sequenceOffsets, (sequenceCount + 1) * sizeof(size_t), SEQINDEXSEQOFFSET, 0);
+    writer.alignToPageSize();
 
     // meta data
     // ENTRIESNUM
@@ -111,11 +125,13 @@ void PrefilteringIndexReader::createIndexFile(std::string outDB, DBReader<unsign
     uint64_t entriesNum = indexTable->getTableEntriesNum();
     char *entriesNumPtr = (char *) &entriesNum;
     writer.writeData(entriesNumPtr, 1 * sizeof(uint64_t), ENTRIESNUM, 0);
+    writer.alignToPageSize();
     // SEQCOUNT
     Debug(Debug::INFO) << "Write SEQCOUNT (" << SEQCOUNT << ")\n";
     size_t tablesize = {indexTable->getSize()};
     char *tablesizePtr = (char *) &tablesize;
     writer.writeData(tablesizePtr, 1 * sizeof(size_t), SEQCOUNT, 0);
+    writer.alignToPageSize();
 
     delete indexTable;
 
@@ -126,25 +142,34 @@ void PrefilteringIndexReader::createIndexFile(std::string outDB, DBReader<unsign
     int metadata[] = {kmerSize, alphabetSize, maskMode, local, spacedKmer, kmerThr, seqType, headers};
     char *metadataptr = (char *) &metadata;
     writer.writeData(metadataptr, sizeof(metadata), META, 0);
+    writer.alignToPageSize();
     printMeta(metadata);
 
     Debug(Debug::INFO) << "Write SCOREMATRIXNAME (" << SCOREMATRIXNAME << ")\n";
     writer.writeData(subMat->getMatrixName().c_str(), subMat->getMatrixName().length(), SCOREMATRIXNAME, 0);
+    writer.alignToPageSize();
 
     Debug(Debug::INFO) << "Write VERSION (" << VERSION << ")\n";
     writer.writeData((char *) CURRENT_VERSION, strlen(CURRENT_VERSION) * sizeof(char), VERSION, 0);
+    writer.alignToPageSize();
 
     Debug(Debug::INFO) << "Write DBRINDEX (" << DBRINDEX << ")\n";
     char* data = DBReader<unsigned int>::serialize(*dbr);
     writer.writeData(data, DBReader<unsigned int>::indexMemorySize(*dbr), DBRINDEX, 0);
+    writer.alignToPageSize();
     free(data);
 
     if (hdbr != NULL) {
         Debug(Debug::INFO) << "Write HDRINDEX (" << HDRINDEX << ")\n";
         data = DBReader<unsigned int>::serialize(*hdbr);
         writer.writeData(data, DBReader<unsigned int>::indexMemorySize(*hdbr), HDRINDEX, 0);
+        writer.alignToPageSize();
         free(data);
     }
+
+    Debug(Debug::INFO) << "Write GENERATOR (" << GENERATOR << ")\n";
+    writer.writeData(version, strlen(version), GENERATOR, 0);
+    writer.alignToPageSize();
 
     writer.close();
     Debug(Debug::INFO) << "Done. \n";
@@ -237,7 +262,9 @@ IndexTable *PrefilteringIndexReader::generateIndexTable(DBReader<unsigned int> *
     PrefilteringIndexData data = getMetadata(dbr);
     IndexTable *retTable;
     if (data.local) {
-        retTable = new IndexTable(data.alphabetSize, data.kmerSize, true);
+        int adjustAlphabetSize = (data.seqType == Sequence::NUCLEOTIDES || data.seqType == Sequence::AMINO_ACIDS)
+                                 ? (data.alphabetSize - 1) : data.alphabetSize;
+        retTable = new IndexTable(adjustAlphabetSize, data.kmerSize, true);
     }else {
         Debug(Debug::ERROR) << "Search mode is not valid.\n";
         EXIT(EXIT_FAILURE);
@@ -284,6 +311,12 @@ void PrefilteringIndexReader::printMeta(int *metadata_tmp) {
 
 void PrefilteringIndexReader::printSummary(DBReader<unsigned int> *dbr) {
     Debug(Debug::INFO) << "Index version: " << dbr->getDataByDBKey(VERSION) << "\n";
+
+    size_t id;
+    if ((id = dbr->getId(GENERATOR)) != UINT_MAX) {
+        Debug(Debug::INFO) << "Generated by:  " << dbr->getData(id) << "\n";
+    }
+
     int *metadata_tmp = (int *) dbr->getDataByDBKey(META);
 
     printMeta(metadata_tmp);
@@ -321,7 +354,7 @@ ScoreMatrix *PrefilteringIndexReader::get2MerScoreMatrix(DBReader<unsigned int> 
         dbr->touchData(id);
     }
 
-    return ScoreMatrix::unserialize(data, meta.alphabetSize, 2);
+    return ScoreMatrix::unserialize(data, meta.alphabetSize-1, 2);
 }
 
 ScoreMatrix *PrefilteringIndexReader::get3MerScoreMatrix(DBReader<unsigned int> *dbr, bool touch) {
@@ -332,8 +365,8 @@ ScoreMatrix *PrefilteringIndexReader::get3MerScoreMatrix(DBReader<unsigned int> 
     if (touch) {
         dbr->touchData(id);
     }
-
-    return ScoreMatrix::unserialize(data, meta.alphabetSize, 3);
+    // remove x (not needed in index)
+    return ScoreMatrix::unserialize(data, meta.alphabetSize-1, 3);
 }
 
 std::string PrefilteringIndexReader::searchForIndex(const std::string &pathToDB) {
@@ -359,7 +392,6 @@ void PrefilteringIndexReader::fillDatabase(DBReader<unsigned int> *dbr, Sequence
                                            int kmerThr, unsigned int threads) {
     Debug(Debug::INFO) << "Index table: counting k-mers...\n";
     // fill and init the index table
-    size_t aaCount = 0;
     dbTo = std::min(dbTo, dbr->getSize());
     size_t maskedResidues = 0;
     size_t totalKmerCount = 0;
@@ -367,27 +399,32 @@ void PrefilteringIndexReader::fillDatabase(DBReader<unsigned int> *dbr, Sequence
 
     size_t dbSize = dbTo - dbFrom;
     size_t *sequenceOffSet = new size_t[dbSize];
+
+    const bool isProfileStateSeq = seq->getSeqType() == Sequence::PROFILE_STATE_SEQ;
+
     // identical scores for memory reduction code
     char *idScoreLookup = new char[subMat->alphabetSize];
-    for (int aa = 0; aa < subMat->alphabetSize; aa++){
-        short score = subMat->subMatrix[aa][aa];
-        if (score > CHAR_MAX || score < CHAR_MIN) {
-            Debug(Debug::WARNING) << "Truncating substitution matrix diagonal score!";
+    if(isProfileStateSeq == false){
+        for (int aa = 0; aa < subMat->alphabetSize; aa++){
+            short score = subMat->subMatrix[aa][aa];
+            if (score > CHAR_MAX || score < CHAR_MIN) {
+                Debug(Debug::WARNING) << "Truncating substitution matrix diagonal score!";
+            }
+            idScoreLookup[aa] = (char) score;
         }
-        idScoreLookup[aa] = (char) score;
     }
-
     // need to prune low scoring k-mers
     // masking code
-    SubstitutionMatrix mat("blosum62.out", 2.0, 0.0);
     double probMatrix[subMat->alphabetSize][subMat->alphabetSize];
     const double **probMatrixPointers = new const double*[subMat->alphabetSize];
     char hardMaskTable[256];
-    std::fill_n(hardMaskTable, 256, subMat->aa2int[(int) 'X']);
-    for (int i = 0; i < subMat->alphabetSize; ++i){
-        probMatrixPointers[i] = probMatrix[i];
-        for (int j = 0; j < subMat->alphabetSize; ++j){
-            probMatrix[i][j]  = subMat->probMatrix[i][j] / (subMat->pBack[i] * subMat->pBack[j]);
+    if(isProfileStateSeq == false) {
+        std::fill_n(hardMaskTable, 256, subMat->aa2int[(int) 'X']);
+        for (int i = 0; i < subMat->alphabetSize; ++i) {
+            probMatrixPointers[i] = probMatrix[i];
+            for (int j = 0; j < subMat->alphabetSize; ++j) {
+                probMatrix[i][j] = subMat->probMatrix[i][j] / (subMat->pBack[i] * subMat->pBack[j]);
+            }
         }
     }
 
@@ -421,63 +458,79 @@ void PrefilteringIndexReader::fillDatabase(DBReader<unsigned int> *dbr, Sequence
 
 #pragma omp parallel
     {
-        Indexer idxer(static_cast<unsigned int>(subMat->alphabetSize), seq->getKmerSize());
-        Sequence s(seq->getMaxLen(), seq->aa2int, seq->int2aa,
-                   seq->getSeqType(), seq->getKmerSize(), seq->isSpaced(), false);
+        Indexer idxer(static_cast<unsigned int>(indexTable->getAlphabetSize()), seq->getKmerSize());
+        Sequence s(seq->getMaxLen(), seq->getSeqType(), subMat, seq->getKmerSize(), seq->isSpaced(), false);
 
         KmerGenerator *generator = NULL;
         if (isProfile) {
-            generator = new KmerGenerator(seq->getKmerSize(), subMat->alphabetSize, kmerThr);
+            generator = new KmerGenerator(seq->getKmerSize(), indexTable->getAlphabetSize(), kmerThr);
             generator->setDivideStrategy(s.profile_matrix);
         }
 
         unsigned int * buffer = new unsigned int[seq->getMaxLen()];
         char * charSequence = new char[seq->getMaxLen()];
-#pragma omp for schedule(dynamic, 100) reduction(+:aaCount, totalKmerCount, maskedResidues)
+
+#pragma omp for schedule(dynamic, 100) reduction(+:totalKmerCount, maskedResidues)
         for (size_t id = dbFrom; id < dbTo; id++) {
             s.resetCurrPos();
             Debug::printProgress(id - dbFrom);
             char *seqData = dbr->getData(id);
             unsigned int qKey = dbr->getDbKey(id);
             s.mapSequence(id - dbFrom, qKey, seqData);
+
             if (maskMode == 2) {
-                (*unmaskedLookup)->addSequence(&s, id - dbFrom, sequenceOffSet[id - dbFrom]);
+
+                if (isProfile) {
+                    (*unmaskedLookup)->addSequence(s.int_consensus_sequence, s.L, id - dbFrom, sequenceOffSet[id - dbFrom]);
+                }else{
+                    (*unmaskedLookup)->addSequence(s.int_sequence, s.L, id - dbFrom, sequenceOffSet[id - dbFrom]);
+                }
             }
+
             // count similar or exact k-mers based on sequence type
             if (isProfile) {
                 totalKmerCount += indexTable->addSimilarKmerCount(&s, generator, &idxer, kmerThr, idScoreLookup);
-            } else {
-                if (maskMode == 1) {
-                    for (int i = 0; i < s.L; i++) {
-                        charSequence[i] = (char) s.int_sequence[i];
-                    }
-                    maskedResidues += tantan::maskSequences(charSequence,
-                                                            charSequence + s.L,
-                                                            50 /*options.maxCycleLength*/,
-                                                            probMatrixPointers,
-                                                            0.005 /*options.repeatProb*/,
-                                                            0.05 /*options.repeatEndProb*/,
-                                                            0.9 /*options.repeatOffsetProbDecay*/,
-                                                            0, 0,
-                                                            0.9 /*options.minMaskProb*/,
-                                                            hardMaskTable);
-                    for (int i = 0; i < s.L; i++) {
-                        s.int_sequence[i] = charSequence[i];
-                    }
-//                maskedResidues += Util::maskLowComplexity(subMat, &s, s.L, 12, 3,
-//                                                          indexTable->getAlphabetSize(), seq->aa2int[(unsigned char) 'X'], true, true, true, true);
-                }
-                aaCount += s.L;
-                totalKmerCount += indexTable->addKmerCount(&s, &idxer, buffer, kmerThr, idScoreLookup);
-            }
+            } else { // Find out if we should also mask profiles
+                if (maskMode == 1 || maskMode == 2) {
+                    // Do not mask if column state sequences are used
+                    if(isProfileStateSeq == false) {
+                        for (int i = 0; i < s.L; ++i) {
+                            charSequence[i] = (char) s.int_sequence[i];
+                        }
+//                        s.print();
+                        maskedResidues += tantan::maskSequences(charSequence,
+                                                                charSequence + s.L,
+                                                                50 /*options.maxCycleLength*/,
+                                                                probMatrixPointers,
+                                                                0.005 /*options.repeatProb*/,
+                                                                0.05 /*options.repeatEndProb*/,
+                                                                0.9 /*options.repeatOffsetProbDecay*/,
+                                                                0, 0,
+                                                                0.9 /*options.minMaskProb*/,
+                                                                hardMaskTable);
 
-            sequenceLookup->addSequence(&s, id - dbFrom, sequenceOffSet[id - dbFrom]);
+                        for (int i = 0; i < s.L; i++) {
+                            s.int_sequence[i] = charSequence[i];
+                        }
+                    }
+                }
+
+
+//                if (!isProfile) {
+                totalKmerCount += indexTable->addKmerCount(&s, &idxer, buffer, kmerThr, idScoreLookup);
+//                }
+            }
+            if (isProfile) {
+                sequenceLookup->addSequence(s.int_consensus_sequence, s.L, id - dbFrom, sequenceOffSet[id - dbFrom]);
+            }else{
+                sequenceLookup->addSequence(s.int_sequence, s.L, id - dbFrom, sequenceOffSet[id - dbFrom]);
+            }
         }
 
         delete [] charSequence;
         delete [] buffer;
 
-        if (generator) {
+        if (generator != NULL) {
             delete generator;
         }
     }
@@ -524,14 +577,13 @@ void PrefilteringIndexReader::fillDatabase(DBReader<unsigned int> *dbr, Sequence
 
 #pragma omp parallel
     {
-        Sequence s(seq->getMaxLen(), seq->aa2int, seq->int2aa,
-                   seq->getSeqType(), seq->getKmerSize(), seq->isSpaced(), false);
-        Indexer idxer(static_cast<unsigned int>(subMat->alphabetSize), seq->getKmerSize());
+        Sequence s(seq->getMaxLen(), seq->getSeqType(), subMat, seq->getKmerSize(), seq->isSpaced(), false);
+        Indexer idxer(static_cast<unsigned int>(indexTable->getAlphabetSize()), seq->getKmerSize());
         IndexEntryLocalTmp * buffer = new IndexEntryLocalTmp[seq->getMaxLen()];
 
         KmerGenerator *generator = NULL;
         if (isProfile) {
-            generator = new KmerGenerator(seq->getKmerSize(), subMat->alphabetSize, kmerThr);
+            generator = new KmerGenerator(seq->getKmerSize(), indexTable->getAlphabetSize(), kmerThr);
             generator->setDivideStrategy(s.profile_matrix);
         }
 
@@ -541,7 +593,7 @@ void PrefilteringIndexReader::fillDatabase(DBReader<unsigned int> *dbr, Sequence
             Debug::printProgress(id - dbFrom);
 
             unsigned int qKey = dbr->getDbKey(id);
-            if (seq->getSeqType() == Sequence::HMM_PROFILE) {
+            if (isProfile) {
                 char *seqData = dbr->getData(id);
                 s.mapSequence(id - dbFrom, qKey, seqData);
                 indexTable->addSimilarSequence(&s, generator, &idxer, kmerThr, idScoreLookup);
@@ -555,6 +607,12 @@ void PrefilteringIndexReader::fillDatabase(DBReader<unsigned int> *dbr, Sequence
         if (generator) {
             delete generator;
         }
+    }
+#pragma omp parallel for
+    for (size_t i = 0; i < indexTable->getTableSize(); i++) {
+        size_t entrySize;
+        IndexEntryLocal * entries = indexTable->getDBSeqList(i, &entrySize);
+        std::sort(entries, entries + entrySize, IndexEntryLocal::comapreByIdAndPos);
     }
     if (diagonalScoring == false) {
         delete sequenceLookup;

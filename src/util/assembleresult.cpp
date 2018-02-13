@@ -30,12 +30,12 @@ public:
             return true;
         if(r2.seqId < r1.seqId )
             return false;
-      /*  int seqLen1 = r1.qEndPos - r1.qStartPos;
-        int seqLen2 = r2.qEndPos - r2.qStartPos;
-        if(seqLen1 < seqLen2)
-            return true;
-        if(seqLen2 < seqLen1 )
-            return false;*/
+        /*  int seqLen1 = r1.qEndPos - r1.qStartPos;
+          int seqLen2 = r2.qEndPos - r2.qStartPos;
+          if(seqLen1 < seqLen2)
+              return true;
+          if(seqLen2 < seqLen1 )
+              return false;*/
         return false;
     }
 };
@@ -99,8 +99,8 @@ int doassembly(Parameters &par) {
                 bool queryCouldBeExtendedLeft = false;
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-                  alnQueue.push(alignments[alnIdx]);
-                  if (alignments.size() > 1)
+                    alnQueue.push(alignments[alnIdx]);
+                    if (alignments.size() > 1)
                         __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(alignments[alnIdx].dbKey)],
                                             static_cast<unsigned char>(0x40));
                 }
@@ -137,7 +137,7 @@ int doassembly(Parameters &par) {
                     if (diagonal >= 0) {
 //                    targetSeq.mapSequence(targetId, besttHitToExtend.dbKey, dbSeq);
                         size_t diagonalLen = std::min(targetSeqLen, querySeqLen - abs(diagonal));
-                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstituionStartEndDistance(
+                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
                                 querySeq + abs(diagonal),
                                 targetSeq, diagonalLen, fastMatrix.matrix);
                         qStartPos = alignment.startPos + dist;
@@ -146,7 +146,7 @@ int doassembly(Parameters &par) {
                         dbEndPos = alignment.endPos;
                     } else {
                         size_t diagonalLen = std::min(targetSeqLen - abs(diagonal), querySeqLen);
-                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstituionStartEndDistance(
+                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
                                 querySeq,
                                 targetSeq + abs(diagonal),
                                 diagonalLen, fastMatrix.matrix);
@@ -230,11 +230,11 @@ int doassembly(Parameters &par) {
 #ifdef OPENMP
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
-     //   bool couldExtend =  (wasExtended[id] & 0x10);
+        //   bool couldExtend =  (wasExtended[id] & 0x10);
         bool isNotContig =  !(wasExtended[id] & 0x20);
         bool wasNotUsed =  !(wasExtended[id] & 0x40);
         bool wasNotExtended =  !(wasExtended[id] & 0x80);
-    //    bool wasUsed    =  (wasExtended[id] & 0x40);
+        //    bool wasUsed    =  (wasExtended[id] & 0x40);
         //if(isNotContig && wasNotExtended ){
         if(isNotContig ){
             char *querySeqData = sequenceDbr->getData(id);
@@ -243,7 +243,7 @@ int doassembly(Parameters &par) {
         }
     }
 // cleanup
-    resultWriter.close();
+    resultWriter.close(DBReader<unsigned int>::DBTYPE_AA);
     alnReader->close();
     delete [] wasExtended;
     delete alnReader;

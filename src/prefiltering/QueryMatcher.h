@@ -34,10 +34,18 @@ struct hit_t {
     unsigned int seqId;
     float pScore;
     unsigned short diagonal;
-    unsigned char prefScore;
+    unsigned short prefScore;
 
-    static bool compareHitsByPValue(hit_t first, hit_t second){
-        return (first.pScore > second.pScore) ? true : false;
+    static bool compareHitsByPValueAndId(hit_t first, hit_t second){
+        if(first.pScore > second.pScore )
+            return true;
+        if(second.pScore > first.pScore )
+            return false;
+        if(first.seqId < second.seqId )
+            return true;
+        if(second.seqId < first.seqId )
+            return false;
+        return false;
     }
 
     static bool compareHitsByDiagonalScore(hit_t first, hit_t second){
@@ -137,14 +145,6 @@ public:
             data = Util::skipLine(data);
         }
         return ret;
-    }
-
-
-    static std::string prefilterHitToString(hit_t h)
-    {
-        std::ostringstream resStream;
-        resStream << h.seqId << '\t' << static_cast<int>(h.pScore) << '\t' << (short) h.diagonal << '\n';
-        return resStream.str();
     }
 
     static size_t prefilterHitToBuffer(char *buff1, hit_t &h)
@@ -251,6 +251,7 @@ protected:
                                          size_t maxHitPerQuery,
                                          const int l, const unsigned int id,
                                          const unsigned short thr,
+                                         UngappedAlignment *ungappedAlignment,
                                          const bool diagonalScoring);
     // compute double hits
     size_t getDoubleDiagonalMatches();
@@ -271,7 +272,7 @@ protected:
 
     size_t keepMaxScoreElementOnly(CounterResult *foundDiagonals, size_t resultSize);
 
-    void radixSortByScoreSize(const unsigned int *scoreSizes,
+    size_t radixSortByScoreSize(const unsigned int *scoreSizes,
                               CounterResult *writePos, const unsigned int scoreThreshold,
                               const CounterResult *results, const size_t resultSize);
 };

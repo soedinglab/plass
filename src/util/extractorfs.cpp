@@ -79,16 +79,16 @@ int extractorfs(int argc, const char **argv, const Command& command) {
         extendMode |= Orf::EXTEND_END;
 
     unsigned int total = 0;
-    #pragma omp parallel for schedule(dynamic, 10) shared(total) 
+#pragma omp parallel for schedule(dynamic, 10) shared(total)
 
     for (unsigned int i = 0; i < reader.getSize(); ++i){
         unsigned int id;
         Orf orf;
         Debug::printProgress(i);
         int thread_idx = 0;
-        #ifdef OPENMP
+#ifdef OPENMP
         thread_idx = omp_get_thread_num();
-        #endif
+#endif
 
         std::string data(reader.getData(i));
         // remove newline in sequence
@@ -121,13 +121,8 @@ int extractorfs(int argc, const char **argv, const Command& command) {
             }
             if(par.orfSkipCompleteEnd && (loc.hasIncompleteEnd == false) ){
                 continue;
-            }          
-            if(par.orfSkipNoEnd && (loc.hasIncompleteEnd) ){
-                continue;
             }
-            if(par.orfSkipStart && (loc.hasIncompleteStart == false) ){
-                continue;
-            }
+
             char buffer[LINE_MAX];
             snprintf(buffer, LINE_MAX, "%s [Orf: %zu, %zu, %d, %d, %d]\n", header.c_str(), loc.from, loc.to, loc.strand, loc.hasIncompleteStart, loc.hasIncompleteEnd);
 
@@ -141,13 +136,13 @@ int extractorfs(int argc, const char **argv, const Command& command) {
             sequenceWriter.writeData(sequence.c_str(), sequence.length(), id, thread_idx);
         }
     }
-    
+
 
     headerWriter.close();
-    sequenceWriter.close();
+    sequenceWriter.close(DBReader<unsigned int>::DBTYPE_NUC);
     headerReader.close();
     reader.close();
-    
+
     return EXIT_SUCCESS;
 }
 

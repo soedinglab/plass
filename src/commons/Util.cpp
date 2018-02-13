@@ -5,6 +5,7 @@
 #include "BaseMatrix.h"
 #include "SubstitutionMatrix.h"
 #include "Sequence.h"
+#include "Parameters.h"
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -18,10 +19,6 @@
 #include <algorithm>
 
 KSEQ_INIT(int, read)
-
-const std::string& tostringidentity::to_string(const std::string& s) {
-    return s;
-}
 
 size_t Util::countLines(const char *data, size_t length) {
     size_t newlines = 0;
@@ -119,6 +116,43 @@ template
 void Util::decomposeDomainByAminoAcid<size_t*>(size_t aaSize, size_t *seqSizes,
                                                size_t count, size_t worldRank, size_t worldSize,
                                                size_t *start, size_t *size);
+
+
+
+
+// http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=20&algorithm=batcher&output=svg
+// sorting networks
+void Util::rankedDescSort32(short *val, unsigned int *index){
+#define SWAP(x,y){\
+if( val[x] < val[y] ){   \
+short tmp1 = val[x];    \
+val[x] = val[y];     \
+val[y] = tmp1;        \
+unsigned int tmp2 = index[x];      \
+index[x] = index[y]; \
+index[y] = tmp2;      \
+} \
+}
+    SWAP(0,16);SWAP(1,17);SWAP(2,18);SWAP(3,19);SWAP(4,20);SWAP(5,21);SWAP(6,22);SWAP(7,23);SWAP(8,24);SWAP(9,25);SWAP(10,26);SWAP(11,27);
+    SWAP(12,28);SWAP(13,29);SWAP(14,30);SWAP(15,31);SWAP(0,8);SWAP(1,9);SWAP(2,10);SWAP(3,11);SWAP(4,12);SWAP(5,13);SWAP(6,14);SWAP(7,15);
+    SWAP(16,24);SWAP(17,25);SWAP(18,26);SWAP(19,27);SWAP(20,28);SWAP(21,29);SWAP(22,30);SWAP(23,31);SWAP(8,16);SWAP(9,17);SWAP(10,18);
+    SWAP(11,19);SWAP(12,20);SWAP(13,21);SWAP(14,22);SWAP(15,23);SWAP(0,4);SWAP(1,5);SWAP(2,6);SWAP(3,7);SWAP(24,28);SWAP(25,29);SWAP(26,30);
+    SWAP(27,31);SWAP(8,12);SWAP(9,13);SWAP(10,14);SWAP(11,15);SWAP(16,20);SWAP(17,21);SWAP(18,22);SWAP(19,23);SWAP(0,2);SWAP(1,3);SWAP(28,30);
+    SWAP(29,31);SWAP(4,16);SWAP(5,17);SWAP(6,18);SWAP(7,19);SWAP(12,24);SWAP(13,25);SWAP(14,26);SWAP(15,27);SWAP(0,1);SWAP(30,31);
+    SWAP(4,8);SWAP(5,9);SWAP(6,10);SWAP(7,11);SWAP(12,16);SWAP(13,17);SWAP(14,18);SWAP(15,19);SWAP(20,24);SWAP(21,25);SWAP(22,26);SWAP(23,27);
+    SWAP(4,6);SWAP(5,7);SWAP(8,10);SWAP(9,11);SWAP(12,14);SWAP(13,15);SWAP(16,18);SWAP(17,19);SWAP(20,22);SWAP(21,23);SWAP(24,26);SWAP(25,27);
+    SWAP(2,16);SWAP(3,17);SWAP(6,20);SWAP(7,21);SWAP(10,24);SWAP(11,25);SWAP(14,28);SWAP(15,29);
+    SWAP(2,8);SWAP(3,9);SWAP(6,12);SWAP(7,13);SWAP(10,16);SWAP(11,17);SWAP(14,20);SWAP(15,21);SWAP(18,24);SWAP(19,25);SWAP(22,28);SWAP(23,29);
+    SWAP(2,4);SWAP(3,5);SWAP(6,8);SWAP(7,9);SWAP(10,12);SWAP(11,13);SWAP(14,16);SWAP(15,17);SWAP(18,20);SWAP(19,21);SWAP(22,24);SWAP(23,25);
+    SWAP(26,28);SWAP(27,29);SWAP(2,3);SWAP(4,5);SWAP(6,7);SWAP(8,9);SWAP(10,11);SWAP(12,13);SWAP(14,15);SWAP(16,17);SWAP(18,19);SWAP(20,21);
+    SWAP(22,23);SWAP(24,25);SWAP(26,27);SWAP(28,29);SWAP(1,16);SWAP(3,18);SWAP(5,20);SWAP(7,22);SWAP(9,24);SWAP(11,26);SWAP(13,28);SWAP(15,30);
+    SWAP(1,8);SWAP(3,10);SWAP(5,12);SWAP(7,14);SWAP(9,16);SWAP(11,18);SWAP(13,20);SWAP(15,22);SWAP(17,24);SWAP(19,26);SWAP(21,28);SWAP(23,30);
+    SWAP(1,4);SWAP(3,6);SWAP(5,8);SWAP(7,10);SWAP(9,12);SWAP(11,14);SWAP(13,16);SWAP(15,18);SWAP(17,20);SWAP(19,22);SWAP(21,24);SWAP(23,26);
+    SWAP(25,28);SWAP(27,30);SWAP(1,2);SWAP(3,4);SWAP(5,6);SWAP(7,8);SWAP(9,10);SWAP(11,12);SWAP(13,14);SWAP(15,16);SWAP(17,18);SWAP(19,20);
+    SWAP(21,22);SWAP(23,24);SWAP(25,26);SWAP(27,28);SWAP(29,30);
+#undef SWAP
+}
+
 
 // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=20&algorithm=batcher&output=svg
 // sorting networks
@@ -368,104 +402,11 @@ const float     aasd100[20] =
                 3.77,3.64,1.71,2.62,3.00,3.63,2.83,1.32,2.18,2.92
         };
 
-void Util::filterRepeates(int *seq, int seqLen, char *mask, int p, int W, int MM){
-    char id[1000];
-    for (int j=0; j<W; j++){
-        id[j]=0;
-    }
-    int sum = 0;         // number of identities
-    int j = 0;
-    for (int i = p; i < seqLen; i++)
-    {
-        sum -= id[j];
-        id[j] = ( seq[i - p] == seq[i] ? 1 : 0 );
-        sum += id[j];
-        if (sum >= W - MM)
-            for (int k = std::max(0,i - W - p + 1); k <= i; k++){
-                mask[k] = 1;
-            }
-        if (++j >= W) {
-            j=0;
-        }
-    }
-}
-size_t Util::maskLowComplexity(BaseMatrix * m, Sequence *s,
-                               int seqLen,
-                               int windowSize,
-                               int maxAAinWindow,
-                               int alphabetSize, int maskValue,
-                               bool repeates=true, bool score =true,
-                               bool ccoil=true, bool window =true) {
-    size_t aafreq[21];
 
-    char * mask = new char[seqLen];
-    memset(mask, 0, seqLen * sizeof(char));
-
-    if(repeates){
-        // Filter runs of 4 identical residues
-        filterRepeates(s->int_sequence, seqLen, mask, 1, 4, 0);
-        //
-        //    // Filter runs of 4 doublets with a maximum of one mismatch
-        filterRepeates(s->int_sequence, seqLen, mask, 2, 8, 1);
-        //
-        //    // Filter runs of 4 triplets with a maximum of two mismatches
-        filterRepeates(s->int_sequence, seqLen, mask, 3, 9, 2);
-    }
-    if(score){
-        filterByBiasCorrection(s, seqLen, m, mask, 70);
-    }
-    if(window){
-
-        // filter low complex
-        for (int i = 0; i < seqLen - windowSize; i++)
-        {
-            for (int j = 0; j < alphabetSize; j++){
-                aafreq[j] = 0;
-            }
-            for (int j = 0; j < windowSize; j++){
-                aafreq[s->int_sequence[i + j]]++;
-            }
-            int n = 0;
-            for (int j = 0; j < alphabetSize; j++){
-                if (aafreq[j]){
-                    n++; // count # amino acids
-                }
-            }
-            if (n <= maxAAinWindow)
-            {
-                for (int j = 0; j < windowSize; j++)
-                    mask[i + j] = 1;
-            }
-        }
-    }
-    if(ccoil){
-        // filter coil
-        // look at 3 possible coils -> 21 pos (3 * 7)
-        for (int i = 0; i < seqLen - 21; i++)
-        {
-            int tot = 0;
-            for (int l = 0; l < 21; l++)
-                tot += ccoilmat[s->int_sequence[i + l]][l % 7];
-            if (tot > 10000)
-            {
-                for (int l = 0; l < 21; l++)
-                    mask[i + l] = 1;
-            }
-        }
-    }
-    size_t maskedResidues = 0;
-    for (int i = 0; i < seqLen; i++){
-        maskedResidues += (mask[i]);
-        s->int_sequence[i] = (mask[i]) ? maskValue : s->int_sequence[i];
-    }
-    delete [] mask;
-    return maskedResidues;
-}
-
-std::map<unsigned int, std::string> Util::readLookup(const std::string& file) {
+std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const bool removeSplit) {
     std::map<unsigned int, std::string> mapping;
     if (file.length() > 0) {
-        std::fstream mappingStream(file);
+        std::ifstream mappingStream(file);
         if (mappingStream.fail()) {
             Debug(Debug::ERROR) << "File " << file << " not found!\n";
             EXIT(EXIT_FAILURE);
@@ -475,40 +416,46 @@ std::map<unsigned int, std::string> Util::readLookup(const std::string& file) {
         while (std::getline(mappingStream, line)) {
             std::vector<std::string> split = Util::split(line, "\t");
             unsigned int id = strtoul(split[0].c_str(), NULL, 10);
-            mapping.emplace(id, split[1]);
+
+            std::string& name = split[1];
+
+            size_t pos;
+            if (removeSplit && (pos = name.find_last_of('_')) != std::string::npos) {
+                name = name.substr(0, pos);
+            }
+
+            mapping.emplace(id, name);
         }
     }
 
     return mapping;
 }
 
-void Util::filterByBiasCorrection(Sequence *s, int seqLen, BaseMatrix *m, char *mask, int scoreThr) {
-    char * compositionBias = new char[seqLen];
-    float * tmp_composition_bias = new float[seqLen];
-    SubstitutionMatrix::calcLocalAaBiasCorrection(m, s->int_sequence, seqLen, tmp_composition_bias);
-    //const int8_t seed_6_spaced[] = {1, 1, 0, 1, 0, 1, 0, 0, 1, 1}; // better than 11101101
-    const int8_t pos[] = {0, 1, 3, 5, 8, 9}; // better than 11101101
+std::map<std::string, unsigned int> Util::readLookupReverse(const std::string& file, const bool removeSplit) {
+    std::map<std::string, unsigned int> mapping;
+    if (file.length() > 0) {
+        std::ifstream mappingStream(file);
+        if (mappingStream.fail()) {
+            Debug(Debug::ERROR) << "File " << file << " not found!\n";
+            EXIT(EXIT_FAILURE);
+        }
 
-    for(int i = 0; i < seqLen; i++){
-        compositionBias[i] = (int8_t) (tmp_composition_bias[i] < 0.0)
-                             ? tmp_composition_bias[i] - 0.5: tmp_composition_bias[i] + 0.5;
-    }
-    for(int i = 0; i < seqLen - 10; i++){
-        int kmerScore = 0;
-        for (unsigned int kmerPos = 0; kmerPos < 6; kmerPos++) {
-            unsigned int aa_pos = i + pos[kmerPos];
-            unsigned int aa = s->int_sequence[aa_pos];
-            kmerScore += m->subMatrix[aa][aa] + compositionBias[aa_pos];
-        }
-        if(kmerScore <= scoreThr) {
-            for (unsigned int kmerPos = 0; kmerPos < 6; kmerPos++) {
-                unsigned int aa_pos = i +  pos[kmerPos];
-                mask[aa_pos] = 1;
+        std::string line;
+        while (std::getline(mappingStream, line)) {
+            std::vector<std::string> split = Util::split(line, "\t");
+            unsigned int id = strtoul(split[0].c_str(), NULL, 10);
+            std::string& name = split[1];
+
+            size_t pos;
+            if (removeSplit && (pos = name.find_last_of('_')) != std::string::npos) {
+                name = name.substr(0, pos);
             }
+
+            mapping.emplace(name, id);
         }
     }
-    delete [] compositionBias;
-    delete [] tmp_composition_bias;
+
+    return mapping;
 }
 
 int Util::omp_thread_count() {
@@ -523,8 +470,26 @@ std::string Util::removeWhiteSpace(std::string in) {
     return in;
 }
 
+bool Util::canBeCovered(const float covThr, const int covMode, float queryLength, float targetLength) {
+    switch(covMode){
+        case Parameters::COV_MODE_BIDIRECTIONAL:
+            return ((queryLength / targetLength >= covThr) || (targetLength / queryLength >= covThr));
+        case Parameters::COV_MODE_QUERY:
+            return ((targetLength / queryLength) >= covThr);
+        default:
+            return true;
+    }
+}
 
-
-
-
-
+bool Util::hasCoverage(float covThr, int covMode, float queryCov, float targetCov){
+    switch(covMode){
+        case Parameters::COV_MODE_BIDIRECTIONAL:
+            return ((queryCov >= covThr) && (targetCov >= covThr));
+        case Parameters::COV_MODE_QUERY:
+            return (queryCov >= covThr);
+        case Parameters::COV_MODE_TARGET:
+            return (targetCov >= covThr);
+        default:
+            return true;
+    }
+}

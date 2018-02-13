@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
-
+#include <climits> 
 #include "BaseMatrix.h"
 #include "Debug.h"
 
@@ -11,9 +11,10 @@ class ReducedMatrix : public BaseMatrix {
     public:
         ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reducedAlphabetSize, float bitFactor);
         virtual ~ReducedMatrix();
-  void setupLetterMapping() {
-                for(char letter = 0; letter < 'z'; letter++){
-                        char upperLetter = toupper(letter);
+
+        void setupLetterMapping() {
+                for(int letter = 0; letter < UCHAR_MAX; letter++){
+                        char upperLetter = toupper(static_cast<char>(letter));
                         switch(upperLetter){
                                 case 'A':
                                 case 'T':
@@ -36,24 +37,23 @@ class ReducedMatrix : public BaseMatrix {
                                 case 'W':
                                 case 'Y':
                                 case 'X':
-                                        this->aa2int[letter] = this->aa2int[upperLetter];
+                                        this->aa2int[static_cast<int>(letter)] = this->aa2int[static_cast<int>(upperLetter)];
                                 break;
                                 case 'J':
-                                        this->aa2int[letter] = this->aa2int[(int)'L'];
+                                        this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'L'];
                                 break;
                                 case 'U':
                                 case 'O':
-                                        this->aa2int[letter] = this->aa2int[(int)'X'];
+                                        this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'X'];
                                 break;
-                                case 'Z': this->aa2int[letter] = this->aa2int[(int)'E']; break;
-                                case 'B': this->aa2int[letter] = this->aa2int[(int)'D']; break;
+                                case 'Z': this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'E']; break;
+                                case 'B': this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'D']; break;
                                 default:
-                                        this->aa2int[letter] = this->aa2int[(int)'X'];
+                                        this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'X'];
                                 break;
                         }
                 }
         };
-        
     private:
 
         /*contains the original matrix before the alphabet reduction*/

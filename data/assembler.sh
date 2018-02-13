@@ -2,11 +2,11 @@
 # Assembler workflow script
 calc() { awk "BEGIN{print int($*) }";}
 
-checkReturnCode () { 
+checkReturnCode () {
 	[ $? -ne 0 ] && echo "$1" && exit 1;
 }
-notExists () { 
-	[ ! -f "$1" ] 
+notExists () {
+	[ ! -f "$1" ]
 }
 # check amount of input variables
 [ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmp>" && exit 1;
@@ -43,12 +43,12 @@ while [ $STEP -lt $NUM_IT ]; do
     #notExists "$3/pref_$STEP"          && $MMSEQS prefilter "$INPUT" "$INPUT" "$3/pref_$STEP"  -s 3 --max-seqs 10000 --min-ungapped-score 60 && checkReturnCode "Kmer matching step died"
     # 2. Ungapped alignment
     notExists "$3/aln_$STEP" && $MMSEQS rescorediagonal "$INPUT" "$INPUT" "$3/pref_$STEP" "$3/aln_$STEP" ${UNGAPPED_ALN_PAR} && checkReturnCode "Ungapped alignment step died"
-    if [ $STEP -eq 0 ]; then 
+    if [ $STEP -eq 0 ]; then
        notExists "$3/corrected_reads" && $MMSEQS findassemblystart "$INPUT" "$3/aln_$STEP" "$3/corrected_seqs" && checkReturnCode "Findassemblystart alignment step died"
        INPUT="$3/corrected_seqs"
        notExists "$3/aln_corrected_$STEP" && $MMSEQS rescorediagonal "$INPUT" "$INPUT" "$3/pref_$STEP" "$3/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} && checkReturnCode "Ungapped alignment step died"
        notExists "$3/assembly_$STEP"      && $MMSEQS assembleresults "$INPUT" "$3/aln_corrected_$STEP" "$3/assembly_$STEP" ${ASSEMBLE_RESULT_PAR}  && checkReturnCode "Assembly step died"
-    else 
+    else
       # 3. Assemble
       notExists "$3/assembly_$STEP"         && $MMSEQS assembleresults "$INPUT" "$3/aln_$STEP" "$3/assembly_$STEP" ${ASSEMBLE_RESULT_PAR}  && checkReturnCode "Assembly step died"
     fi
@@ -60,8 +60,8 @@ while [ $STEP -lt $NUM_IT ]; do
 done
 
 let STEP=STEP-1
-echo $MERGEDBSTR 
-# merge databases 
+#echo $MERGEDBSTR
+# merge databases
 #$notExists "$3/assembly_${STEP}_merge" && $MMSEQS mergedbs $1 "$3/assembly_${STEP}_merge" $MERGEDBSTR && checkReturnCode "Merge databases step died"
 # first line should be the longest assembled sequence
 #notExists "$3/assembly_${STEP}_filter" && $MMSEQS filterdb "$3/assembly_${STEP}_merge" "$3/assembly_${STEP}_filter" --extract-lines 1 && checkReturnCode "Filter database step died"
@@ -80,7 +80,7 @@ checkReturnCode "Could not move result to $2.index"
 
 if [ -n "$REMOVE_TMP" ]; then
  echo "Remove temporary files"
- rm -f "$3/pref_*" 
- rm -f "$3/aln_*" 
+ rm -f "$3/pref_*"
+ rm -f "$3/aln_*"
  rm -f "$3/assembly*"
 fi

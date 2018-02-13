@@ -28,6 +28,17 @@
 struct __attribute__((__packed__)) IndexEntryLocal {
     unsigned int seqId;
     unsigned short position_j;
+    static bool comapreByIdAndPos(IndexEntryLocal first, IndexEntryLocal second){
+        if(first.seqId < second.seqId )
+            return true;
+        if(second.seqId < first.seqId )
+            return false;
+        if(first.position_j < second.position_j )
+            return true;
+        if(second.position_j < first.position_j )
+            return false;
+        return false;
+    }
 };
 
 struct __attribute__((__packed__)) IndexEntryLocalTmp {
@@ -129,8 +140,20 @@ public:
                         int threshold, char *diagonalScore) {
         s->resetCurrPos();
         size_t countKmer = 0;
+        bool removeX = (s->getSequenceType() == Sequence::NUCLEOTIDES ||
+                        s->getSequenceType() == Sequence::AMINO_ACIDS);
+        const int xIndex = s->subMat->aa2int[(int)'X'];
         while(s->hasNextKmer()){
             const int * kmer = s->nextKmer();
+            if(removeX){
+                int xCount = 0;
+                for(int pos = 0; pos < kmerSize; pos++){
+                    xCount += (kmer[pos] == xIndex);
+                }
+                if(xCount > 0){
+                    continue;
+                }
+            }
             if(threshold > 0){
                 int score = 0;
                 for(int pos = 0; pos < kmerSize; pos++){
@@ -321,9 +344,20 @@ public:
         s->resetCurrPos();
         idxer->reset();
         size_t kmerPos = 0;
+        bool removeX = (s->getSequenceType() == Sequence::NUCLEOTIDES ||
+                        s->getSequenceType() == Sequence::AMINO_ACIDS);
+        const int xIndex = s->subMat->aa2int[(int)'X'];
         while (s->hasNextKmer()){
             const int * kmer = s->nextKmer();
-
+            if(removeX){
+                int xCount = 0;
+                for(int pos = 0; pos < kmerSize; pos++){
+                    xCount += (kmer[pos] == xIndex);
+                }
+                if(xCount > 0){
+                    continue;
+                }
+            }
             if(threshold > 0) {
                 int score = 0;
                 for (int pos = 0; pos < kmerSize; pos++) {

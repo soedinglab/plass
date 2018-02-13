@@ -84,8 +84,8 @@ ReducedMatrix::ReducedMatrix(double **probMatrix, float ** rMatrix, size_t reduc
 
     // map big index to new small index
     Debug(Debug::INFO) << "Reduced amino acid alphabet:\n";
-    int* aa2int_new = new int['z'+1];
-    for (int i = 0; i <= 'z'; ++i){
+    int* aa2int_new = new int[UCHAR_MAX+1];
+    for (int i = 0; i <= UCHAR_MAX; ++i){
         aa2int_new[i] = -1;
     }
     char* int2aa_new = new char[origAlphabetSize];
@@ -287,4 +287,3 @@ void ReducedMatrix::addTwoRows(double ** input, double ** output, size_t size, s
     for (size_t j = 0; j < size; j++)
         output[size-1][j] = 0.0;
 }
-

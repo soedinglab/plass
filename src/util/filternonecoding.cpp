@@ -39,8 +39,8 @@ int filternonecoding(int argc, const char **argv, const Command& command)  {
         Tensor in(56);
         float counter[255];
         std::fill(counter, counter + 255, 1.0);
-        Sequence seq(par.maxSeqLen, subMat.aa2int, subMat.int2aa, Sequence::AMINO_ACIDS, par.kmerSize, false, false);
-        Sequence rseq(par.maxSeqLen, redMat.aa2int, redMat.int2aa, Sequence::AMINO_ACIDS, 2, false, false);
+        Sequence seq(par.maxSeqLen, Sequence::AMINO_ACIDS, &subMat,  par.kmerSize, false, false);
+        Sequence rseq(par.maxSeqLen, Sequence::AMINO_ACIDS, &redMat, 2, false, false);
         Indexer indexer(redMat.alphabetSize, 2);
         float diAACnt[redMat.alphabetSize * redMat.alphabetSize];
         std::fill(diAACnt, diAACnt + redMat.alphabetSize * redMat.alphabetSize, 1.0);
@@ -108,7 +108,7 @@ int filternonecoding(int argc, const char **argv, const Command& command)  {
     }
 //    std::cout << "Filtered: " << static_cast<float>(cnt)/ static_cast<float>(seqDb.getSize()) << std::endl;
     seqDb.close();
-    dbw.close();
+    dbw.close(DBReader<unsigned int>::DBTYPE_AA);
     return 0;
 }
 

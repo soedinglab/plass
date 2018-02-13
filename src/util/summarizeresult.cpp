@@ -13,7 +13,7 @@
 static inline float getOverlap(const std::vector<bool> &covered, unsigned int qStart, unsigned int qEnd) {
     size_t counter = 0;
     for (size_t i = qStart; i < qEnd; ++i) {
-        counter += covered[i];
+        counter += covered[i] ? 1 : 0;
     }
     return static_cast<float>(counter) / static_cast<float>(qEnd - qStart + 1);
 }
@@ -21,7 +21,7 @@ static inline float getOverlap(const std::vector<bool> &covered, unsigned int qS
 std::vector<Matcher::result_t> mapDomains(const std::vector<Matcher::result_t> &input, float overlap, float minCoverage,
                                           double eValThreshold) {
     std::vector<Matcher::result_t> result;
-    if (input.size() == 0) {
+    if (input.empty()) {
         return result;
     }
 
@@ -47,7 +47,7 @@ std::vector<Matcher::result_t> mapDomains(const std::vector<Matcher::result_t> &
         }
         float targetCov = MathUtil::getCoverage(domain.dbStartPos, domain.dbEndPos, domain.dbLen);
         if (percentageOverlap <= overlap && targetCov > minCoverage && domain.eval < eValThreshold) {
-            for (unsigned int j = domain.qStartPos; j < domain.qEndPos; ++j) {
+            for (int j = domain.qStartPos; j < domain.qEndPos; ++j) {
                 covered[j] = true;
             }
             result.push_back(domain);
@@ -69,6 +69,7 @@ int doSummarize(Parameters &par, DBReader<unsigned int> &blastTabReader,
 #pragma omp parallel for schedule(dynamic, 100)
     for (size_t i = dbFrom; i < dbFrom + dbSize; ++i) {
         unsigned int thread_idx = 0;
+        char buffer[1024+32768];
 #ifdef OPENMP
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
@@ -86,14 +87,12 @@ int doSummarize(Parameters &par, DBReader<unsigned int> &blastTabReader,
             Debug(Debug::WARNING) << "Could not map any domains for entry " << id << "!\n";
             continue;
         }
-
-        std::ostringstream oss;
+        std::string annotation;
+        annotation.reserve(1024*1024);
         for (size_t j = 0; j < result.size(); j++) {
-            Matcher::result_t d = result[j];
-            oss << Matcher::resultToString(d, par.addBacktrace);
+            size_t len = Matcher::resultToBuffer(buffer, result[j], par.addBacktrace);
+            annotation.append(buffer, len);
         }
-
-        std::string annotation = oss.str();
         writer.writeData(annotation.c_str(), annotation.length(), id, thread_idx);
     }
     writer.close();

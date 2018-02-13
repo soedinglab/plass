@@ -31,6 +31,8 @@ void UngappedAlignment::processQuery(Sequence *seq,
                                    size_t resultSize,
                                    unsigned int thr) {
     short bias = createProfile(seq, biasCorrection, subMatrix->subMatrix2Bit, subMatrix->alphabetSize);
+    this->bias = bias;
+    queryLen = seq->L;
     computeScores(queryProfile, seq->L, results, resultSize, bias, thr);
 }
 
@@ -47,7 +49,7 @@ int UngappedAlignment::scalarDiagonalScoring(const char * profile,
 //        std::cout << (int) dbSeq[pos] << "\t" << curr << "\t" << max << "\t" << score <<  "\t" << (curr - bias) << std::endl;
         max = (score > max)? score : max;
     }
-    return std::min(max, 255);
+    return max;
 }
 
 #ifdef AVX2
@@ -175,25 +177,15 @@ void UngappedAlignment::scoreDiagonalAndUpdateHits(const char * queryProfile,
         extractScores(score_arr, vMaxScore);
         // update score
         for(size_t hitIdx = 0; hitIdx < hitSize; hitIdx++){
-            hits[hitIdx]->count = normalizeScore(score_arr[hitIdx], seqs[hitIdx].second);
+            hits[hitIdx]->count = score_arr[hitIdx];
         }
 
     }else {
         for (size_t hitIdx = 0; hitIdx < hitSize; hitIdx++) {
             const unsigned int seqId = hits[hitIdx]->id;
             std::pair<const unsigned char *, const unsigned int> dbSeq =  sequenceLookup->getSequence(seqId);
-            int max = 0;
-
-            if(diagonal >= 0 && minDistToDiagonal < queryLen){
-                unsigned int minSeqLen = std::min(dbSeq.second, queryLen - minDistToDiagonal);
-                int scores = scalarDiagonalScoring(queryProfile + (minDistToDiagonal * PROFILESIZE), bias, minSeqLen, dbSeq.first);
-                max = std::max(scores, max);
-            }else if(diagonal < 0 && minDistToDiagonal < dbSeq.second){
-                unsigned int minSeqLen = std::min(dbSeq.second - minDistToDiagonal, queryLen);
-                int scores = scalarDiagonalScoring(queryProfile, bias, minSeqLen, dbSeq.first + minDistToDiagonal);
-                max = std::max(scores, max);
-            }
-            hits[hitIdx]->count = normalizeScore(static_cast<unsigned char>(std::min(255, max)), dbSeq.second);
+            int max = computeSingelSequenceScores(queryProfile,queryLen,dbSeq,diagonal, minDistToDiagonal, bias);
+            hits[hitIdx]->count = static_cast<unsigned char>(std::min(255, max));
         }
     }
 }
@@ -258,21 +250,19 @@ void UngappedAlignment::extractScores(unsigned int *score_arr, simd_int score) {
 #endif
 }
 
-unsigned char UngappedAlignment::normalizeScore(const unsigned char score, const unsigned int len) {
-    //float log2Len = 0.0;
-//MathUtil::flog2(static_cast<float>(len));
-    //float floatScore = static_cast<float>(score);
-    //return static_cast<unsigned char>((log2Len > floatScore) ? 0.0 : (floatScore - log2Len) + 0.5 );
-    return score;
-}
 
 short UngappedAlignment::createProfile(Sequence *seq,
                                      float * biasCorrection,
                                      short **subMat, int alphabetSize) {
     short bias = 0;
     int aaBias = 0;
-    if(seq->getSequenceType() == Sequence::HMM_PROFILE){
-        size_t matSize = seq->L * Sequence::PROFILE_AA_SIZE;
+    if(seq->getSequenceType() == Sequence::HMM_PROFILE || seq->getSequenceType() == Sequence::PROFILE_STATE_PROFILE){
+        size_t matSize = 0;
+        if(seq->getSequenceType() == Sequence::PROFILE_STATE_PROFILE){
+            matSize = seq->L * alphabetSize;
+        }else{
+            matSize= seq->L * Sequence::PROFILE_AA_SIZE;
+        }
         const int8_t * mat = seq->getAlignmentProfile();
         for (size_t i = 0; i < matSize; i++){
             if (mat[i] < bias){
@@ -299,14 +289,17 @@ short UngappedAlignment::createProfile(Sequence *seq,
     bias = abs(bias) + abs(aaBias);
     memset(queryProfile, bias, PROFILESIZE * seq->L);
     // create profile
-    if(seq->getSequenceType() == Sequence::HMM_PROFILE) {
-        const short * profile_score = seq->profile_score;
-        const unsigned int * profile_index = seq->profile_index;
-        const size_t profile_row_size = seq->profile_row_size;
+    if(seq->getSequenceType() == Sequence::HMM_PROFILE||seq->getSequenceType() == Sequence::PROFILE_STATE_PROFILE) {
+        const int8_t * profile_aln = seq->getAlignmentProfile();
         for (int pos = 0; pos < seq->L; pos++) {
-            for (size_t aa_num = 0; aa_num < Sequence::PROFILE_AA_SIZE; aa_num++) {
-                unsigned int aa_idx = profile_index[pos * profile_row_size + aa_num];
-                queryProfile[pos * PROFILESIZE + aa_idx] = (profile_score[pos * profile_row_size + aa_num] / 4) + bias;
+            if(seq->getSequenceType() == Sequence::PROFILE_STATE_PROFILE){
+                for (int aa_num = 0; aa_num < alphabetSize; aa_num++) {
+                    queryProfile[pos * PROFILESIZE + aa_num] = (profile_aln[aa_num * seq->L + pos] ) + bias;
+                }
+            }else{
+                for (size_t aa_num = 0; aa_num < Sequence::PROFILE_AA_SIZE; aa_num++) {
+                    queryProfile[pos * PROFILESIZE + aa_num] = (profile_aln[aa_num * seq->L + pos]) + bias;
+                }
             }
         }
     }else{
@@ -329,6 +322,28 @@ unsigned int UngappedAlignment::diagonalLength(const short diagonal, const unsig
         diagLen = std::min(targetLen - diagonal, queryLen);
     }
     return diagLen;
+}
+
+int UngappedAlignment::computeSingelSequenceScores(const char *queryProfile, const unsigned int queryLen,
+                                                    std::pair<const unsigned char *, const unsigned int> &dbSeq,
+                                                    short diagonal, unsigned short minDistToDiagonal, short bias) {
+    int max = 0;
+    if(diagonal >= 0 && minDistToDiagonal < queryLen){
+        unsigned int minSeqLen = std::min(dbSeq.second, queryLen - minDistToDiagonal);
+        int scores = scalarDiagonalScoring(queryProfile + (minDistToDiagonal * PROFILESIZE), bias, minSeqLen, dbSeq.first);
+        max = std::max(scores, max);
+    }else if(diagonal < 0 && minDistToDiagonal < dbSeq.second){
+        unsigned int minSeqLen = std::min(dbSeq.second - minDistToDiagonal, queryLen);
+        int scores = scalarDiagonalScoring(queryProfile, bias, minSeqLen, dbSeq.first + minDistToDiagonal);
+        max = std::max(scores, max);
+    }
+    return max;
+}
+
+int UngappedAlignment::scoreSingelSequence(CounterResult &result) {
+    std::pair<const unsigned char *, const unsigned int> dbSeq =  sequenceLookup->getSequence(result.id);
+    unsigned short minDistToDiagonal = distanceFromDiagonal(result.diagonal);
+    return computeSingelSequenceScores(queryProfile,queryLen ,dbSeq, result.diagonal, minDistToDiagonal, bias);
 }
 
 

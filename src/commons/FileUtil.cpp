@@ -10,6 +10,7 @@
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <sys/mman.h>
 
 bool FileUtil::fileExists(const char* fileName) {
     struct stat st;
@@ -19,6 +20,35 @@ bool FileUtil::fileExists(const char* fileName) {
 bool FileUtil::directoryExists(const char* directoryName) {
     struct stat st;
     return stat(directoryName, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+bool FileUtil::makeDir(const char* directoryName, const int mode ) {
+    if(mkdir(directoryName, mode) == 0){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+void* FileUtil::mmapFile(FILE * file, size_t *dataSize){
+    struct stat sb;
+    if (fstat(fileno(file), &sb) < 0)
+    {
+        int errsv = errno;
+        Debug(Debug::ERROR) << "Failed to fstat." << ". Error " << errsv << ".\n";
+        EXIT(EXIT_FAILURE);
+    }
+    *dataSize = sb.st_size;
+    int mode = PROT_READ;
+    int fd =  fileno(file);
+
+    void * ret = mmap(NULL, *dataSize, mode, MAP_PRIVATE, fd, 0);
+    if(ret == MAP_FAILED){
+        int errsv = errno;
+        Debug(Debug::ERROR) << "Failed to mmap memory dataSize=" << *dataSize <<". Error " << errsv << ".\n";
+        EXIT(EXIT_FAILURE);
+    }
+    return ret;
 }
 
 FILE* FileUtil::openFileOrDie(const char * fileName, const char * mode, bool shouldExist) {
@@ -65,7 +95,7 @@ void FileUtil::deleteTempFiles(std::list<std::string> tmpFiles) {
 }
 
 void FileUtil::writeFile(std::string pathToFile, const unsigned char *data, size_t len) {
-    int fd = open(pathToFile.c_str(), O_RDWR|O_CREAT, 0700);
+    int fd = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IXUSR);
     if (fd == -1) {
         Debug(Debug::ERROR) << "Could not write file " << pathToFile << "!\n";
         EXIT(EXIT_FAILURE);
@@ -139,3 +169,48 @@ size_t FileUtil::getFileSize(std::string fileName) {
     return rc == 0 ? stat_buf.st_size : -1;
 }
 
+
+bool FileUtil::symlinkExists(const std::string  path)
+{
+    struct stat buf;
+    int result;
+
+    result = lstat(path.c_str(), &buf);
+
+    return (result == 0);
+}
+
+bool FileUtil::symlinkCreateOrRepleace(const std::string linkname, const std::string linkdest) {
+    if(symlinkExists(linkname)==true){
+        if(remove(linkname.c_str()) != 0){
+            return false;
+        }
+    }
+    char *abs_in_header_filename = realpath(linkdest.c_str(), NULL);
+    symlink(abs_in_header_filename, linkname.c_str());
+    free(abs_in_header_filename);
+    return true;
+}
+
+
+void FileUtil::copyFile(const char *src, const char *dst) {
+    //https://stackoverflow.com/questions/10195343/copy-a-file-in-a-sane-safe-and-efficient-way
+    char buf[BUFSIZ];
+    size_t size;
+
+    int source = open(src, O_RDONLY, 0);
+    if (source == -1) {
+        Debug(Debug::ERROR) << "Could not open file " << src << "!\n";
+        EXIT(EXIT_FAILURE);
+    }
+    int dest = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (dest == -1) {
+        Debug(Debug::ERROR) << "Could not open file " << dst << "!\n";
+        EXIT(EXIT_FAILURE);
+    }
+    while ((size = read(source, buf, BUFSIZ)) > 0) {
+        write(dest, buf, size);
+    }
+    close(source);
+    close(dest);
+}

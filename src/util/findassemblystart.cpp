@@ -167,7 +167,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
     }
     // cleanup
     delete [] addStopAtPosition;
-    resultWriter.close();
+    resultWriter.close(DBReader<unsigned int>::DBTYPE_AA);
     resultReader.close();
     qDbr.close();
 

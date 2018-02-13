@@ -7,35 +7,34 @@
 // Represents a database sequence object, holds its representation in the int array form.
 //
 #include "Debug.h"
+#include "MathUtil.h"
+#include "BaseMatrix.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
 
 struct ScoreMatrix;
-const int8_t seed_2[]        = {1, 1};
-const int8_t seed_2_spaced[] = {1, 0, 1};
+
 const int8_t seed_4[]        = {1, 1, 1, 1};
 const int8_t seed_4_spaced[] = {1, 1, 1, 0, 1};
 const int8_t seed_5[]        = {1, 1, 1, 1, 1};
 //const char seed_5_spaced[] = {1, 1, 1, 0, 1, 1};
 //const char seed_5_spaced[] = {1, 1, 0, 1, 0, 1, 1};// better than 111011
-const int8_t seed_5_spaced[] = {1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1}; // just 0.001 %worse ROC5 but way faster
-const int8_t seed_6[]        = {1, 1, 1, 1, 1, 1};
+const int8_t seed_5_spaced[]  = {1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1}; // just 0.001 %worse ROC5 but way faster
+const int8_t seed_6[]         = {1, 1, 1, 1, 1, 1};
 //const char seed_6_spaced[] = {1, 1, 1, 0, 1, 1, 0, 1};
-const int8_t seed_6_spaced[] = {1, 1, 0, 1, 0, 1, 0, 0, 1, 1}; // better than 11101101
-const int8_t seed_7[]        = {1, 1, 1, 1, 1, 1, 1};
+const int8_t seed_6_spaced[]  = {1, 1, 0, 1, 0, 1, 0, 0, 1, 1}; // better than 11101101
+const int8_t seed_7[]         = {1, 1, 1, 1, 1, 1, 1};
 //const char seed_7_spaced[] = {1, 1, 1, 1, 0, 1, 0, 1, 0, 1};
-const int8_t seed_7_spaced[] = {1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1};
-
-
+const int8_t seed_7_spaced[]  = {1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1};
 const int8_t seed_9[]         = {1, 1, 1, 1, 1, 1, 1, 1, 1};
-const int8_t seed_9_spaced[]  = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+const int8_t seed_9_spaced[]  = {1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1};
 const int8_t seed_10[]        = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const int8_t seed_10_spaced[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const int8_t seed_11[]        = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const int8_t seed_11_spaced[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const int8_t seed_12[]        = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-const int8_t seed_12_spaced[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+const int8_t seed_12_spaced[] = {1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1};
 const int8_t seed_13[]        = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const int8_t seed_13_spaced[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const int8_t seed_14[]        = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -51,7 +50,7 @@ const int8_t seed_17_spaced[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 class Sequence
 {
 public:
-    Sequence(size_t maxLen, int *aa2int, char *int2aa, int seqType,
+    Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat,
              const unsigned int kmerSize, const bool spaced, const bool aaBiasCorrection);
     ~Sequence();
 
@@ -62,7 +61,13 @@ public:
     void mapSequence(size_t id, unsigned int dbKey, std::pair<const unsigned char *, const unsigned int> data);
 
     // map profile HMM, *data points to start position of Profile
-    void mapProfile(const char *data);
+    void mapProfile(const char *sequence, bool mapScores);
+
+    // mixture of library and profile prob
+    void mapProfileState(const char *sequence);
+
+    // map the profile state sequence
+    void mapProfileStateSequence(const char *sequence);
 
     // checks if there is still a k-mer left
     bool hasNextKmer() {
@@ -133,7 +138,7 @@ public:
                             break;
                     }
 
-                    if(seqType == HMM_PROFILE) {
+                    if(seqType == HMM_PROFILE||seqType==PROFILE_STATE_PROFILE) {
                             nextProfileKmer();
                             for(unsigned int i = 0; i < this->kmerSize; i++) {
                                     kmerWindow[i] = 0;
@@ -170,6 +175,12 @@ public:
     static const int AMINO_ACIDS = 0;
     static const int NUCLEOTIDES = 1;
     static const int HMM_PROFILE = 2;
+    static const int PROFILE_STATE_SEQ = 3;
+    static const int PROFILE_STATE_PROFILE = 4;
+
+
+    // submat
+    BaseMatrix * subMat;
 
     // length of sequence
     int L;
@@ -177,12 +188,19 @@ public:
     // each amino acid coded as integer
     int * int_sequence;
 
+    // each consensus amino acid as integer (PROFILE ONLY)
+    int * int_consensus_sequence;
+
     // Contains profile information
     short           * profile_score;
     unsigned int    * profile_index;
+    float           * profile;
+    float           * neffM;
+    float           * pseudocountsWeight;
     size_t profile_row_size; // (PROFILE_AA_SIZE / SIMD_SIZE) + 1 * SIMD_SIZE
 
     static const size_t PROFILE_AA_SIZE = 20;
+    static const size_t PROFILE_READIN_SIZE = 23; // 20 AA, 1 query, 1 consensus, 2 for Neff M,
     ScoreMatrix ** profile_matrix;
     // Memory layout of this profile is qL * AA
     //   Query lenght
@@ -193,12 +211,13 @@ public:
 
     int8_t * profile_for_alignment;
 
-    int  * aa2int; // ref to mapping from aa -> int
-    char * int2aa; // ref mapping from int -> aa
-
     std::pair<const char *, unsigned int> getSpacedPattern(bool spaced, unsigned int kmerSize);
 
     const unsigned char *getAAPosInSpacedPattern() {     return aaPosInSpacedPattern;  }
+
+    void printPSSM();
+
+    void printProfileStatePSSM();
 
     void printProfile();
 
@@ -208,11 +227,48 @@ public:
 
     unsigned int getEffectiveKmerSize();
 
+    static unsigned char scoreMask(float prob)
+    {
+        unsigned char charProb = MathUtil::convertFloatToChar(prob);
+        // avoid 0
+        return charProb + 1;
+    }
+
+    static float scoreUnmask(unsigned char score)
+    {
+        float prob = MathUtil::convertCharToFloat(score-1);
+        return prob;
+    }
+
+    static float probaToBitScore(double proba, double pBack)
+    {
+        // No score bias when profile proba stored in file
+        return MathUtil::flog2(proba / pBack);
+    }
+
+
+    static float scoreToProba(short score, double pBack, double bitFactor, double scoreBias)
+    {
+        if (score == -127)
+            return 0.0;
+        double dblScore = static_cast<double>(score);
+        // No score bias when profile proba stored in file
+        float prob = MathUtil::fpow2( (float) (dblScore - scoreBias) / bitFactor )*pBack;
+        return prob;
+    }
+
+
+    const float *getProfile();
+
+    const char * getSeqData(){
+        return seqData;
+    }
 
 private:
     void mapSequence(const char *seq);
     size_t id;
     unsigned int dbKey;
+    const char * seqData;
 
     // current iterator position
     int currItPos;

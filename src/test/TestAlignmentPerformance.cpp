@@ -21,7 +21,9 @@
 #include "Sequence.h"
 #include "ExtendedSubstitutionMatrix.h"
 #include "SubstitutionMatrix.h"
-#include "smith_waterman_sse2.h"
+#include "StripedSmithWaterman.h"
+
+const char* binary_name = "test_alignmentperformance";
 
 #define MAX_FILENAME_LIST_FILES 4096
 
@@ -65,8 +67,8 @@ int main (int argc, const char * argv[])
 
 
     std::cout << "Sequence (id 0):\n";
-    Sequence* query = new Sequence(10000, subMat.aa2int, subMat.int2aa, 0, kmer_size, true, false);
-    Sequence* dbSeq = new Sequence(10000, subMat.aa2int, subMat.int2aa, 0, kmer_size, true, false);
+    Sequence* query = new Sequence(10000, 0, &subMat, kmer_size, true, false);
+    Sequence* dbSeq = new Sequence(10000, 0, &subMat, kmer_size, true, false);
     //dbSeq->mapSequence(1,"lala2",ref_seq);
     SmithWaterman aligner(15000, subMat.alphabetSize, false);
     int8_t * tinySubMat = new int8_t[subMat.alphabetSize*subMat.alphabetSize];
@@ -92,7 +94,7 @@ int main (int argc, const char * argv[])
             dbSeq->mapSequence(2, 2, sequences[seq_j].c_str());
             int32_t maskLen = query->L / 2;
             EvalueComputation evalueComputation(100000, &subMat, gap_open, gap_extend, true );
-            s_align alignment = aligner.ssw_align(dbSeq->int_sequence, dbSeq->L, gap_open, gap_extend, 0, 10000, &evalueComputation, maskLen);
+            s_align alignment = aligner.ssw_align(dbSeq->int_sequence, dbSeq->L, gap_open, gap_extend, 0, 10000, &evalueComputation, 0, 0.0, maskLen);
             if(mode == 0 ){
                 cells += query->L * dbSeq->L;
                 std::cout << alignment.qEndPos1 << " " << alignment.dbEndPos1 << "\n";

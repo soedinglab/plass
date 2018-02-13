@@ -8,14 +8,16 @@
 #include <fstream>
 #include <cmath>
 #include <climits>
-#include <blosum62.out.h>
+#include "blosum62.out.h"
+#include "nucleotide.out.h"
+
 
 
 SubstitutionMatrix::SubstitutionMatrix(const char *scoringMatrixFileName_,
                                        float bitFactor, float scoreBias = -0.2) :
         scoringMatrixFileName(scoringMatrixFileName_) {
     setupLetterMapping();
-    if(strcmp(scoringMatrixFileName,"blosum62.out") != 0) {
+    if(strcmp(scoringMatrixFileName,"blosum62.out") != 0 && strcmp(scoringMatrixFileName,"nucleotide.out")!=0 ) {
         // read amino acid substitution matrix from file
         std::string fileName(scoringMatrixFileName);
         matrixName = Util::base_name(fileName, "/\\");
@@ -30,7 +32,7 @@ SubstitutionMatrix::SubstitutionMatrix(const char *scoringMatrixFileName_,
                             std::istreambuf_iterator<char>());
             int alphabetSize = readProbMatrix(str);
             if (alphabetSize < this->alphabetSize - 1) {
-                this->alphabetSize = alphabetSize + 1;
+                this->alphabetSize = alphabetSize;
             }
             in.close();
         }
@@ -38,12 +40,19 @@ SubstitutionMatrix::SubstitutionMatrix(const char *scoringMatrixFileName_,
             Debug(Debug::ERROR) << "Invalid format of the substitution matrix input file! Only .out files are accepted.\n";
             EXIT(EXIT_FAILURE);
         }
-    }else{
+    } else if(strcmp(scoringMatrixFileName,"nucleotide.out") == 0){
+        std::string submat((const char *)nucleotide_out,nucleotide_out_len);
+        matrixName = "nucleotide.out";
+        int alphabetSize = readProbMatrix(submat);
+        if (alphabetSize < this->alphabetSize - 1) {
+            this->alphabetSize = alphabetSize;
+        }
+    } else{
         std::string submat((const char *)blosum62_out,blosum62_out_len);
         matrixName = "blosum62.out";
         int alphabetSize = readProbMatrix(submat);
         if (alphabetSize < this->alphabetSize - 1) {
-            this->alphabetSize = alphabetSize + 1;
+            this->alphabetSize = alphabetSize;
         }
     }
 
@@ -120,6 +129,49 @@ void SubstitutionMatrix::calcLocalAaBiasCorrection(const BaseMatrix *m,
     }
 }
 
+
+void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrection(short *profileScores,
+                                                             const size_t profileAASize,
+                                                             const int N) {
+
+    const int windowSize = 40;
+
+    float pnul[32];
+    memset(pnul, 0, sizeof(float) * 32);
+
+
+    for (int pos = 0; pos < N; pos++) {
+        const short * subMat = profileScores + (pos * profileAASize);
+        for(size_t aa = 0; aa < 32; aa++) {
+            pnul[aa] += subMat[aa]  ;
+        }
+    }
+    for(size_t aa = 0; aa < 32; aa++)
+        pnul[aa] /= N;
+    for (int i = 0; i < N; i++){
+        const int minPos = std::max(0, (i - windowSize/2));
+        const int maxPos = std::min(N, (i + windowSize/2));
+        const int windowLength = maxPos - minPos;
+        // negative score for the amino acids in the neighborhood of i
+        float aaSum[32];
+        memset(aaSum, 0, sizeof(float) * 32);
+
+        for (int j = minPos; j < maxPos; j++){
+            const short * subMat = profileScores + (j * profileAASize);
+            if( i == j )
+                continue;
+            for(size_t aa = 0; aa < 32; aa++){
+                aaSum[aa] += subMat[aa] - pnul[aa];
+            }
+        }
+        for(size_t aa = 0; aa < 32; aa++) {
+            profileScores[i*profileAASize + aa] = static_cast<int>((profileScores + (i * profileAASize))[aa] - aaSum[aa]/windowLength);
+        }
+    }
+}
+
+
+
 /* Compute aa correction
    => p(a) =  ( \prod_{i=1}^L pi(a) )^(1/L)
    => p(a) = 2^[ (1/L) * \log2 ( \prod_{i=1}^L pi(a) )
@@ -180,8 +232,8 @@ SubstitutionMatrix::~SubstitutionMatrix() {
 }
 
 void SubstitutionMatrix::setupLetterMapping(){
-        for(char letter = 0; letter < 'z'; letter++){
-            char upperLetter = toupper(letter);
+        for(int letter = 0; letter < UCHAR_MAX; letter++){
+            char upperLetter = toupper(static_cast<char>(letter));
             switch(upperLetter){
                 case 'A':
                 case 'T':
@@ -204,19 +256,19 @@ void SubstitutionMatrix::setupLetterMapping(){
                 case 'W':
                 case 'Y':
                 case 'X':
-                    this->aa2int[letter] = this->aa2int[upperLetter];
+                    this->aa2int[static_cast<int>(letter)] = this->aa2int[static_cast<int>(upperLetter)];
                     break;
                 case 'J':
-                    this->aa2int[letter] = this->aa2int[(int)'L'];
+                    this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'L'];
                     break;
                 case 'U':
                 case 'O':
-                    this->aa2int[letter] = this->aa2int[(int)'X'];
+                    this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'X'];
                     break;
-                case 'Z': this->aa2int[letter] = this->aa2int[(int)'E']; break;
-                case 'B': this->aa2int[letter] = this->aa2int[(int)'D']; break;
+                case 'Z': this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'E']; break;
+                case 'B': this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'D']; break;
                 default:
-                    this->aa2int[letter] = this->aa2int[(int)'X'];
+                    this->aa2int[static_cast<int>(letter)] = this->aa2int[(int)'X'];
                     break;
             }
         }
@@ -346,7 +398,7 @@ int SubstitutionMatrix::readProbMatrix(const std::string &matrixData) {
             Debug(Debug::ERROR) << "Computing inverse of substitution matrix failed\n";
             EXIT(EXIT_FAILURE);
         }
-        pBack[aa2int['X']]=ANY_BACK;
+        pBack[aa2int[(int)'X']]=ANY_BACK;
     }
     if(xIsPositive == false){
         for (int i = 0; i < alphabetSize - 1; i++) {

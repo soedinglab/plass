@@ -52,16 +52,16 @@ int assembler(int argc, const char **argv, const Command& command) {
         }
     }
     if(kmerSizeWasSet==false){
-       par.kmerSize = baseKmerSize;
+        par.kmerSize = baseKmerSize;
     }
     if(alphabetSizeWasSet == false){
-       par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
+        par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
     }
     cmd.addVariable("KMER_PER_SEQ", SSTR(par.kmersPerSequence).c_str());
     std::vector<MMseqsParameter> kmerMatcherrWithoutKmerPerseq;
     for(size_t i = 0; i < par.kmermatcher.size(); i++){
         if(par.kmermatcher[i].uniqid != par.PARAM_KMER_PER_SEQ.uniqid ){
-           kmerMatcherrWithoutKmerPerseq.push_back(par.kmermatcher[i]);
+            kmerMatcherrWithoutKmerPerseq.push_back(par.kmermatcher[i]);
         }
     }
 
@@ -79,6 +79,6 @@ int assembler(int argc, const char **argv, const Command& command) {
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
     FileUtil::writeFile(par.db3 + "/assembler.sh", assembler_sh, assembler_sh_len);
     std::string program(par.db3 + "/assembler.sh");
-    cmd.execProgram(program.c_str(), 3, argv);
+    cmd.execProgram(program.c_str(), par.filenames);
     return 0;
 }

@@ -13,8 +13,9 @@
 
 #include "Sequence.h"
 #include "BaseMatrix.h"
-#include "smith_waterman_sse2.h"
+#include "StripedSmithWaterman.h"
 #include "EvalueComputation.h"
+#include "BandedNucleotideAligner.h"
 
 class Matcher{
 
@@ -56,23 +57,34 @@ public:
                                           qStartPos(qStartPos), qEndPos(qEndPos), qLen(qLen),
                                           dbStartPos(dbStartPos), dbEndPos(dbEndPos), dbLen(dbLen),
                                           backtrace(backtrace) {};
-		result_t(){};
+        result_t(){};
     };
 
-    Matcher(int maxSeqLen, BaseMatrix *m, EvalueComputation * evaluer, bool aaBiasCorrection);
+    Matcher(int querySeqType, int maxSeqLen, BaseMatrix *m,
+            EvalueComputation * evaluer, bool aaBiasCorrection,
+            int gapOpen, int gapExtend);
 
     ~Matcher();
 
     // run SSE2 parallelized Smith-Waterman alignment calculation and traceback
-    result_t getSWResult(Sequence* dbSeq,const size_t seqDbSize,const double evalThr, const unsigned int mode);
+    result_t getSWResult(Sequence* dbSeq, const int diagonal, const int covMode, const float covThr, const double evalThr, const unsigned int mode, bool isIdentical);
 
     // need for sorting the results
-    static bool compareHits (result_t first, result_t second){ return (first.eval < second.eval); }
+    static bool compareHits (const result_t &first, const result_t &second){
+        //return (first.eval < second.eval);
+        if(first.eval < second.eval )
+            return true;
+        if(second.eval < first.eval )
+            return false;
+        if(first.score > second.score )
+            return true;
+        if(second.score > first.score )
+            return false;
+        return false;
+    }
 
     // map new query into memory (create queryProfile, ...)
     void initQuery(Sequence* query);
-
-    static float computeCov(unsigned int startPos, unsigned int endPos, unsigned int len);
 
     static result_t parseAlignmentRecord(char *data, bool readCompressed=false);
 
@@ -88,9 +100,14 @@ public:
     static const unsigned short GAP_OPEN = 11;
     static const unsigned short GAP_EXTEND = 1;
 
-    static std::string resultToString(result_t &result, bool addBacktrace);
+    static size_t resultToBuffer(char * buffer, const result_t &result, bool addBacktrace, bool compress  = true);
 
 private:
+
+    // costs to open a gap
+    int gapOpen;
+    // costs to extend a gap
+    int gapExtend;
 
     // calculate the query queryProfile for SIMD registers processing 8 elements
     int maxSeqLen;
@@ -100,6 +117,8 @@ private:
 
     // aligner Class
     SmithWaterman * aligner;
+    // aligner for nucl
+    BandedNucleotideAligner * nuclaligner;
     // substitution matrix
     BaseMatrix* m;
     // evalue

@@ -20,6 +20,7 @@ public:
     Prefiltering(
             const std::string &targetDB,
             const std::string &targetDBIndex,
+            int querySeqType, int targetSeqType,
             const Parameters &par);
 
     ~Prefiltering();
@@ -41,10 +42,12 @@ public:
                     const std::vector<std::pair<std::string, std::string>> &splitFiles);
 
     // get substitution matrix
-    static BaseMatrix *getSubstitutionMatrix(const std::string &scoringMatrixFile, size_t alphabetSize, float bitFactor, bool ignoreX);
+    static BaseMatrix *getSubstitutionMatrix(const std::string &scoringMatrixFile, size_t alphabetSize,
+                                             float bitFactor, bool ignoreX, bool profileState);
 
     static void setupSplit(DBReader<unsigned int>& dbr, const int alphabetSize, const int threads,
-                           const bool templateDBIsIndex, const size_t maxResListLen, int *kmerSize, int *split, int *splitMode);
+                           const bool templateDBIsIndex, const size_t maxResListLen, const size_t memoryLimit,
+                           int *kmerSize, int *split, int *splitMode);
 
     static int getKmerThreshold(const float sensitivity, const int querySeqType,
                                 const int kmerScore, const int kmerSize);
@@ -81,11 +84,12 @@ private:
     const float sensitivity;
     const size_t resListOffset;
     const size_t maxSeqLen;
-    const int querySeqType;
+    int querySeqType;
     const bool diagonalScoring;
     const unsigned int minDiagScoreThr;
     const bool aaBiasCorrection;
     const float covThr;
+    const int covMode;
     const bool includeIdentical;
     const bool earlyExit;
     const bool noPreload;

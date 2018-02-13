@@ -1,12 +1,4 @@
-find_program(XXD_EXECUTABLE xxd)
-if(NOT XXD_EXECUTABLE)
-    message(FATAL_ERROR "xxd not found in path. It is usually contained in your distributions vim-common package!")
-endif()
-
-find_program(SED_EXECUTABLE sed)
-if(NOT SED_EXECUTABLE)
-    message(FATAL_ERROR "sed not found in path!")
-endif()
+include(MMseqsResourceCompiler)
 
 set(COMPILED_RESOURCES
         assembler.sh
@@ -17,6 +9,10 @@ set(COMPILED_RESOURCES
         cascaded_clustering.sh
         update_clustering.sh
         searchtargetprofile.sh
+        createindex.sh
+        translated_search.sh
+        taxonomy.sh
+        nucleotide.out
         blosum30.out
         blosum35.out
         blosum40.out
@@ -35,21 +31,14 @@ set(COMPILED_RESOURCES
         blosum100.out
         CovSeqidQscPercMinDiag.out
         CovSeqidQscPercMinDiagTargetCov.out
+        ExpOpt3_8_polished.cs32.lib
         predict_coding_acc9260_56x96.model
+        K4000.crf
         )
 
 set(GENERATED_OUTPUT_HEADERS "")
 FOREACH(INPUT_FILE ${COMPILED_RESOURCES})
-    get_filename_component(INPUT_FILE_NAME ${INPUT_FILE} NAME)
-    set(OUTPUT_FILE ${PROJECT_SOURCE_DIR}/src/generatedfiles/${INPUT_FILE_NAME}.h)
-    message("-- Compile ${INPUT_FILE_NAME} to ${OUTPUT_FILE}")
-    add_custom_command(OUTPUT ${OUTPUT_FILE}
-            COMMAND ${XXD_EXECUTABLE} -i ${INPUT_FILE_NAME} ${OUTPUT_FILE}
-            COMMAND ${SED_EXECUTABLE} 's!unsigned char!static const unsigned char!' < ${OUTPUT_FILE} > ${OUTPUT_FILE}.tmp
-            COMMAND mv -f ${OUTPUT_FILE}.tmp ${OUTPUT_FILE}
-            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/data
-            MAIN_DEPENDENCY ${INPUT_FILE_NAME})
-    set_source_files_properties(${OUTPUT_FILE} PROPERTIES GENERATED TRUE)
+    compile_resource(${INPUT_FILE} OUTPUT_FILE)
     list(APPEND GENERATED_OUTPUT_HEADERS "${OUTPUT_FILE}")
 ENDFOREACH()
 

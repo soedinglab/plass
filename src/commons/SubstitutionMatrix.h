@@ -23,7 +23,9 @@ class SubstitutionMatrix: public BaseMatrix {
         virtual double getBackgroundProb(size_t aa_index) { return pBack[aa_index]; }
 
         static void calcLocalAaBiasCorrection(const BaseMatrix *m ,const int *int_sequence, const int N, float *compositionBias);
-
+        static void calcProfileProfileLocalAaBiasCorrection(short *profileScores,
+                                                const size_t profileAASize,
+                                                const int N);
         static void calcGlobalAaBiasCorrection( short *profileScores,
                                                const size_t profileAASize,
                                                const int N);
@@ -43,18 +45,18 @@ class SubstitutionMatrix: public BaseMatrix {
         };
 
         // build matrix from ~ (=0) to ~(=122)
-        static FastMatrix createAsciiSubMat(SubstitutionMatrix & submat){
+        static FastMatrix createAsciiSubMat(BaseMatrix & submat){
             const size_t asciiStart = 0;
             const size_t asciiEnd = 'z';
             const size_t range = asciiEnd-asciiStart;
             char ** matrix = new char *[range];
             char * matrixData = new char[range*range];
-            for(char i = 0; i < range; i++) {
+            for(size_t i = 0; i < range; i++) {
                 matrix[i] = matrixData+(i*range);
-                int curr_i = submat.aa2int[asciiStart+(int)i];
-                for (char j = 0; j < range; j++) {
-                    int curr_j = submat.aa2int[asciiStart+(int)j];
-                    matrix[i][j] = submat.subMatrix[curr_i][curr_j];
+                int curr_i = submat.aa2int[asciiStart+i];
+                for (size_t j = 0; j < range; j++) {
+                    int curr_j = submat.aa2int[asciiStart+j];
+                    matrix[i][j] = static_cast<char>(submat.subMatrix[curr_i][curr_j]);
                 }
             }
             return FastMatrix((const char**) matrix,
