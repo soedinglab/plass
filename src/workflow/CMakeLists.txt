@@ -1,10 +1,4 @@
 set(workflow_source_files
         workflow/Assembler.cpp
-        workflow/Cluster.cpp
-        workflow/ClusterUpdate.cpp
-        workflow/Linclust.cpp
-        workflow/Search.cpp
-        workflow/Taxonomy.cpp
-        workflow/CreateIndex.cpp
         PARENT_SCOPE
         )
