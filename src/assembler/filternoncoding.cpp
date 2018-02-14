@@ -39,6 +39,11 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     // Create a 1D Tensor on length 20 for input data.
 #pragma omp parallel
     {
+        unsigned int thread_idx = 0;
+#ifdef OPENMP
+        thread_idx = static_cast<unsigned int>(omp_get_thread_num());
+#endif
+
         Tensor in(56);
         float counter[255];
         std::fill(counter, counter + 255, 1.0);
@@ -47,14 +52,11 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
         Indexer indexer(redMat.alphabetSize, 2);
         float *diAACnt = new float[redMat.alphabetSize * redMat.alphabetSize];
         std::fill(diAACnt, diAACnt + redMat.alphabetSize * redMat.alphabetSize, 1.0);
+
 #pragma omp for schedule(static)
         for (size_t id = 0; id < seqDb.getSize(); id++) {
-            unsigned int thread_idx = 0;
-#ifdef OPENMP
-            thread_idx = static_cast<unsigned int>(omp_get_thread_num());
-#endif
             std::vector<float> data;
-            char * seqData = seqDb.getData(id);
+            char *seqData = seqDb.getData(id);
             unsigned int dbKey = seqDb.getDbKey(id);
             seq.mapSequence(id, dbKey, seqData);
 
@@ -103,7 +105,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
             if (out.data_[0] > 0.2) {
                 // -1 dont write \0 byte
                 dbw.writeData(seqData, seqDb.getSeqLens(id) - 1, dbKey, thread_idx);
-            }else{
+            } else {
                 dbw.writeData("\n",  1, dbKey, thread_idx);
             }
 //        out.Print();
@@ -112,8 +114,9 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
         delete[] diAACnt;
     }
 //    std::cout << "Filtered: " << static_cast<float>(cnt)/ static_cast<float>(seqDb.getSize()) << std::endl;
-    seqDb.close();
     dbw.close(DBReader<unsigned int>::DBTYPE_AA);
-    return 0;
+    seqDb.close();
+
+    return EXIT_SUCCESS;
 }
 

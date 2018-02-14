@@ -11,7 +11,7 @@
 #include <omp.h>
 #endif
 
-int findPosOfM(char *seq) {
+int findPosOfM(const char *seq) {
     int stopPos = -1;
     int pos = 0;
     while(seq[pos] != '\0'){
@@ -68,7 +68,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
                     : id(id), mPos(mPos), hasM(hasM), hasStopM(hasStopM) {}
         };
         std::vector<PositionOfM> stopPositions;
-        stopPositions.push_back(PositionOfM(qId,queryPosOfM, true, hasStopM));
+        stopPositions.emplace_back(qId,queryPosOfM, true, hasStopM);
 
         char *results = resultReader.getData(id);
         while (*results != '\0') {
@@ -149,9 +149,9 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
             unsigned int queryKey = qDbr.getDbKey(id);
             char *querySeqData = tDbr->getData(id);
             int mPos = addStopAtPosition[id];
-            if(mPos == -1){
+            if (mPos == -1){
                 resultWriter.writeData(querySeqData, strlen(querySeqData), queryKey, thread_idx);
-            }else{
+            } else {
                 str.append("*");
                 str.append(querySeqData + mPos);
                 resultWriter.writeData(str.c_str(), str.length(), queryKey, thread_idx);

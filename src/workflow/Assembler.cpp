@@ -5,8 +5,6 @@
 #include "LocalParameters.h"
 #include "assembler.sh.h"
 
-
-
 void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
@@ -35,7 +33,7 @@ int assembler(int argc, const char **argv, const Command& command) {
         }
     }
     size_t hash = par.hashParameter(par.filenames, par.searchworkflow);
-    std::string tmpDir(par.db4 + "/" + SSTR(hash));
+    std::string tmpDir(par.db3 + "/" + SSTR(hash));
     if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
         if (FileUtil::makeDir(tmpDir.c_str()) == false) {
             Debug(Debug::WARNING) << "Could not create sub folder in temporary directory " << tmpDir << ".\n";
@@ -44,7 +42,7 @@ int assembler(int argc, const char **argv, const Command& command) {
     }
     par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
-    if (FileUtil::symlinkCreateOrRepleace(par.db4 + "/latest", tmpDir) == false){
+    if (FileUtil::symlinkCreateOrRepleace(par.db3 + "/latest", tmpDir) == false){
         Debug(Debug::WARNING) << "Could not symlink latest folder in temporary directory." << tmpDir << ".\n";
         EXIT(EXIT_FAILURE);
     }
@@ -80,16 +78,16 @@ int assembler(int argc, const char **argv, const Command& command) {
     }
     cmd.addVariable("KMER_PER_SEQ", SSTR(par.kmersPerSequence).c_str());
 
-    std::vector<MMseqsParameter> kmerMatcherrWithoutKmerPerseq;
+    std::vector<MMseqsParameter> kmerMatcherWithoutKmerPerSeq;
     for (size_t i = 0; i < par.kmermatcher.size(); i++){
         if(par.kmermatcher[i].uniqid != par.PARAM_KMER_PER_SEQ.uniqid ){
-            kmerMatcherrWithoutKmerPerseq.push_back(par.kmermatcher[i]);
+            kmerMatcherWithoutKmerPerSeq.push_back(par.kmermatcher[i]);
         }
     }
     for (int i = 0; i < par.numIterations; i++){
         std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
         par.hashShift = i+1;
-        cmd.addVariable(key.c_str(), par.createParameterString(kmerMatcherrWithoutKmerPerseq).c_str());
+        cmd.addVariable(key.c_str(), par.createParameterString(kmerMatcherWithoutKmerPerSeq).c_str());
     }
 
     par.alphabetSize = alphabetSize;

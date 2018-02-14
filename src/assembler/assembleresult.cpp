@@ -1,6 +1,3 @@
-// Computes either a PSSM or a MSA from clustering or alignment result
-// For PSSMs: MMseqs just stores the position specific score in 1 byte
-
 #include <string>
 #include <vector>
 #include <sstream>
@@ -14,7 +11,6 @@
 #include "Debug.h"
 #include "Util.h"
 #include "MathUtil.h"
-#include <set>
 #include <limits>
 #include <cstdint>
 #include <queue>
@@ -44,7 +40,7 @@ typedef std::priority_queue<Matcher::result_t, std::vector<Matcher::result_t> , 
 Matcher::result_t selectBestExtensionFragment(SeqIdQueue &alignments,
                                               unsigned int queryKey) {
     // results are ordered by score
-    while(alignments.empty() == false){
+    while (alignments.empty() == false){
         Matcher::result_t res = alignments.top();
         alignments.pop();
         size_t dbKey = res.dbKey;
@@ -52,7 +48,7 @@ Matcher::result_t selectBestExtensionFragment(SeqIdQueue &alignments,
         const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != res.dbLen-1);
         const bool leftStart = res.qStartPos == 0   && (res.qEndPos != res.qLen-1);
         const bool isNotIdentity = (dbKey != queryKey);
-        if((rightStart|| leftStart)  && notRightStartAndLeftStart && isNotIdentity){
+        if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
             return res;
         }
     }
@@ -77,7 +73,7 @@ int doassembly(LocalParameters &par) {
 
 #pragma omp parallel
     {
-    unsigned int thread_idx = 0;
+        unsigned int thread_idx = 0;
 #ifdef OPENMP
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
