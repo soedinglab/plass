@@ -5,6 +5,8 @@
 Compiling PLASS from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile PLASS `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are needed. Afterwards, the PLASS binary will be located in `build/bin/`.
 
         git clone https://github.com/soedinglab/plass.git
+        git submodule init
+        git submodule update
         cd plass
         mkdir build
         cd build
@@ -26,7 +28,7 @@ PLASS was evaluated on illumina HiSeq 2500 150x2 paired end reads but should be 
        flash read_1.fastq read_2.fastq
        cat out.extendedFrags.fastq out.notCombined_1.fastq out.notCombined_2.fastq > all_merged_reads_nucl.fastq
        # create internal database
-       mmseqs createdb all_merged_reads_nucl.fastq all_merged_reads_nucl
+       plass createdb all_merged_reads_nucl.fastq all_merged_reads_nucl
        # assemble
-       mmseqs assemble all_merged_reads_nucl all_merged_reads_aa_assembly tmp  --mask 0 --min-seq-id 0.9 --num-iterations 12
+       plass assemble all_merged_reads_nucl all_merged_reads_aa_assembly tmp  --mask 0 --min-seq-id 0.9 --num-iterations 12
 
