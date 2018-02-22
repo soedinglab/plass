@@ -35,7 +35,7 @@ INPUT="$(abspath $1)"
 TMP_PATH="$(abspath $3)"
 
 if notExists "${TMP_PATH}/nucl_6f_start"; then
-    $MMSEQS extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" --orf-start-state 1 --orf-end-state 0 --longest-orf --min-length 30 --max-length 45 --max-gaps 0 \
+    $MMSEQS extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
         || fail "extractorfs start step died"
 fi
 
@@ -45,7 +45,7 @@ if notExists "${TMP_PATH}/aa_6f_start"; then
 fi
 
 if notExists "${TMP_PATH}/nucl_6f_long"; then
-    $MMSEQS extractorfs ${INPUT} "${TMP_PATH}/nucl_6f_long" --longest-orf --min-length 45 --max-gaps 0 \
+    $MMSEQS extractorfs ${INPUT} "${TMP_PATH}/nucl_6f_long" --orf-start-mode 0 --min-length 45 --max-gaps 0 \
         || fail "extractorfs longest step died"
 fi
 
@@ -59,7 +59,6 @@ if notExists "${TMP_PATH}/aa_6f_start_long"; then
     $MMSEQS concatdbs "${TMP_PATH}/aa_6f_long" "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_start_long" \
         || fail "concatdbs start long step died"
 fi
-
 
 INPUT="${TMP_PATH}/aa_6f_start_long"
 STEP=0
