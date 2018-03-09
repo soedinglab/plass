@@ -31,13 +31,14 @@ abspath() {
 [   -f "$2" ] &&  echo "$2 exists already!" && exit 1;
 [ ! -d "$3" ] &&  echo "tmp directory $3 not found!" && mkdir -p $3;
 
-INPUT="$(abspath $1)"
-TMP_PATH="$(abspath $3)"
+INPUT="$(abspath "$1")"
+TMP_PATH="$(abspath "$3")"
 if [ -z ${NUCL} ]; then
     if notExists "${TMP_PATH}/nucl_6f_start"; then
         $MMSEQS extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
             || fail "extractorfs start step died"
     fi
+
 
     if notExists "${TMP_PATH}/aa_6f_start"; then
         $MMSEQS translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" --add-orf-stop \
