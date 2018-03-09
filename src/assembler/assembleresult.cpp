@@ -242,7 +242,8 @@ int doassembly(LocalParameters &par) {
     }
 
     // cleanup
-    resultWriter.close(DBReader<unsigned int>::DBTYPE_AA);
+
+    resultWriter.close(sequenceDbr->getDbtype());
     alnReader->close();
     delete [] wasExtended;
     delete alnReader;

@@ -1,3 +1,4 @@
+#include <mmseqs/src/commons/DBReader.h>
 #include "Util.h"
 #include "CommandCaller.h"
 #include "Debug.h"
@@ -11,7 +12,7 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->covThr = 0.0;
     p->evalThr = 0.00001;
     p->seqIdThr = 0.9;
-    p->alphabetSize = 21;
+//    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
     p->numIterations = 12;
     p->includeOnlyExtendable = true;
@@ -22,6 +23,8 @@ int assembler(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     setAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, 3);
+
+    const int dbType = DBReader<unsigned int>::parseDbType(par.db1.c_str());
 
     if (FileUtil::directoryExists(par.db3.c_str()) == false){
         Debug(Debug::INFO) << "Temporary folder " << par.db3 << " does not exist or is not a directory.\n";
@@ -53,42 +56,17 @@ int assembler(int argc, const char **argv, const Command& command) {
     }
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-
+    // nucleotide assembly
+    if(dbType == DBReader<unsigned int>::DBTYPE_NUC){
+        cmd.addVariable("NUCL", "1");
+    }
     // save some values to restore them later
     size_t alphabetSize = par.alphabetSize;
     size_t kmerSize = par.kmerSize;
 
     // # 1. Finding exact $k$-mer matches.
-    int baseKmerSize = 14;
-    bool kmerSizeWasSet = false;
-    bool alphabetSizeWasSet = false;
-    for (size_t i = 0; i < par.assemblerworkflow.size(); i++) {
-        if (par.assemblerworkflow[i].uniqid == par.PARAM_K.uniqid && par.assemblerworkflow[i].wasSet) {
-            kmerSizeWasSet = true;
-        }
-        if (par.assemblerworkflow[i].uniqid == par.PARAM_ALPH_SIZE.uniqid && par.assemblerworkflow[i].wasSet) {
-            alphabetSizeWasSet = true;
-        }
-    }
-    if (kmerSizeWasSet == false){
-        par.kmerSize = baseKmerSize;
-    }
-    if (alphabetSizeWasSet == false){
-        par.alphabetSize = Parameters::CLUST_LINEAR_DEFAULT_ALPH_SIZE;
-    }
-    cmd.addVariable("KMER_PER_SEQ", SSTR(par.kmersPerSequence).c_str());
 
-    std::vector<MMseqsParameter> kmerMatcherWithoutKmerPerSeq;
-    for (size_t i = 0; i < par.kmermatcher.size(); i++){
-        if(par.kmermatcher[i].uniqid != par.PARAM_KMER_PER_SEQ.uniqid ){
-            kmerMatcherWithoutKmerPerSeq.push_back(par.kmermatcher[i]);
-        }
-    }
-    for (int i = 0; i < par.numIterations; i++){
-        std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
-        par.hashShift = i+1;
-        cmd.addVariable(key.c_str(), par.createParameterString(kmerMatcherWithoutKmerPerSeq).c_str());
-    }
+    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
     par.alphabetSize = alphabetSize;
     par.kmerSize = kmerSize;
