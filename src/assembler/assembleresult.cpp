@@ -36,9 +36,9 @@ public:
     }
 };
 
-typedef std::priority_queue<Matcher::result_t, std::vector<Matcher::result_t> , CompareResultBySeqId> SeqIdQueue;
-Matcher::result_t selectBestExtensionFragment(SeqIdQueue &alignments,
-                                              unsigned int queryKey) {
+typedef std::priority_queue<Matcher::result_t, std::vector<Matcher::result_t> , CompareResultBySeqId> QueueBySeqId;
+Matcher::result_t selectFragmentToExtend(QueueBySeqId &alignments,
+                                             unsigned int queryKey) {
     // results are ordered by score
     while (alignments.empty() == false){
         Matcher::result_t res = alignments.top();
@@ -90,7 +90,7 @@ int doassembly(LocalParameters &par) {
             std::string query(querySeq, querySeqLen); // no /n/0
             char *alnData = alnReader->getDataByDBKey(queryId);
             std::vector<Matcher::result_t> alignments = Matcher::readAlignmentResults(alnData);
-            SeqIdQueue alnQueue;
+            QueueBySeqId alnQueue;
             bool queryCouldBeExtended = false;
             while(alignments.size() > 1){
                 bool queryCouldBeExtendedLeft = false;
@@ -103,7 +103,7 @@ int doassembly(LocalParameters &par) {
                 }
                 std::vector<Matcher::result_t> tmpAlignments;
                 Matcher::result_t besttHitToExtend;
-                while ((besttHitToExtend = selectBestExtensionFragment(alnQueue, queryId)).dbKey != UINT_MAX) {
+                while ((besttHitToExtend = selectFragmentToExtend(alnQueue, queryId)).dbKey != UINT_MAX) {
 
                     querySeqLen = query.size();
                     querySeq = (char *) query.c_str();
@@ -201,6 +201,14 @@ int doassembly(LocalParameters &par) {
                     int qStartPos = tmpAlignments[alnIdx].qStartPos;
                     int qEndPos = tmpAlignments[alnIdx].qEndPos;
                     int dbStartPos = tmpAlignments[alnIdx].dbStartPos;
+                    int diagonal = (leftQueryOffset + besttHitToExtend.qStartPos) - besttHitToExtend.dbStartPos;
+                    int dist = std::max(abs(diagonal), 0);
+                    if (diagonal >= 0) {
+                        qStartPos+=dist;
+                        qEndPos+=dist;
+                    }else{
+                        dbStartPos+=dist;
+                    }
                     unsigned int targetId = sequenceDbr->getId(tmpAlignments[alnIdx].dbKey);
                     char *targetSeq = sequenceDbr->getData(targetId);
                     for(int i = qStartPos; i < qEndPos; i++){
