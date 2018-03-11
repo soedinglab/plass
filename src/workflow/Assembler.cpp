@@ -12,7 +12,6 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->covThr = 0.0;
     p->evalThr = 0.00001;
     p->seqIdThr = 0.9;
-//    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
     p->numIterations = 12;
     p->includeOnlyExtendable = true;
@@ -25,7 +24,9 @@ int assembler(int argc, const char **argv, const Command& command) {
     par.parseParameters(argc, argv, command, 3);
 
     const int dbType = DBReader<unsigned int>::parseDbType(par.db1.c_str());
-
+    if(dbType==DBReader<unsigned int>::DBTYPE_AA){
+        par.alphabetSize = 21;
+    }
     if (FileUtil::directoryExists(par.db3.c_str()) == false){
         Debug(Debug::INFO) << "Temporary folder " << par.db3 << " does not exist or is not a directory.\n";
         if (FileUtil::makeDir(par.db3.c_str()) == false){
