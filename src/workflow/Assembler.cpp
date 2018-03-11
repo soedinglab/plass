@@ -26,6 +26,7 @@ int assembler(int argc, const char **argv, const Command& command) {
     const int dbType = DBReader<unsigned int>::parseDbType(par.db1.c_str());
     if(dbType==DBReader<unsigned int>::DBTYPE_AA){
         par.alphabetSize = 21;
+        par.kmerSize = 14;
     }
     if (FileUtil::directoryExists(par.db3.c_str()) == false){
         Debug(Debug::INFO) << "Temporary folder " << par.db3 << " does not exist or is not a directory.\n";
