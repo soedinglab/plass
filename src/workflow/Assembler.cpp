@@ -14,7 +14,7 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.9;
     p->kmersPerSequence = 60;
     p->numIterations = 12;
-    p->alphabetSize = 21;
+    p->alphabetSize = 13;
     p->kmerSize = 14;
     p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
