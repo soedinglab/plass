@@ -33,35 +33,33 @@ abspath() {
 
 INPUT="$(abspath "$1")"
 TMP_PATH="$(abspath "$3")"
-if [ -z ${NUCL} ]; then
-    if notExists "${TMP_PATH}/nucl_6f_start"; then
-        $MMSEQS extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
-            || fail "extractorfs start step died"
-    fi
-
-
-    if notExists "${TMP_PATH}/aa_6f_start"; then
-        $MMSEQS translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" --add-orf-stop \
-            || fail "translatenucs start step died"
-    fi
-
-    if notExists "${TMP_PATH}/nucl_6f_long"; then
-        $MMSEQS extractorfs ${INPUT} "${TMP_PATH}/nucl_6f_long" --orf-start-mode 0 --min-length 45 --max-gaps 0 \
-            || fail "extractorfs longest step died"
-    fi
-
-    if notExists "${TMP_PATH}/aa_6f_long"; then
-        $MMSEQS translatenucs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/aa_6f_long" --add-orf-stop \
-            || fail "translatenucs long step died"
-    fi
-
-    # $MMSEQS concatdbs "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_end" "${TMP_PATH}/aa_6f_start_end"
-    if notExists "${TMP_PATH}/aa_6f_start_long"; then
-        $MMSEQS concatdbs "${TMP_PATH}/aa_6f_long" "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_start_long" \
-            || fail "concatdbs start long step died"
-    fi
-    INPUT="${TMP_PATH}/aa_6f_start_long"
+if notExists "${TMP_PATH}/nucl_6f_start"; then
+    $MMSEQS extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
+        || fail "extractorfs start step died"
 fi
+
+
+if notExists "${TMP_PATH}/aa_6f_start"; then
+    $MMSEQS translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" --add-orf-stop \
+        || fail "translatenucs start step died"
+fi
+
+if notExists "${TMP_PATH}/nucl_6f_long"; then
+    $MMSEQS extractorfs ${INPUT} "${TMP_PATH}/nucl_6f_long" --orf-start-mode 0 --min-length 45 --max-gaps 0 \
+        || fail "extractorfs longest step died"
+fi
+
+if notExists "${TMP_PATH}/aa_6f_long"; then
+    $MMSEQS translatenucs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/aa_6f_long" --add-orf-stop \
+        || fail "translatenucs long step died"
+fi
+
+# $MMSEQS concatdbs "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_end" "${TMP_PATH}/aa_6f_start_end"
+if notExists "${TMP_PATH}/aa_6f_start_long"; then
+    $MMSEQS concatdbs "${TMP_PATH}/aa_6f_long" "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_start_long" \
+        || fail "concatdbs start long step died"
+fi
+INPUT="${TMP_PATH}/aa_6f_start_long"
 STEP=0
 if [ -z "$NUM_IT" ]; then
     NUM_IT=1;
@@ -83,25 +81,18 @@ while [ $STEP -lt $NUM_IT ]; do
     fi
 
     if [ $STEP -eq 0 ]; then
-        if [ -z ${NUCL} ]; then
-            if notExists "${TMP_PATH}/corrected_reads"; then
-                $MMSEQS findassemblystart "$INPUT" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/corrected_seqs" \
-            || fail "Findassemblystart alignment step died"
-            fi
-            INPUT="${TMP_PATH}/corrected_seqs"
-            if notExists "${TMP_PATH}/aln_corrected_$STEP"; then
-                $MMSEQS rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
-            || fail "Ungapped alignment step died"
-            fi
-            if notExists "${TMP_PATH}/assembly_$STEP"; then
-                $MMSEQS assembleresults "$INPUT" "${TMP_PATH}/aln_corrected_$STEP" "${TMP_PATH}/assembly_$STEP" ${ASSEMBLE_RESULT_PAR} \
-            || fail "Assembly step died"
-            fi
-        else
-            if notExists "${TMP_PATH}/assembly_$STEP"; then
-                $MMSEQS assembleresults "$INPUT" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/assembly_$STEP" ${ASSEMBLE_RESULT_PAR} \
-            || fail "Assembly step died"
-            fi
+        if notExists "${TMP_PATH}/corrected_reads"; then
+            $MMSEQS findassemblystart "$INPUT" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/corrected_seqs" \
+        || fail "Findassemblystart alignment step died"
+        fi
+        INPUT="${TMP_PATH}/corrected_seqs"
+        if notExists "${TMP_PATH}/aln_corrected_$STEP"; then
+            $MMSEQS rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
+        || fail "Ungapped alignment step died"
+        fi
+        if notExists "${TMP_PATH}/assembly_$STEP"; then
+            $MMSEQS assembleresults "$INPUT" "${TMP_PATH}/aln_corrected_$STEP" "${TMP_PATH}/assembly_$STEP" ${ASSEMBLE_RESULT_PAR} \
+        || fail "Assembly step died"
         fi
     else
       # 3. Assemble
@@ -116,19 +107,13 @@ while [ $STEP -lt $NUM_IT ]; do
 done
 STEP=$(($STEP-1))
 
-if [ -z ${NUCL} ]; then
     # post processing
-    if notExists "${TMP_PATH}/assembly_${STEP}_filtered"; then
-        $MMSEQS filternoncoding "${TMP_PATH}/assembly_${STEP}" "${TMP_PATH}/assembly_${STEP}_filtered" \
-            || fail "Filter protein with NN step died"
-    fi
-    mv -f "${TMP_PATH}/assembly_${STEP}_filtered" "$2" || fail "Could not move result to $2"
-    mv -f "${TMP_PATH}/assembly_${STEP}_filtered.index" "$2.index" || fail "Could not move result to $2.index"
-else
-    mv -f "${TMP_PATH}/assembly_${STEP}" "$2" || fail "Could not move result to $2"
-    mv -f "${TMP_PATH}/assembly_${STEP}.index" "$2.index" || fail "Could not move result to $2.index"
+if notExists "${TMP_PATH}/assembly_${STEP}_filtered"; then
+    $MMSEQS filternoncoding "${TMP_PATH}/assembly_${STEP}" "${TMP_PATH}/assembly_${STEP}_filtered" \
+        || fail "Filter protein with NN step died"
 fi
-
+mv -f "${TMP_PATH}/assembly_${STEP}_filtered" "$2" || fail "Could not move result to $2"
+mv -f "${TMP_PATH}/assembly_${STEP}_filtered.index" "$2.index" || fail "Could not move result to $2.index"
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
