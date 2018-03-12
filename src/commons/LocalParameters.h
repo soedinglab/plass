@@ -5,6 +5,8 @@
 
 class LocalParameters : public Parameters {
 public:
+
+
     static void initInstance() {
         new LocalParameters;
     }
@@ -17,6 +19,7 @@ public:
     }
 
     std::vector<MMseqsParameter> assembleresults;
+    std::vector<MMseqsParameter> hybridassembleresults;
     std::vector<MMseqsParameter> assemblerworkflow;
 
 private:
@@ -31,6 +34,12 @@ private:
         assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
         assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
         assemblerworkflow.push_back(PARAM_RUNNER);
+
+        //
+        hybridassembleresults = combineList(rescorediagonal, kmermatcher);
+        hybridassembleresults.push_back(PARAM_NUM_ITERATIONS);
+        hybridassembleresults.push_back(PARAM_REMOVE_TMP_FILES);
+        hybridassembleresults.push_back(PARAM_RUNNER);
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};

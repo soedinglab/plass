@@ -4,9 +4,9 @@
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
-#include "assembler.sh.h"
+#include "nuclassembler.sh.h"
 
-void setAssemblerWorkflowDefaults(LocalParameters *p) {
+void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
@@ -14,15 +14,15 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.9;
     p->kmersPerSequence = 60;
     p->numIterations = 12;
-    p->alphabetSize = 21;
-    p->kmerSize = 14;
     p->includeOnlyExtendable = true;
+    p->alphabetSize = 5;
+    p->kmerSize = 22;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 
-int assembler(int argc, const char **argv, const Command& command) {
+int nuclassembler(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    setAssemblerWorkflowDefaults(&par);
+    setNuclAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, 3);
 
     if (FileUtil::directoryExists(par.db3.c_str()) == false){
@@ -55,10 +55,6 @@ int assembler(int argc, const char **argv, const Command& command) {
     }
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-    // nucleotide assembly
-
-
-
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
@@ -68,7 +64,7 @@ int assembler(int argc, const char **argv, const Command& command) {
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
-    FileUtil::writeFile(par.db3 + "/assembler.sh", assembler_sh, assembler_sh_len);
+    FileUtil::writeFile(par.db3 + "/assembler.sh", nuclassembler_sh, nuclassembler_sh_len);
     std::string program(par.db3 + "/assembler.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 

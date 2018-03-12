@@ -4,26 +4,27 @@
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
-#include "assembler.sh.h"
+#include "hybridassembler.sh.h"
 
-void setAssemblerWorkflowDefaults(LocalParameters *p) {
+void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
     p->seqIdThr = 0.9;
+//    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
     p->numIterations = 12;
-    p->alphabetSize = 21;
-    p->kmerSize = 14;
     p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 
-int assembler(int argc, const char **argv, const Command& command) {
+int hybridassembler(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    setAssemblerWorkflowDefaults(&par);
+    setHybridAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, 3);
+
+    const int dbType = DBReader<unsigned int>::parseDbType(par.db1.c_str());
 
     if (FileUtil::directoryExists(par.db3.c_str()) == false){
         Debug(Debug::INFO) << "Temporary folder " << par.db3 << " does not exist or is not a directory.\n";
@@ -55,12 +56,17 @@ int assembler(int argc, const char **argv, const Command& command) {
     }
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-    // nucleotide assembly
 
-
+    // save some values to restore them later
+    size_t alphabetSize = par.alphabetSize;
+    size_t kmerSize = par.kmerSize;
 
     // # 1. Finding exact $k$-mer matches.
+
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+
+    par.alphabetSize = alphabetSize;
+    par.kmerSize = kmerSize;
 
     // # 2. Hamming distance pre-clustering
     par.filterHits = false;
@@ -68,8 +74,8 @@ int assembler(int argc, const char **argv, const Command& command) {
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
-    FileUtil::writeFile(par.db3 + "/assembler.sh", assembler_sh, assembler_sh_len);
-    std::string program(par.db3 + "/assembler.sh");
+    FileUtil::writeFile(par.db3 + "/hybridassembler.sh", hybridassembler_sh, hybridassembler_sh_len);
+    std::string program(par.db3 + "/hybridassembler.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;
