@@ -113,9 +113,11 @@ int dohybridassembleresult(LocalParameters &par) {
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < nuclAlignments.size(); alnIdx++) {
                     alnQueue.push(nuclAlignments[alnIdx]);
-                    if (nuclAlignments.size() > 1)
-                        __sync_or_and_fetch(&wasExtended[nuclSequenceDbr->getId(nuclAlignments[alnIdx].dbKey)],
+                    if (nuclAlignments.size() > 1) {
+                        size_t id = nuclSequenceDbr->getId(nuclAlignments[alnIdx].dbKey);
+                        __sync_or_and_fetch(&wasExtended[id],
                                             static_cast<unsigned char>(0x40));
+                    }
                 }
                 std::vector<Matcher::result_t> tmpNuclAlignments;
 
@@ -225,6 +227,7 @@ int dohybridassembleresult(LocalParameters &par) {
                 }
                 nuclAlignments.clear();
                 nuclQuerySeq = (char *) nuclQuery.c_str();
+                break;
                 for(size_t alnIdx = 0; alnIdx < tmpNuclAlignments.size(); alnIdx++){
                     int idCnt = 0;
                     int qStartPos = tmpNuclAlignments[alnIdx].qStartPos;
@@ -278,6 +281,9 @@ int dohybridassembleresult(LocalParameters &par) {
             char *querySeqData = nuclSequenceDbr->getData(id);
             unsigned int queryLen = nuclSequenceDbr->getSeqLens(id) - 1; //skip null byte
             nuclResultWriter.writeData(querySeqData, queryLen, nuclSequenceDbr->getDbKey(id), thread_idx);
+            char *queryAASeqData = aaSequenceDbr->getData(id);
+            unsigned int queryAALen = aaSequenceDbr->getSeqLens(id) - 1; //skip null byte
+            aaResultWriter.writeData(queryAASeqData, queryAALen, aaSequenceDbr->getDbKey(id), thread_idx);
         }
     }
 
