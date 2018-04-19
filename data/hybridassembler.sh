@@ -105,11 +105,17 @@ while [ $STEP -lt $NUM_IT ]; do
 done
 STEP=$(($STEP-1))
 
-mv -f "${TMP_PATH}/assembly_nucl_${STEP}" "${2}_nucl" || fail "Could not move result to $2"
-mv -f "${TMP_PATH}/assembly_nucl_${STEP}.index" "${2}_nucl.index" || fail "Could not move result to $2.index"
+awk 'FNR==NR{a[$1]=$3;next}{ if(a[$1]!=$3){ print $1 } }' "${TMP_PATH}/nucl_6f_start_long.index" "${TMP_PATH}/assembly_nucl_${STEP}.index" > "${TMP_PATH}/assembled_ids"
 
-mv -f "${TMP_PATH}/assembly_aa_${STEP}" "${2}_aa" || fail "Could not move result to $2"
-mv -f "${TMP_PATH}/assembly_aa_${STEP}.index" "${2}_aa.index" || fail "Could not move result to $2.index"
+$MMSEQS createsubdb "${TMP_PATH}/assembled_ids" "${TMP_PATH}/assembly_nucl_${STEP}" "${TMP_PATH}/assembly_nucl_${STEP}_assembled"
+$MMSEQS concatdbs "${TMP_PATH}/assembly_nucl_${STEP}_assembled" "${INPUT}" "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads"
+$MMSEQS nuclassemble "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads" "${TMP_PATH}/assembly_nucl_${STEP}_2" "${TMP_PATH}/nuclassembly_2"
+
+mv -f "${TMP_PATH}/assembly_nucl_${STEP}_2" "${2}_nucl" || fail "Could not move result to $2"
+mv -f "${TMP_PATH}/assembly_nucl_${STEP}_2.index" "${2}_nucl.index" || fail "Could not move result to $2.index"
+
+#mv -f "${TMP_PATH}/assembly_aa_${STEP}" "${2}_aa" || fail "Could not move result to $2"
+#mv -f "${TMP_PATH}/assembly_aa_${STEP}.index" "${2}_aa.index" || fail "Could not move result to $2.index"
 
 
 if [ -n "$REMOVE_TMP" ]; then
