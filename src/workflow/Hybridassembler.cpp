@@ -64,6 +64,7 @@ int hybridassembler(int argc, const char **argv, const Command& command) {
     // # 1. Finding exact $k$-mer matches.
 
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.kmermatcher).c_str());
 
     par.alphabetSize = alphabetSize;
     par.kmerSize = kmerSize;

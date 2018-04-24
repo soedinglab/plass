@@ -109,7 +109,7 @@ awk 'FNR==NR{a[$1]=$3;next}{ if(a[$1]!=$3){ print $1 } }' "${TMP_PATH}/nucl_6f_s
 
 $MMSEQS createsubdb "${TMP_PATH}/assembled_ids" "${TMP_PATH}/assembly_nucl_${STEP}" "${TMP_PATH}/assembly_nucl_${STEP}_assembled"
 $MMSEQS concatdbs "${TMP_PATH}/assembly_nucl_${STEP}_assembled" "${INPUT}" "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads"
-$MMSEQS nuclassemble "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads" "${TMP_PATH}/assembly_nucl_${STEP}_2" "${TMP_PATH}/nuclassembly_2"
+$MMSEQS nuclassemble "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads" "${TMP_PATH}/assembly_nucl_${STEP}_2" "${TMP_PATH}/nuclassembly_2" ${NUCL_ASM_PAR}
 
 mv -f "${TMP_PATH}/assembly_nucl_${STEP}_2" "${2}_nucl" || fail "Could not move result to $2"
 mv -f "${TMP_PATH}/assembly_nucl_${STEP}_2.index" "${2}_nucl.index" || fail "Could not move result to $2.index"
