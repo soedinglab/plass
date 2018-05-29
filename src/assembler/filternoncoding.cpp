@@ -114,7 +114,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
         delete[] diAACnt;
     }
 //    std::cout << "Filtered: " << static_cast<float>(cnt)/ static_cast<float>(seqDb.getSize()) << std::endl;
-    dbw.close(DBReader<unsigned int>::DBTYPE_AA);
+    dbw.close(Sequence::AMINO_ACIDS);
     seqDb.close();
 
     return EXIT_SUCCESS;

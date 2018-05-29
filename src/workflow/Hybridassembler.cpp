@@ -16,6 +16,7 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->kmersPerSequence = 60;
     p->numIterations = 12;
     p->includeOnlyExtendable = true;
+    p->skipNRepeatKmer = 8;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 
@@ -45,10 +46,7 @@ int hybridassembler(int argc, const char **argv, const Command& command) {
     }
     par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
-    if (FileUtil::symlinkCreateOrRepleace(par.db3 + "/latest", tmpDir) == false){
-        Debug(Debug::WARNING) << "Could not symlink latest folder in temporary directory." << tmpDir << ".\n";
-        EXIT(EXIT_FAILURE);
-    }
+    FileUtil::symlinkAlias(tmpDir, "latest");
 
     CommandCaller cmd;
     if (par.removeTmpFiles) {

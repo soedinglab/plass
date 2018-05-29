@@ -17,6 +17,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->includeOnlyExtendable = true;
     p->alphabetSize = 5;
     p->kmerSize = 22;
+    p->skipNRepeatKmer = 8;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 
@@ -44,10 +45,8 @@ int nuclassembler(int argc, const char **argv, const Command& command) {
     }
     par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
-    if (FileUtil::symlinkCreateOrRepleace(par.db3 + "/latest", tmpDir) == false){
-        Debug(Debug::WARNING) << "Could not symlink latest folder in temporary directory." << tmpDir << ".\n";
-        EXIT(EXIT_FAILURE);
-    }
+    FileUtil::symlinkAlias(tmpDir, "latest");
+
 
     CommandCaller cmd;
     if (par.removeTmpFiles) {
