@@ -160,6 +160,13 @@ std::vector<struct Command> commands = {
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
                 "<i:sequenceDB> <o:sequenceDB>",
                 CITATION_MMSEQS2},
+
+        {"mergereads",      mergereads,      &par.onlythreads,          COMMAND_SPECIAL,
+                "Merge paired-end reads from FASTQ file (powered by FLASH)",
+                NULL,
+                "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
+                "<i:fastq> <o:sequenceDB>",
+                CITATION_MMSEQS2},
         {"shellcompletion",      shellcompletion,      &par.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,

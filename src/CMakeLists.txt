@@ -12,7 +12,7 @@ add_executable(plass
         plass.cpp
         )
 mmseqs_setup_derived_target(plass)
-target_link_libraries(plass version kerasify)
+target_link_libraries(plass version kerasify flash)
 
 add_dependencies(plass local-generated)
 

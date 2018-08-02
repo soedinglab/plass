@@ -24,19 +24,45 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
 int assembler(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     setAssemblerWorkflowDefaults(&par);
-    par.parseParameters(argc, argv, command, 3);
+//    par.parseParameters(argc, argv, command, 3);
+    par.parseParameters(argc, argv, command, 2, true, Parameters::PARSE_VARIADIC);
+    CommandCaller cmd;
 
-    if (FileUtil::directoryExists(par.db3.c_str()) == false){
-        Debug(Debug::INFO) << "Temporary folder " << par.db3 << " does not exist or is not a directory.\n";
-        if (FileUtil::makeDir(par.db3.c_str()) == false){
-            Debug(Debug::WARNING) << "Could not crate tmp folder " << par.db3 << ".\n";
+    // paired end reads
+    if((par.filenames.size() - 2) % 2  == 0 ){
+        std::string readStr = "";
+        for(size_t i = 0; i < (par.filenames.size() -2)/2; i++){
+            readStr.append(par.filenames[i*2]);
+            readStr.append(" ");
+            readStr.append(par.filenames[i*2 + 1]);
+        }
+        cmd.addVariable("PAIRED_END", "1");
+        cmd.addVariable("READ_FILES", readStr.c_str());
+    }else{
+        if(par.filenames.size() == 3){
+            cmd.addVariable("READ_FILES", par.filenames[0].c_str());
+        }else{
+            Debug(Debug::ERROR) << "Read input parameters are wrong. \n";
+            Debug(Debug::ERROR) << "For paired end input use READSETA_1.fastq READSETA_2.fastq ... OUTPUT.fasta  \n";
+            Debug(Debug::ERROR) << "For single input use READSET.fast(q|a) OUTPUT.fasta  \n";
+            EXIT(EXIT_FAILURE);
+        }
+    }
+    cmd.addVariable("OUT_FILE", par.filenames[par.filenames.size() - 2].c_str());
+    cmd.addVariable("PROTEIN_FILTER", "1");
+
+    std::string tmpPath = par.filenames[par.filenames.size() - 1];
+    if (FileUtil::directoryExists(tmpPath.c_str()) == false){
+        Debug(Debug::INFO) << "Temporary folder " << tmpPath << " does not exist or is not a directory.\n";
+        if (FileUtil::makeDir(tmpPath.c_str()) == false){
+            Debug(Debug::WARNING) << "Could not crate tmp folder " << tmpPath << ".\n";
             EXIT(EXIT_FAILURE);
         } else {
-            Debug(Debug::INFO) << "Created directory " << par.db3 << "\n";
+            Debug(Debug::INFO) << "Created directory " << tmpPath << "\n";
         }
     }
     size_t hash = par.hashParameter(par.filenames, par.searchworkflow);
-    std::string tmpDir(par.db3 + "/" + SSTR(hash));
+    std::string tmpDir(tmpPath + "/" + SSTR(hash));
     if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
         if (FileUtil::makeDir(tmpDir.c_str()) == false) {
             Debug(Debug::WARNING) << "Could not create sub folder in temporary directory " << tmpDir << ".\n";
@@ -46,8 +72,8 @@ int assembler(int argc, const char **argv, const Command& command) {
     par.filenames.pop_back();
     par.filenames.push_back(tmpDir);
     FileUtil::symlinkAlias(tmpDir, "latest");
+    cmd.addVariable("TMP_PATH", tmpDir.c_str());
 
-    CommandCaller cmd;
     if (par.removeTmpFiles) {
         cmd.addVariable("REMOVE_TMP", "TRUE");
     }
@@ -66,8 +92,8 @@ int assembler(int argc, const char **argv, const Command& command) {
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
-    FileUtil::writeFile(par.db3 + "/assembler.sh", assembler_sh, assembler_sh_len);
-    std::string program(par.db3 + "/assembler.sh");
+    FileUtil::writeFile(tmpDir + "/assembler.sh", assembler_sh, assembler_sh_len);
+    std::string program(tmpDir + "/assembler.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;
