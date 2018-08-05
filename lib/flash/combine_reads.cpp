@@ -43,6 +43,28 @@
 
 #ifdef WITH_SSE2
 
+
+
+#ifdef __GNUC__
+#	if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
+#		define __cold __attribute__((cold))
+#	else
+#		define __cold
+#	endif
+#	define __noreturn __attribute__((noreturn))
+#	define __format(type, format_str, args_start) \
+			__attribute__((format(type, format_str, args_start)))
+#	define max(a,b) ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a > _b ? _a : _b; })
+#	define min(a,b) ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a < _b ? _a : _b; })
+#	define inline inline __attribute__((always_inline))
+#else
+#	define __noreturn
+#	define __cold
+#	define __format(type, format_str, args_start)
+#	define max(a,b) (((a) > (b)) ? (a) : (b))
+#	define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
 /* Sum the values an 8 x 8 bit vector and return a 32-bit result.  */
 static inline uint32_t
 hsum32_v8(__m128i v)
@@ -522,3 +544,10 @@ combine_reads(const struct read *read_1, const struct read *read_2,
                            overlap_begin, params->cap_mismatch_quals);
     return status;
 }
+
+
+#undef max
+#undef min
+#undef __noreturn
+#undef __format
+#undef __cold

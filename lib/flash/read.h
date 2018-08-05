@@ -35,20 +35,5 @@ struct input_stream;
 extern void
 reverse_complement(struct read *r);
 
-extern void
-clean_read(struct read *r, int phred_offset, struct input_stream *in,
-	   uint64_t line_no);
-
-extern void
-clean_read_for_write(struct read *r, int phred_offset);
-
-extern void
-copy_tag(struct read *to, const struct read *from);
-
-extern void
-get_combined_tag(const struct read *read_1,
-		 const struct read *read_2,
-		 struct read *combined_read);
-
 
 #endif /* _FLASH_READ_H_ */

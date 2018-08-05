@@ -1,20 +1,22 @@
 #include "read.h"
-/* A table mapping an ASCII base character in canonical form to its complement.
- * Unknown bases (N's) stay unknown.  */
-static const char complement_tab[] = {
-        ['A'] = 'T',
-        ['C'] = 'G',
-        ['G'] = 'C',
-        ['T'] = 'A',
-        ['N'] = 'N',
-};
+
+
+
+//note: N->N, S->S, W->W, U->A, T->A
+static const char* complement_tab =
+        "................................................................"
+                ".TVGH..CD..M.KN...YSAABW.R.......tvgh..cd..m.kn...ysaabw.r......"
+                "................................................................"
+                "................................................................";
 
 /* Complements a canonical ASCII base (A, C, G, T, N). */
 static inline char
 complement(char c)
 {
+
     return complement_tab[(unsigned char)c];
 }
+
 
 static inline char
 identity_mapping(char c)
