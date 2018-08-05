@@ -24,6 +24,14 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
 int assembler(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     setAssemblerWorkflowDefaults(&par);
+    par.overrideParameterDescription((Command &)command, par.PARAM_COV_MODE.uniqid, NULL, NULL, par.PARAM_COV_MODE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_C.uniqid, NULL, NULL, par.PARAM_C.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_MIN_SEQ_ID.uniqid, "overlap sequence identity threshold", NULL,  par.PARAM_MIN_SEQ_ID.category);
+    par.overrideParameterDescription((Command &)command, par.PARAM_SEQ_ID_MODE.uniqid, NULL, NULL,  par.PARAM_SEQ_ID_MODE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_RESCORE_MODE.uniqid, NULL, NULL,  par.PARAM_RESCORE_MODE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_INCLUDE_ONLY_EXTENDABLE.uniqid, NULL, NULL,  par.PARAM_INCLUDE_ONLY_EXTENDABLE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_KMER_PER_SEQ.uniqid, NULL, NULL,  par.PARAM_KMER_PER_SEQ.category | MMseqsParameter::COMMAND_EXPERT);
+
 //    par.parseParameters(argc, argv, command, 3);
     par.parseParameters(argc, argv, command, 2, true, Parameters::PARSE_VARIADIC);
     CommandCaller cmd;

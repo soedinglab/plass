@@ -101,7 +101,7 @@ int mergereads(int argn, const char **argv, const Command& command) {
     }
 
     // cleanup
-    resultWriter.close(Sequence::AMINO_ACIDS);
+    resultWriter.close(Sequence::NUCLEOTIDES);
     headerResultWriter.close();
     Debug(Debug::INFO) << "\nDone.\n";
 

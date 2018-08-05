@@ -24,15 +24,26 @@ abspath() {
     fi
 }
 
-# check amount of input variables
-[ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmp>" && exit 1;
-# check if files exists
-[ ! -f "$1" ] &&  echo "$1 not found!" && exit 1;
-[   -f "$2" ] &&  echo "$2 exists already!" && exit 1;
-[ ! -d "$3" ] &&  echo "tmp directory $3 not found!" && mkdir -p $3;
 
-INPUT="$(abspath "$1")"
-TMP_PATH="$(abspath "$3")"
+# check amount of input variables
+[ ! -n "${READ_FILES}" ] && echo "Please provide ${READ_FILES}" && exit 1;
+[ ! -n ${OUT_FILE} ] && echo "Please provide ${OUT_FILE}" && exit 1;
+[ ! -n ${TMP_PATH} ] && echo "Please provide ${TMP_PATH}" && exit 1;
+
+# check if files exists
+[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1;
+[ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p ${TMP_PATH};
+
+
+if notExists "${TMP_PATH}/nucl_reads"; then
+    if [ ${PAIRED_END} -eq 1 ]; then
+        echo "PAIRED END MODE"
+        $MMSEQS mergereads $READ_FILES "${TMP_PATH}/nucl_reads"
+    else
+        $MMSEQS createdb $READ_FILES "${TMP_PATH}/nucl_reads"
+    fi
+fi
+INPUT="${TMP_PATH}/nucl_reads"
 
 STEP=0
 if [ -z "$NUM_IT" ]; then
@@ -66,9 +77,29 @@ done
 STEP=$(($STEP-1))
 
 
-mv -f "${TMP_PATH}/assembly_${STEP}" "$2" || fail "Could not move result to $2"
-mv -f "${TMP_PATH}/assembly_${STEP}.index" "$2.index" || fail "Could not move result to $2.index"
+# select only assembled sequences
+RESULT="${TMP_PATH}/assembly_${STEP}"
+awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' ${RESULT}.index "${TMP_PATH}/nucl_reads.index" > ${RESULT}_tmp.index
+awk '$3 > $6 { print }' ${RESULT}_tmp.index > ${RESULT}_only_assembled.index
+mv ${RESULT}.index ${RESULT}_old.index
+mv ${RESULT}_only_assembled.index ${RESULT}.index
 
+# create fasta output
+if notExists "${RESULT}_h"; then
+    ln -s "${TMP_PATH}/nucl_reads_h" "${RESULT}_h"
+fi
+if notExists "${RESULT}_h.index"; then
+    ln -s "${TMP_PATH}/nucl_reads_h.index" "${RESULT}_h.index"
+fi
+if notExists "${RESULT}.fasta"; then
+    $MMSEQS convert2fasta "${RESULT}" "${RESULT}.fasta"
+fi
+
+echo "${RESULT}.fasta"
+
+echo "$OUT_FILE"
+
+mv -f "${RESULT}.fasta" "$OUT_FILE" || fail "Could not move result to $OUT_FILE"
 
 
 if [ -n "$REMOVE_TMP" ]; then
