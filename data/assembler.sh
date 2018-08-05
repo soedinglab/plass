@@ -127,12 +127,13 @@ awk '$3 > $6 { print }' ${RESULT}_tmp.index > ${RESULT}_only_assembled.index
 mv ${RESULT}.index ${RESULT}_old.index
 mv ${RESULT}_only_assembled.index ${RESULT}.index
 
+ABS_TMP_PATH=$(realpath "${TMP_PATH}")
 # create fasta output
 if notExists "${RESULT}_h"; then
-    ln -s ${TMP_PATH}/aa_6f_start_long_h "${RESULT}_h"
+    ln -s "${ABS_TMP_PATH}/aa_6f_start_long_h" "${RESULT}_h"
 fi
 if notExists "${RESULT}_h.index"; then
-    ln -s ${TMP_PATH}/aa_6f_start_long_h.index "${RESULT}_h.index"
+    ln -s "${ABS_TMP_PATH}/aa_6f_start_long_h.index" "${RESULT}_h.index"
 fi
 
 if notExists "${RESULT}.fasta"; then
