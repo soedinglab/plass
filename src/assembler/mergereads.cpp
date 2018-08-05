@@ -22,9 +22,13 @@ int mergereads(int argn, const char **argv, const Command& command) {
     // + 1 for query
     SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0f, 0.0f);
     Debug(Debug::INFO) << "Start computing overlap in reads.\n";
-    combine_params alg_params = {.max_overlap = 65, .min_overlap = 10,
-            .max_mismatch_density = 0.25, .cap_mismatch_quals = false,
-            .allow_outies = false };
+    combine_params alg_params;
+    //TODO
+    alg_params.max_overlap = 65;
+    alg_params.min_overlap = 10;
+    alg_params.max_mismatch_density = 0.25;
+    alg_params.cap_mismatch_quals = false;
+    alg_params.allow_outies = false;
 
     std::vector<std::string> filenames(par.filenames);
     std::string outFile = par.filenames.back();
