@@ -1,6 +1,9 @@
 # PLASS protein level assembly
 [ ![Codeship Status for soedinglab/plass](https://app.codeship.com/projects/fc7c4e70-e188-0135-0db2-569fac09cf96/status?branch=master)](https://app.codeship.com/projects/266646)
 
+Plass (Proten-level-assembler) is a software to assemble short reads on a protein level. Plass is open source GPL-licensed software implemented in C++ for Linux, MacOS. The software is designed to run on multiple cores and servers. 
+ 
+ 
 ### Compile from source
 Compiling PLASS from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile PLASS `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are needed. Afterwards, the PLASS binary will be located in `build/bin/`.
 
@@ -22,13 +25,11 @@ Compiling PLASS from source has the advantage that it will be optimized to the s
 
 ## How to assemble
 
-PLASS was evaluated on illumina HiSeq 2500 150x2 paired end reads but should be able to assemble protein fragments of all sizes.
+PLASS can assemble paired-end reads (fastq) and single reads 
 
-       # combine reads using FLASH (Install flash from https://ccb.jhu.edu/software/FLASH/)
-       flash read_1.fastq read_2.fastq
-       cat out.extendedFrags.fastq out.notCombined_1.fastq out.notCombined_2.fastq > all_merged_reads_nucl.fastq
-       # create internal database
-       plass createdb all_merged_reads_nucl.fastq all_merged_reads_nucl
-       # assemble
-       plass assemble all_merged_reads_nucl all_merged_reads_aa_assembly tmp  --mask 0 --min-seq-id 0.9 --num-iterations 12
-
+       # assemble paired-end reads 
+       plass assemble read_1.fastq read_2.fastq assembly.fas tmp
+        
+       # assemble single-end reads 
+       plass assemble reads.fasta assembly.fas tmp
+      
