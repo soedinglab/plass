@@ -25,11 +25,15 @@ int nuclassembler(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.overrideParameterDescription((Command &)command, par.PARAM_COV_MODE.uniqid, NULL, NULL, par.PARAM_COV_MODE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_C.uniqid, NULL, NULL, par.PARAM_C.category | MMseqsParameter::COMMAND_EXPERT);
-    par.overrideParameterDescription((Command &)command, par.PARAM_MIN_SEQ_ID.uniqid, "overlap sequence identity threshold", NULL,  par.PARAM_MIN_SEQ_ID.category);
+    par.overrideParameterDescription((Command &)command, par.PARAM_MIN_SEQ_ID.uniqid, "overlap sequence identity threshold [0.0, 1.0]", NULL,  par.PARAM_MIN_SEQ_ID.category);
+    par.overrideParameterDescription((Command &)command, par.PARAM_NUM_ITERATIONS.uniqid, "number of assembly iterations [1, inf]", NULL,  par.PARAM_NUM_ITERATIONS.category);
+    par.overrideParameterDescription((Command &)command, par.PARAM_E.uniqid, "extend sequences if the E-value is below [0.0, inf]", NULL,  par.PARAM_E.category);
+
     par.overrideParameterDescription((Command &)command, par.PARAM_SEQ_ID_MODE.uniqid, NULL, NULL,  par.PARAM_SEQ_ID_MODE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_RESCORE_MODE.uniqid, NULL, NULL,  par.PARAM_RESCORE_MODE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_INCLUDE_ONLY_EXTENDABLE.uniqid, NULL, NULL,  par.PARAM_INCLUDE_ONLY_EXTENDABLE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_KMER_PER_SEQ.uniqid, NULL, NULL,  par.PARAM_KMER_PER_SEQ.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_SORT_RESULTS.uniqid, NULL, NULL,  par.PARAM_SORT_RESULTS.category | MMseqsParameter::COMMAND_EXPERT);
 
     setNuclAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, 2, true, Parameters::PARSE_VARIADIC);
