@@ -1,7 +1,7 @@
-# PLASS - Protein Level ASSembly
+# PLASS - Protein-Level ASSembler
 [ ![Codeship Status for soedinglab/plass](https://app.codeship.com/projects/fc7c4e70-e188-0135-0db2-569fac09cf96/status?branch=master)](https://app.codeship.com/projects/266646)
 
-Plass (Protein-level-assembler) is a software to assemble short read sequencing data on a protein level. Plass is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS. The software is designed to run on multiple cores. 
+Plass (Protein-Level ASSembler) is a software to assemble short read sequencing data on a protein level. Plass is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS. The software is designed to run on multiple cores. 
  
 ### Install static Linux version
 The following command will download the last Plass version, extract it and set the `PATH` environment variable. This version runs only on Linux. If you want to run it on Mac please compile it from source.
