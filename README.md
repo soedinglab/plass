@@ -4,6 +4,13 @@
 Plass (Proten-level-assembler) is a software to assemble short reads on a protein level. Plass is open source GPL-licensed software implemented in C++ for Linux, MacOS. The software is designed to run on multiple cores and servers. 
  
  
+### Install static Linux version
+The following command will download the last Plass version, extract it and set the `PATH` variable. This version runs only on linux. If you want to run it on Mac please compile it or use brew.
+
+        wget https://mmseqs.com/latest/plass-static_sse41.tar.gz 
+        tar xvzf plass-static_sse41.tar.gz
+        export PATH=$(pwd)/plass/bin/:$PATH
+ 
 ### Compile from source
 Compiling PLASS from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile PLASS `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are needed. Afterwards, the PLASS binary will be located in `build/bin/`.
 
