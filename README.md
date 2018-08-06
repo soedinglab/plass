@@ -6,7 +6,7 @@ Plass (Protein-level-assembler) is a software to assemble short read sequencing 
 ### Install static Linux version
 The following command will download the last Plass version, extract it and set the `PATH` environment variable. This version runs only on Linux. If you want to run it on Mac please compile it from source.
 
-      wget https://mmseqs.com/latest/plass-static_sse41.tar.gz
+      wget https://mmseqs.com/plass/plass-static_sse41.tar.gz
       tar xvzf plass-static_sse41.tar.gz
       export PATH=$(pwd)/plass/bin/:$PATH
 
