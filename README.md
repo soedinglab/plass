@@ -51,6 +51,12 @@ Compiling PLASS from source has the advantage that it will be optimized to the s
 
       CXX="$(brew --prefix)/bin/g++-8" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
 
+### Use the docker image
+We also provide a Docker image of Plass. You can mount the current directory containing the reads to be assembled and run plass with the following command:
+
+      docker pull soedinglab/plass
+      docker run -ti --rm -v "$(pwd):/app" -w /app plass assemble read_1.fastq read_2.fastq assembly.fas tmp
+
 ## Hardware requirements
 Plass needs roughly 1 byte of memory per residue to work efficiently. Plass will scale its memory consumption based on the available main memory of the machine. Plass needs a CPU with at least the SSE4.1 instruction set to run. 
 
