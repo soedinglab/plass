@@ -4,8 +4,6 @@ RUN apk add --no-cache gcc g++ cmake musl-dev vim git ninja zlib-dev bzip2-dev
 WORKDIR /opt/plass
 ADD . .
 
-RUN git submodule init && git submodule update
-
 WORKDIR build_sse
 RUN cmake -G Ninja -DHAVE_SSE4_1=1 -DCMAKE_BUILD_TYPE=Release ..
 RUN ninja && ninja install
