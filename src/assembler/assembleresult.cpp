@@ -1,8 +1,3 @@
-#include <string>
-#include <vector>
-#include <sstream>
-#include <sys/time.h>
-
 #include "LocalParameters.h"
 #include "DistanceCalculator.h"
 #include "Matcher.h"
@@ -11,9 +6,11 @@
 #include "Debug.h"
 #include "Util.h"
 #include "MathUtil.h"
+
 #include <limits>
 #include <cstdint>
 #include <queue>
+#include <vector>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -273,15 +270,6 @@ int assembleresult(int argc, const char **argv, const Command& command) {
     // never allow deletions
     par.allowDeletion = false;
     Debug(Debug::INFO) << "Compute assembly.\n";
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-
-    int retCode = doassembly(par);
-
-    gettimeofday(&end, NULL);
-    time_t sec = end.tv_sec - start.tv_sec;
-    Debug(Debug::INFO) << "Time for processing: " << (sec / 3600) << " h " << (sec % 3600 / 60) << " m " << (sec % 60) << "s\n";
-
-    return retCode;
+    return doassembly(par);
 }
 
