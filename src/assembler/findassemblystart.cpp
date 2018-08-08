@@ -35,6 +35,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
 
     DBReader<unsigned int> resultReader(par.db2.c_str(), par.db2Index.c_str());
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
+
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads);
     resultWriter.open();
 
@@ -45,7 +46,6 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
     std::fill(addStopAtPosition, addStopAtPosition + qDbr.getSize(), -1);
 
     const float threshold = 0.2;
-
 #pragma omp parallel for schedule(dynamic, 100)
     for (size_t id = 0; id < resultReader.getSize(); id++) {
         Debug::printProgress(id);

@@ -24,8 +24,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str());
     seqDb.open(DBReader<unsigned int>::NOSORT);
 
-    Debug(Debug::INFO) << "Output  file: " << par.db2 << "\n";
-
+    Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
     DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads));
     dbw.open();
 
@@ -33,7 +32,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     KerasModel model;
     model.LoadModel(std::string((const char *)predict_coding_acc9260_56x96_model, predict_coding_acc9260_56x96_model_len));
 
-    SubstitutionMatrix subMat("blosum62.out", 2.0, 0.0);
+    SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0, 0.0);
     ReducedMatrix redMat(subMat.probMatrix, subMat.subMatrixPseudoCounts, 7, subMat.getBitFactor());
 
     // Create a 1D Tensor on length 20 for input data.

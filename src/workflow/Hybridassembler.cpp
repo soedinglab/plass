@@ -1,4 +1,4 @@
-#include <mmseqs/src/commons/DBReader.h>
+#include "DBReader.h"
 #include "Util.h"
 #include "CommandCaller.h"
 #include "Debug.h"
@@ -20,24 +20,22 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 
-int hybridassembler(int argc, const char **argv, const Command& command) {
-    LocalParameters& par = LocalParameters::getLocalInstance();
+int hybridassembler(int argc, const char **argv, const Command &command) {
+    LocalParameters &par = LocalParameters::getLocalInstance();
     setHybridAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, 3);
 
-    const int dbType = DBReader<unsigned int>::parseDbType(par.db1.c_str());
-
-    if (FileUtil::directoryExists(par.db3.c_str()) == false){
+    if (FileUtil::directoryExists(par.db3.c_str()) == false) {
         Debug(Debug::INFO) << "Temporary folder " << par.db3 << " does not exist or is not a directory.\n";
-        if (FileUtil::makeDir(par.db3.c_str()) == false){
+        if (FileUtil::makeDir(par.db3.c_str()) == false) {
             Debug(Debug::WARNING) << "Could not crate tmp folder " << par.db3 << ".\n";
             EXIT(EXIT_FAILURE);
         } else {
             Debug(Debug::INFO) << "Created directory " << par.db3 << "\n";
         }
     }
-    size_t hash = par.hashParameter(par.filenames, par.searchworkflow);
-    std::string tmpDir(par.db3 + "/" + SSTR(hash));
+    size_t hash = par.hashParameter(par.filenames, par.hybridassembleresults);
+    std::string tmpDir = par.db3 + "/" + SSTR(hash);
     if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
         if (FileUtil::makeDir(tmpDir.c_str()) == false) {
             Debug(Debug::WARNING) << "Could not create sub folder in temporary directory " << tmpDir << ".\n";
@@ -49,9 +47,7 @@ int hybridassembler(int argc, const char **argv, const Command& command) {
     FileUtil::symlinkAlias(tmpDir, "latest");
 
     CommandCaller cmd;
-    if (par.removeTmpFiles) {
-        cmd.addVariable("REMOVE_TMP", "TRUE");
-    }
+    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
 
@@ -60,7 +56,6 @@ int hybridassembler(int argc, const char **argv, const Command& command) {
     size_t kmerSize = par.kmerSize;
 
     // # 1. Finding exact $k$-mer matches.
-
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
     cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.kmermatcher).c_str());
 
@@ -72,6 +67,9 @@ int hybridassembler(int argc, const char **argv, const Command& command) {
     par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
+
+    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
+    cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
     FileUtil::writeFile(par.db3 + "/hybridassembler.sh", hybridassembler_sh, hybridassembler_sh_len);
     std::string program(par.db3 + "/hybridassembler.sh");
