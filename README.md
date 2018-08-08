@@ -22,7 +22,7 @@ The following command will download the last Plass version, extract it and set t
 Plass can assemble both paired-end reads (FASTQ) and single reads (FASTA or FASTQ):
 
       # assemble paired-end reads 
-      plass assemble read_1.fastq read_2.fastq assembly.fas tmp
+      plass assemble reads_1.fastq reads_2.fastq assembly.fas tmp
 
       # assemble single-end reads 
       plass assemble reads.fasta assembly.fas tmp
@@ -58,7 +58,7 @@ Compiling PLASS from source has the advantage that it will be optimized to the s
 We also provide a Docker image of Plass. You can mount the current directory containing the reads to be assembled and run plass with the following command:
 
       docker pull soedinglab/plass
-      docker run -ti --rm -v "$(pwd):/app" -w /app plass assemble read_1.fastq read_2.fastq assembly.fas tmp
+      docker run -ti --rm -v "$(pwd):/app" -w /app plass assemble reads_1.fastq reads_2.fastq assembly.fas tmp
 
 ## Hardware requirements
 Plass needs roughly 1 byte of memory per residue to work efficiently. Plass will scale its memory consumption based on the available main memory of the machine. Plass needs a CPU with at least the SSE4.1 instruction set to run. 
