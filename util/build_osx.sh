@@ -21,5 +21,5 @@ make -j 4
 make install
 
 cd "$BUILD"
-tar -czvf plass-osx-static_sse41.tar.gz mmseqs
+tar -czvf plass-osx-static_sse41.tar.gz plass
 
