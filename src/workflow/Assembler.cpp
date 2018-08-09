@@ -87,8 +87,7 @@ int assembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
 
-    // nucleotide assembly
-    cmd.addVariable("PROTEIN_FILTER", NULL);
+    cmd.addVariable("PROTEIN_FILTER", "1");
 
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
