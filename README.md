@@ -33,7 +33,8 @@ Important parameters:
      -e                   E-value threshold for overlaps 
      --skip-n-repeat-kmer Sequence with >= n exact repeating k-mers are ignored
      --num-iterations     Number of iterations of assembly
-     
+     --filter-proteins    Switches the neural network protein filter off/on
+
 Modules: 
 
       plass assemble      Assembles proteins (i:Nucleotides -> o:Proteins)
