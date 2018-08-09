@@ -1,5 +1,6 @@
 # PLASS - Protein-Level ASSembler
 [ ![Codeship Status for soedinglab/plass](https://app.codeship.com/projects/fc7c4e70-e188-0135-0db2-569fac09cf96/status?branch=master)](https://app.codeship.com/projects/266646)
+[![Build Status](https://travis-ci.org/soedinglab/plass.svg?branch=master)](https://travis-ci.org/soedinglab/plass)
 [![DOI](https://zenodo.org/badge/118119513.svg)](https://zenodo.org/badge/latestdoi/118119513)
 
 
