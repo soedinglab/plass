@@ -25,10 +25,10 @@ The following command will download the last Plass version, extract it and set t
 Plass can assemble both paired-end reads (FASTQ) and single reads (FASTA or FASTQ):
 
       # assemble paired-end reads 
-      plass assemble reads_1.fastq reads_2.fastq assembly.fas tmp
+      plass assemble examples/reads_1.fastq.gz examples/reads_2.fastq.gz assembly.fas tmp
 
       # assemble single-end reads 
-      plass assemble reads.fasta assembly.fas tmp
+      plass assemble examples/reads_1.fastq.gz assembly.fas tmp
       
 Important parameters: 
 
