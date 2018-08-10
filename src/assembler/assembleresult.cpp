@@ -23,6 +23,10 @@ public:
             return true;
         if(r2.seqId < r1.seqId )
             return false;
+        if(r1.dbKey > r2.dbKey )
+            return true;
+        if(r2.dbKey > r1.dbKey )
+            return false;
         /*  int seqLen1 = r1.qEndPos - r1.qStartPos;
           int seqLen2 = r2.qEndPos - r2.qStartPos;
           if(seqLen1 < seqLen2)
