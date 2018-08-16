@@ -61,7 +61,7 @@ fi
 
 if notExists "${TMP_PATH}/aa_6f_start_long_h"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" concatdbs "${TMP_PATH}/aa_6f_long_h" "${TMP_PATH}/aa_6f_start_h" "${TMP_PATH}/aa_6f_start_long_h" ${VERBOSITY_PAR} \
+    "$MMSEQS" concatdbs "${TMP_PATH}/nucl_6f_long_h" "${TMP_PATH}/nucl_6f_start_h" "${TMP_PATH}/aa_6f_start_long_h" ${VERBOSITY_PAR} \
         || fail "concatdbs start long step died"
 fi
 
@@ -129,8 +129,13 @@ fi
 
 # select only assembled sequences
 if notExists "${RESULT}_only_assembled.index"; then
+    # detect assembled proteins sequences
     awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT}.index" "${TMP_PATH}/aa_6f_start_long.index" > "${RESULT}_tmp.index"
-    awk '$3 > $6 { print }' "${RESULT}_tmp.index" > "${RESULT}_only_assembled.index"
+    awk '$3 > $6 { print $1"\t"$2"\t"$3 }' "${RESULT}_tmp.index" > "${RESULT}_only_assembled1.index"
+    # detect complete proteins with * at start and end
+    awk '/^\x00?\*[A-Z]*\*$/{ f[NR-1]=1; next } $1 in f { print $0 }' "${RESULT}" "${RESULT}.index" > "${RESULT}_only_assembled2.index"
+    # keep only non-redundant entries
+    cat "${RESULT}_only_assembled1.index" "${RESULT}_only_assembled2.index" | sort | uniq > "${RESULT}_only_assembled.index"
 fi
 
 # create fasta output
