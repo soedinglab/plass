@@ -36,6 +36,8 @@ int assembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription((Command &)command, par.PARAM_INCLUDE_ONLY_EXTENDABLE.uniqid, NULL, NULL,  par.PARAM_INCLUDE_ONLY_EXTENDABLE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_KMER_PER_SEQ.uniqid, NULL, NULL,  par.PARAM_KMER_PER_SEQ.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_SORT_RESULTS.uniqid, NULL, NULL,  par.PARAM_SORT_RESULTS.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_TRANSLATION_TABLE.uniqid, NULL, NULL, par.PARAM_TRANSLATION_TABLE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_USE_ALL_TABLE_STARTS.uniqid, NULL, NULL, par.PARAM_USE_ALL_TABLE_STARTS.category | MMseqsParameter::COMMAND_EXPERT);
     par.parseParameters(argc, argv, command, 3, true, Parameters::PARSE_VARIADIC);
 
     CommandCaller cmd;
@@ -97,6 +99,9 @@ int assembler(int argc, const char **argv, const Command &command) {
     // # 2. Hamming distance pre-clustering
     par.filterHits = false;
     par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
+    cmd.addVariable("EXTRACTORFS_SUBSET_PAR", par.createParameterString(par.extractorfssubset).c_str());
+    par.addOrfStop = true;
+    cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 

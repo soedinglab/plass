@@ -20,36 +20,40 @@ notExists() {
 if notExists "${TMP_PATH}/nucl_reads"; then
     if [ -n "${PAIRED_END}" ]; then
         echo "PAIRED END MODE"
-        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads"
+        # shellcheck disable=SC2086
+        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+            || fail "mergereads failed"
     else
-        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads"
+        # shellcheck disable=SC2086
+        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+            || fail "createdb failed"
     fi
 fi
 
 INPUT="${TMP_PATH}/nucl_reads"
 if notExists "${TMP_PATH}/nucl_6f_start"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${THREADS_PAR} \
+    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${EXTRACTORFS_SUBSET_PAR} \
         --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
         || fail "extractorfs start step died"
 fi
 
 if notExists "${TMP_PATH}/aa_6f_start"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" ${THREADS_PAR} --add-orf-stop \
+    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" ${TRANSLATENUCS_PAR} \
         || fail "translatenucs start step died"
 fi
 
 if notExists "${TMP_PATH}/nucl_6f_long"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${THREADS_PAR} \
+    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${EXTRACTORFS_SUBSET_PAR} \
         --orf-start-mode 0 --min-length 45 --max-gaps 0 \
         || fail "extractorfs longest step died"
 fi
 
 if notExists "${TMP_PATH}/aa_6f_long"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/aa_6f_long" ${THREADS_PAR} --add-orf-stop \
+    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/aa_6f_long" ${TRANSLATENUCS_PAR} \
         || fail "translatenucs long step died"
 fi
 

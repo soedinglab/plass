@@ -21,9 +21,13 @@ notExists() {
 if notExists "${TMP_PATH}/nucl_reads"; then
     if [ -n "${PAIRED_END}" ]; then
         echo "PAIRED END MODE"
-        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads"
+        # shellcheck disable=SC2086
+        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+            || fail "mergereads failed"
     else
-        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads"
+        # shellcheck disable=SC2086
+        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+            || fail "createdb failed"
     fi
 fi
 INPUT="${TMP_PATH}/nucl_reads"

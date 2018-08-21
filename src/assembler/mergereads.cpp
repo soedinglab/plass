@@ -17,7 +17,6 @@ int mergereads(int argn, const char **argv, const Command& command) {
     par.parseParameters(argn, argv, command, 2, true, Parameters::PARSE_VARIADIC);
 
     // + 1 for query
-    SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0f, 0.0f);
     Debug(Debug::INFO) << "Start merging reads.\n";
 
     //TODO
@@ -48,7 +47,6 @@ int mergereads(int argn, const char **argv, const Command& command) {
             header.reserve(1024);
             std::string splitId;
             splitId.reserve(1024);
-            char lookupBuffer[32768];
             KSeqWrapper *kseq1 = KSeqFactory(filenames[i * 2].c_str());
             KSeqWrapper *kseq2 = KSeqFactory(filenames[i * 2 + 1].c_str());
             while (kseq1->ReadEntry() && kseq2->ReadEntry()) {
