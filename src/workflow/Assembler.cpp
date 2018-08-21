@@ -88,11 +88,7 @@ int assembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-    if(par.filterProteins == 1){
-        cmd.addVariable("PROTEIN_FILTER", "1");
-    }else{
-        cmd.addVariable("PROTEIN_FILTER", "0");
-    }
+    cmd.addVariable("PROTEIN_FILTER", par.filterProteins == 1 ? "1" : NULL);
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
