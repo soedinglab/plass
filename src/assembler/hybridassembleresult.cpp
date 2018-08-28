@@ -85,6 +85,8 @@ int dohybridassembleresult(LocalParameters &par) {
 #ifdef OPENMP
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
+        std::vector<Matcher::result_t> nuclAlignments;
+        nuclAlignments.reserve(300);
 
         #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < nuclSequenceDbr->getSize(); id++) {
@@ -104,7 +106,8 @@ int dohybridassembleresult(LocalParameters &par) {
 
             char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryId);
 
-            std::vector<Matcher::result_t> nuclAlignments = Matcher::readAlignmentResults(nuclAlnData, true);
+            nuclAlignments.clear();
+            Matcher::readAlignmentResults(nuclAlignments, nuclAlnData, true);
 
             QueueBySeqId alnQueue;
             bool queryCouldBeExtended = false;

@@ -79,10 +79,11 @@ int doassembly(LocalParameters &par) {
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
 
-        #pragma omp for schedule(dynamic, 100)
+        std::vector<Matcher::result_t> alignments;
+        alignments.reserve(300);
+#pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
             Debug::printProgress(id);
-
             unsigned int queryId = sequenceDbr->getDbKey(id);
             char *querySeq = sequenceDbr->getData(id);
             unsigned int querySeqLen = sequenceDbr->getSeqLens(id) - 2;
@@ -90,7 +91,8 @@ int doassembly(LocalParameters &par) {
             unsigned int rightQueryOffset = 0;
             std::string query(querySeq, querySeqLen); // no /n/0
             char *alnData = alnReader->getDataByDBKey(queryId);
-            std::vector<Matcher::result_t> alignments = Matcher::readAlignmentResults(alnData);
+            alignments.clear();
+            Matcher::readAlignmentResults(alignments, alnData);
             QueueBySeqId alnQueue;
             bool queryCouldBeExtended = false;
             while(alignments.size() > 1){
