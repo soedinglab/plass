@@ -10,18 +10,34 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-# check amount of input variables
-[ "$#" -ne 3 ] && echo "Please provide <sequenceDB> <outDB> <tmp>" && exit 1
+
+# check input variables
+[ ! -n "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
+[ ! -n "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
+
 # check if files exists
-[ ! -f "$1" ] &&  echo "$1 not found!" && exit 1
-[   -f "$2" ] &&  echo "$2 exists already!" && exit 1
-[ ! -d "$3" ] &&  echo "tmp directory $3 not found!" && mkdir -p "$3"
+[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
+[ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
-INPUT="$1"
-TMP_PATH="$3"
 
+if notExists "${TMP_PATH}/nucl_reads"; then
+    if [ -n "${PAIRED_END}" ]; then
+        echo "PAIRED END MODE"
+        # shellcheck disable=SC2086
+        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+            || fail "mergereads failed"
+    else
+        # shellcheck disable=SC2086
+        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+            || fail "createdb failed"
+    fi
+fi
+
+
+INPUT="${TMP_PATH}/nucl_reads"
 if notExists "${TMP_PATH}/nucl_6f_start"; then
-    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
+    # shellcheck disable=SC2086
+    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${EXTRACTORFS_START_PAR} \
         || fail "extractorfs start step died"
 fi
 
@@ -32,7 +48,8 @@ if notExists "${TMP_PATH}/aa_6f_start"; then
 fi
 
 if notExists "${TMP_PATH}/nucl_6f_long"; then
-    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" --orf-start-mode 0 --min-length 45 --max-gaps 0 \
+    # shellcheck disable=SC2086
+    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${EXTRACTORFS_LONG_PAR} \
         || fail "extractorfs longest step died"
 fi
 
@@ -51,6 +68,13 @@ if notExists "${TMP_PATH}/nucl_6f_start_long"; then
     "$MMSEQS" concatdbs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/nucl_6f_start_long" \
         || fail "concatdbs start long step died"
 fi
+
+if notExists "${TMP_PATH}/nucl_6f_start_long_h"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" concatdbs "${TMP_PATH}/nucl_6f_long_h" "${TMP_PATH}/nucl_6f_start_h" "${TMP_PATH}/nucl_6f_start_long_h" ${VERBOSITY_PAR} \
+        || fail "concatdbs start long step died"
+fi
+
 
 INPUT_AA="${TMP_PATH}/aa_6f_start_long"
 INPUT_NUCL="${TMP_PATH}/nucl_6f_start_long"
@@ -95,16 +119,36 @@ while [ $STEP -lt $NUM_IT ]; do
 done
 STEP="$((STEP-1))"
 
-awk 'FNR==NR{a[$1]=$3;next}{ if(a[$1]!=$3){ print $1 } }' "${TMP_PATH}/nucl_6f_start_long.index" "${TMP_PATH}/assembly_nucl_${STEP}.index" > "${TMP_PATH}/assembled_ids"
+RESULT_NUCL="${TMP_PATH}/assembly_nucl_$STEP"
+RESULT_AA="${TMP_PATH}/assembly_aa_$STEP"
 
-"$MMSEQS" createsubdb "${TMP_PATH}/assembled_ids" "${TMP_PATH}/assembly_nucl_${STEP}" "${TMP_PATH}/assembly_nucl_${STEP}_assembled"
-"$MMSEQS" concatdbs "${TMP_PATH}/assembly_nucl_${STEP}_assembled" "${INPUT}" "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads"
+
+#if notExists "${RESULT_NUCL}_only_assembled.index"; then
+#    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT_NUCL}.index" "${TMP_PATH}/aa_6f_start_long.index" > "${RESULT_NUCL}_tmp.index"
+#    awk '$3 > $6 { print $1"\t"$2"\t"$3 }' "${RESULT_NUCL}_tmp.index" > "${RESULT_NUCL}_only_assembled.index"
+#fi
+
+# create fasta output
+#if notExists "${RESULT_NUCL}_only_assembled"; then
+#    ln -s "${RESULT_NUCL}" "${RESULT_NUCL}_only_assembled"
+#fi
+
+if notExists "${RESULT_NUCL}_h"; then
+    ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_h"
+fi
+
+if notExists "${RESULT_NUCL}_h.index"; then
+    ln -s "${TMP_PATH}/nucl_6f_start_long_h.index" "${RESULT_NUCL}_h.index"
+fi
+
+if notExists "${RESULT_NUCL}.fasta"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" convert2fasta "${RESULT_NUCL}" "${RESULT_NUCL}.fasta" ${VERBOSITY_PAR} \
+        || fail "convert2fasta died"
+fi
 
 # shellcheck disable=SC2086
-"$MMSEQS" nuclassemble "${TMP_PATH}/assembly_nucl_${STEP}_assembled_input_reads" "${TMP_PATH}/assembly_nucl_${STEP}_2" "${TMP_PATH}/nuclassembly_2" ${NUCL_ASM_PAR}
-
-mv -f "${TMP_PATH}/assembly_nucl_${STEP}_2" "${2}_nucl" || fail "Could not move result to $2"
-mv -f "${TMP_PATH}/assembly_nucl_${STEP}_2.index" "${2}_nucl.index" || fail "Could not move result to $2.index"
+"$MMSEQS" nuclassemble "${RESULT_NUCL}.fasta" "${OUT_FILE}" "${TMP_PATH}/nuclassembly_2" ${NUCL_ASM_PAR}
 
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}" "${2}_aa" || fail "Could not move result to $2"
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}.index" "${2}_aa.index" || fail "Could not move result to $2.index"
@@ -115,4 +159,5 @@ if [ -n "$REMOVE_TMP" ]; then
     rm -f "${TMP_PATH}/pref_"*
     rm -f "${TMP_PATH}/aln_"*
     rm -f "${TMP_PATH}/assembly_"*
+    rm -f "${TMP_PATH}/nuclassembly_2/latest/"*
 fi

@@ -33,8 +33,7 @@ fi
 INPUT="${TMP_PATH}/nucl_reads"
 if notExists "${TMP_PATH}/nucl_6f_start"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${EXTRACTORFS_SUBSET_PAR} \
-        --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0 \
+    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${EXTRACTORFS_START_PAR} \
         || fail "extractorfs start step died"
 fi
 
@@ -46,8 +45,7 @@ fi
 
 if notExists "${TMP_PATH}/nucl_6f_long"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${EXTRACTORFS_SUBSET_PAR} \
-        --orf-start-mode 0 --min-length 45 --max-gaps 0 \
+    "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${EXTRACTORFS_LONG_PAR} \
         || fail "extractorfs longest step died"
 fi
 
@@ -81,14 +79,14 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
     # 1. Finding exact $k$-mer matches.
     if notExists "${TMP_PATH}/pref_$STEP"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_PAR} \
+        $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_PAR} \
             || fail "Kmer matching step died"
     fi
 
     # 2. Ungapped alignment
     if notExists "${TMP_PATH}/aln_$STEP"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_$STEP" ${UNGAPPED_ALN_PAR} \
+        $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_$STEP" ${UNGAPPED_ALN_PAR} \
             || fail "Ungapped alignment step died"
     fi
 
@@ -102,7 +100,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         INPUT="${TMP_PATH}/corrected_seqs"
         if notExists "${TMP_PATH}/aln_corrected_$STEP"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
+            $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
                 || fail "Ungapped alignment step died"
         fi
         ALN="${TMP_PATH}/aln_corrected_$STEP"

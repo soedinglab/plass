@@ -17,6 +17,7 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->numIterations = 12;
     p->alphabetSize = 13;
     p->kmerSize = 14;
+    p->orfMinLength = 45;
     p->skipNRepeatKmer = 8;
     p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
@@ -28,8 +29,17 @@ int assembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription((Command &)command, par.PARAM_COV_MODE.uniqid, NULL, NULL, par.PARAM_COV_MODE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_C.uniqid, NULL, NULL, par.PARAM_C.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_MIN_SEQ_ID.uniqid, "Overlap sequence identity threshold [0.0, 1.0]", NULL,  par.PARAM_MIN_SEQ_ID.category);
+//    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_MIN_LENGTH.uniqid, "Min codons in orf", "minimum codon number in open reading frames",  par.PARAM_ORF_MIN_LENGTH.category );
     par.overrideParameterDescription((Command &)command, par.PARAM_NUM_ITERATIONS.uniqid, "Number of assembly iterations [1, inf]", NULL,  par.PARAM_NUM_ITERATIONS.category);
     par.overrideParameterDescription((Command &)command, par.PARAM_E.uniqid, "Extend sequences if the E-value is below [0.0, inf]", NULL,  par.PARAM_E.category);
+
+    par.overrideParameterDescription((Command &)command, par.PARAM_ID_OFFSET.uniqid, NULL, NULL,  par.PARAM_ID_OFFSET.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_CONTIG_END_MODE.uniqid, NULL, NULL,  par.PARAM_CONTIG_END_MODE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_CONTIG_START_MODE.uniqid, NULL, NULL,  par.PARAM_CONTIG_START_MODE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_MAX_GAP.uniqid, NULL, NULL,  par.PARAM_ORF_MAX_GAP.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_START_MODE.uniqid, NULL, NULL,  par.PARAM_ORF_START_MODE.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_FORWARD_FRAMES.uniqid, NULL, NULL,  par.PARAM_ORF_FORWARD_FRAMES.category | MMseqsParameter::COMMAND_EXPERT);
+    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_REVERSE_FRAMES.uniqid, NULL, NULL,  par.PARAM_ORF_REVERSE_FRAMES.category | MMseqsParameter::COMMAND_EXPERT);
 
     par.overrideParameterDescription((Command &)command, par.PARAM_SEQ_ID_MODE.uniqid, NULL, NULL,  par.PARAM_SEQ_ID_MODE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_RESCORE_MODE.uniqid, NULL, NULL,  par.PARAM_RESCORE_MODE.category | MMseqsParameter::COMMAND_EXPERT);
@@ -38,6 +48,7 @@ int assembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription((Command &)command, par.PARAM_SORT_RESULTS.uniqid, NULL, NULL,  par.PARAM_SORT_RESULTS.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_TRANSLATION_TABLE.uniqid, NULL, NULL, par.PARAM_TRANSLATION_TABLE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_USE_ALL_TABLE_STARTS.uniqid, NULL, NULL, par.PARAM_USE_ALL_TABLE_STARTS.category | MMseqsParameter::COMMAND_EXPERT);
+
     par.parseParameters(argc, argv, command, 3, true, Parameters::PARSE_VARIADIC);
 
     CommandCaller cmd;
@@ -95,7 +106,25 @@ int assembler(int argc, const char **argv, const Command &command) {
     // # 2. Hamming distance pre-clustering
     par.filterHits = false;
     par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-    cmd.addVariable("EXTRACTORFS_SUBSET_PAR", par.createParameterString(par.extractorfssubset).c_str());
+
+
+    // --orf-start-mode 0 --min-length 45 --max-gaps 0
+    par.orfStartMode = 0;
+    par.orfMaxGaps = 0;
+    cmd.addVariable("EXTRACTORFS_LONG_PAR", par.createParameterString(par.extractorfs).c_str());
+
+
+    // --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0
+    par.contigStartMode = 1;
+    par.contigEndMode = 0;
+    par.orfStartMode = 0;
+    par.orfMaxLength = par.orfMinLength;
+    par.orfMinLength = 20;
+    par.orfMaxGaps = 0;
+    cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
+
+
+
     par.addOrfStop = true;
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());

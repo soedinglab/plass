@@ -43,8 +43,8 @@ private:
 
         // assembler workflow
         assemblerworkflow = combineList(rescorediagonal, kmermatcher);
+        assemblerworkflow = combineList(assemblerworkflow, extractorfs);
         assemblerworkflow = combineList(assemblerworkflow, assembleresults);
-        assemblerworkflow = combineList(assemblerworkflow, extractorfssubset);
         assemblerworkflow.push_back(PARAM_FILTER_PROTEINS);
         assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
         assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
