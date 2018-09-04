@@ -120,7 +120,7 @@ done
 STEP="$((STEP-1))"
 
 RESULT_NUCL="${TMP_PATH}/assembly_nucl_$STEP"
-RESULT_AA="${TMP_PATH}/assembly_aa_$STEP"
+#RESULT_AA="${TMP_PATH}/assembly_aa_$STEP"
 
 
 #if notExists "${RESULT_NUCL}_only_assembled.index"; then
