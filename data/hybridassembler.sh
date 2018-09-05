@@ -123,15 +123,6 @@ RESULT_NUCL="${TMP_PATH}/assembly_nucl_$STEP"
 #RESULT_AA="${TMP_PATH}/assembly_aa_$STEP"
 
 
-#if notExists "${RESULT_NUCL}_only_assembled.index"; then
-#    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT_NUCL}.index" "${TMP_PATH}/aa_6f_start_long.index" > "${RESULT_NUCL}_tmp.index"
-#    awk '$3 > $6 { print $1"\t"$2"\t"$3 }' "${RESULT_NUCL}_tmp.index" > "${RESULT_NUCL}_only_assembled.index"
-#fi
-
-# create fasta output
-#if notExists "${RESULT_NUCL}_only_assembled"; then
-#    ln -s "${RESULT_NUCL}" "${RESULT_NUCL}_only_assembled"
-#fi
 
 if notExists "${RESULT_NUCL}_h"; then
     ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_h"
@@ -147,8 +138,17 @@ if notExists "${RESULT_NUCL}.fasta"; then
         || fail "convert2fasta died"
 fi
 
+if notExists "${RESULT_NUCL}.merged.fasta"; then
+    if [ -n "${PAIRED_END}" ]; then
+       "$MMSEQS" convert2fasta "${TMP_PATH}/nucl_reads" "${TMP_PATH}/nucl_reads.fasta"
+       cat "${RESULT_NUCL}.fasta" "${TMP_PATH}/nucl_reads.fasta" > "${RESULT_NUCL}.merged.fasta"
+    else
+       cat "${RESULT_NUCL}.fasta" $INPUT > "${RESULT_NUCL}.merged.fasta"
+    fi
+fi
+
 # shellcheck disable=SC2086
-"$MMSEQS" nuclassemble "${RESULT_NUCL}.fasta" "${OUT_FILE}" "${TMP_PATH}/nuclassembly_2" ${NUCL_ASM_PAR}
+"$MMSEQS" nuclassemble "${RESULT_NUCL}.merged.fasta" "${OUT_FILE}" "${TMP_PATH}/nuclassembly_2" ${NUCL_ASM_PAR}
 
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}" "${2}_aa" || fail "Could not move result to $2"
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}.index" "${2}_aa.index" || fail "Could not move result to $2.index"
