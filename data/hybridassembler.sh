@@ -143,7 +143,7 @@ if notExists "${RESULT_NUCL}.merged.fasta"; then
        "$MMSEQS" convert2fasta "${TMP_PATH}/nucl_reads" "${TMP_PATH}/nucl_reads.fasta"
        cat "${RESULT_NUCL}.fasta" "${TMP_PATH}/nucl_reads.fasta" > "${RESULT_NUCL}.merged.fasta"
     else
-       cat "${RESULT_NUCL}.fasta" $INPUT > "${RESULT_NUCL}.merged.fasta"
+       cat "${RESULT_NUCL}.fasta" "$INPUT" > "${RESULT_NUCL}.merged.fasta"
     fi
 fi
 
