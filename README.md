@@ -8,7 +8,6 @@ Plass (Protein-Level ASSembler) is a software to assemble short read sequencing 
 
 [Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. biorxiv, doi: doi.org/10.1101/386110  (2018)](https://www.biorxiv.org/content/early/2018/08/07/386110).
 
-
 ## Soil Reference Catalog (SRC) and Marine Eukaryotic Reference Catalog (MERC)
 SRC was created by assembling 640 soil metagenome samples. MERC was assembled from the the metatranscriptomics datasets created by the TARA ocean expedition. Both catalogues were redundancy reduced to 90% sequence identity at 90% coverage.
 Each catalog is a single FASTA file containing the sequences, the header identifiers contain the Sequence Read Archive (SRA) identifiers.
@@ -42,6 +41,12 @@ Modules:
 
       plass assemble      Assembles proteins (i:Nucleotides -> o:Proteins)
       plass nuclassemble  Assembles nucleotides *experimental* (i:Nucleotides -> o:Nucleotides)
+      
+### Assemble using MPI 
+Plass can be distrubted over several homogeneous computers. However the TMP folder has to be shared between all nodes (e.g. NFS). The following command assembles several nodes:
+
+    RUNNER="mpirun -np 42" plass assemble examples/reads_1.fastq.gz examples/reads_2.fastq.gz assembly.fas tmp
+
 
 ### Compile from source
 Compiling PLASS from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile PLASS `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the PLASS binary will be located in the `build/bin` directory.
