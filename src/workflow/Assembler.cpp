@@ -103,6 +103,20 @@ int assembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
     cmd.addVariable("PROTEIN_FILTER", par.filterProteins == 1 ? "1" : NULL);
     // # 1. Finding exact $k$-mer matches.
+
+    for(int i = 0; i < par.numIterations; i++){
+        std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
+        par.hashShift = par.hashShift + i % 2;
+        if(par.PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet == false){
+            if (i == 0) {
+                par.includeOnlyExtendable = false;
+            } else {
+                par.includeOnlyExtendable = true;
+            }
+        }
+        cmd.addVariable(key.c_str(), par.createParameterString(par.kmermatcher).c_str());
+    }
+
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
     // # 2. Hamming distance pre-clustering

@@ -25,7 +25,7 @@ if notExists "${TMP_PATH}/nucl_reads"; then
             || fail "mergereads failed"
     else
         # shellcheck disable=SC2086
-        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${CREATEDB_PAR} \
             || fail "createdb failed"
     fi
 fi
@@ -78,8 +78,9 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 
     # 1. Finding exact $k$-mer matches.
     if notExists "${TMP_PATH}/pref_$STEP"; then
+        PARAM="KMERMATCHER${STEP}_PAR"
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_PAR} \
+        $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${!PARAM} \
             || fail "Kmer matching step died"
     fi
 
