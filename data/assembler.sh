@@ -78,9 +78,10 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 
     # 1. Finding exact $k$-mer matches.
     if notExists "${TMP_PATH}/pref_$STEP"; then
-        PARAM="KMERMATCHER${STEP}_PAR"
+        PARAM=KMERMATCHER${STEP}_PAR
+        eval KMERMATCHER_TMP="\$$PARAM"
         # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${!PARAM} \
+        $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_TMP} \
             || fail "Kmer matching step died"
     fi
 
