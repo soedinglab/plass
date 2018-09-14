@@ -23,9 +23,9 @@ public:
 //            return true;
 //        if(r2.seqId < r1.seqId )
 //            return false;
-        if(r1.score > r2.score )
+        if(r1.score < r2.score )
             return true;
-        if(r2.score > r1.score )
+        if(r2.score < r1.score )
             return false;
         if(r1.dbKey > r2.dbKey )
             return true;
@@ -104,7 +104,11 @@ int doassembly(LocalParameters &par) {
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
                     float scorePerCol = static_cast<float>(alignments[alnIdx].score) / static_cast<float>(alignments[alnIdx].alnLength);
+                    float alnLen = static_cast<float>(alignments[alnIdx].alnLength);
+                    float ids = static_cast<float>(alignments[alnIdx].seqId) * alnLen;
+                    alignments[alnIdx].seqId = ids / (alnLen + 0.5);
                     alignments[alnIdx].score = static_cast<int>(scorePerCol*100);
+
                     alnQueue.push(alignments[alnIdx]);
                     if (alignments.size() > 1)
                         __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(alignments[alnIdx].dbKey)],
@@ -113,7 +117,6 @@ int doassembly(LocalParameters &par) {
                 std::vector<Matcher::result_t> tmpAlignments;
                 Matcher::result_t besttHitToExtend;
                 while ((besttHitToExtend = selectFragmentToExtend(alnQueue, queryId)).dbKey != UINT_MAX) {
-
                     querySeqLen = query.size();
                     querySeq = (char *) query.c_str();
 
@@ -187,7 +190,7 @@ int doassembly(LocalParameters &par) {
 
                     } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
                         if (queryCouldBeExtendedLeft == true) {
-                            float alnLen = (qEndPos - qStartPos);
+                            float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / alnLen;
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
                             tmpAlignments.push_back(besttHitToExtend);
@@ -233,7 +236,7 @@ int doassembly(LocalParameters &par) {
                         int queryRes = static_cast<int>(querySeq[i]);
                         idCnt += (queryRes == targetRes) ? 1 : 0;
                     }
-                    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos));
+                    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos) + 0.5);
                     tmpAlignments[alnIdx].seqId = seqId;
                     if(seqId >= par.seqIdThr){
                         alignments.push_back(tmpAlignments[alnIdx]);
