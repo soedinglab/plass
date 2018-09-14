@@ -14,6 +14,8 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->evalThr = 0.00001;
     p->seqIdThr = 0.9;
     p->kmersPerSequence = 60;
+//    p->shuffleDatabase = true;
+    p->splitSeqByLen = false;
     p->numIterations = 12;
     p->alphabetSize = 13;
     p->kmerSize = 14;
@@ -126,6 +128,7 @@ int assembler(int argc, const char **argv, const Command &command) {
 
 
     par.addOrfStop = true;
+    cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
