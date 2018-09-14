@@ -170,7 +170,7 @@ int doassembly(LocalParameters &par) {
                     if (dbStartPos == 0 && qEndPos == (querySeqLen - 1) ) {
                         if(queryCouldBeExtendedRight == true) {
                             float alnLen = qEndPos - qStartPos;
-                            float scorePerCol = static_cast<float>(score) / alnLen;
+                            float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
@@ -191,7 +191,7 @@ int doassembly(LocalParameters &par) {
                     } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
                         if (queryCouldBeExtendedLeft == true) {
                             float alnLen = qEndPos - qStartPos;
-                            float scorePerCol = static_cast<float>(score) / alnLen;
+                            float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
