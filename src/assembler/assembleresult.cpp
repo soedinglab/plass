@@ -23,6 +23,10 @@ public:
             return true;
         if(r2.seqId < r1.seqId )
             return false;
+        if(r1.score > r2.score )
+            return true;
+        if(r2.score > r1.score )
+            return false;
         if(r1.dbKey > r2.dbKey )
             return true;
         if(r2.dbKey > r1.dbKey )
@@ -99,6 +103,8 @@ int doassembly(LocalParameters &par) {
                 bool queryCouldBeExtendedLeft = false;
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+                    float scorePerCol = static_cast<float>(alignments[alnIdx].score) / static_cast<float>(alignments[alnIdx].alnLength);
+                    alignments[alnIdx].score = static_cast<int>(scorePerCol*100);
                     alnQueue.push(alignments[alnIdx]);
                     if (alignments.size() > 1)
                         __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(alignments[alnIdx].dbKey)],
@@ -131,7 +137,7 @@ int doassembly(LocalParameters &par) {
                         }
                     }
                     __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x10));
-                    int qStartPos, qEndPos, dbStartPos, dbEndPos;
+                    int qStartPos, qEndPos, dbStartPos, dbEndPos, score;
                     int diagonal = (leftQueryOffset + besttHitToExtend.qStartPos) - besttHitToExtend.dbStartPos;
                     int dist = std::max(abs(diagonal), 0);
                     if (diagonal >= 0) {
@@ -144,6 +150,7 @@ int doassembly(LocalParameters &par) {
                         qEndPos = alignment.endPos + dist;
                         dbStartPos = alignment.startPos;
                         dbEndPos = alignment.endPos;
+                        score = alignment.score;
                     } else {
                         size_t diagonalLen = std::min(targetSeqLen - abs(diagonal), querySeqLen);
                         DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
@@ -154,10 +161,14 @@ int doassembly(LocalParameters &par) {
                         qEndPos = alignment.endPos;
                         dbStartPos = alignment.startPos + dist;
                         dbEndPos = alignment.endPos + dist;
+                        score = alignment.score;
                     }
 
                     if (dbStartPos == 0 && qEndPos == (querySeqLen - 1) ) {
                         if(queryCouldBeExtendedRight == true) {
+                            float alnLen = qEndPos - qStartPos;
+                            float scorePerCol = static_cast<float>(score) / alnLen;
+                            besttHitToExtend.score = static_cast<int>(scorePerCol*100);
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
                         }
@@ -176,6 +187,9 @@ int doassembly(LocalParameters &par) {
 
                     } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
                         if (queryCouldBeExtendedLeft == true) {
+                            float alnLen = qEndPos - qStartPos;
+                            float scorePerCol = static_cast<float>(score) / alnLen;
+                            besttHitToExtend.score = static_cast<int>(scorePerCol*100);
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
                         }
@@ -214,8 +228,10 @@ int doassembly(LocalParameters &par) {
                     }
                     unsigned int targetId = sequenceDbr->getId(tmpAlignments[alnIdx].dbKey);
                     char *targetSeq = sequenceDbr->getData(targetId);
-                    for(int i = qStartPos; i < qEndPos; i++){
-                        idCnt += (querySeq[i] == targetSeq[dbStartPos+(i-qStartPos)]) ? 1 : 0;
+                    for(int i = qStartPos; i <= qEndPos; i++){
+                        int targetRes = static_cast<int>(targetSeq[dbStartPos+(i-qStartPos)]);
+                        int queryRes = static_cast<int>(querySeq[i]);
+                        idCnt += (queryRes == targetRes) ? 1 : 0;
                     }
                     float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos));
                     tmpAlignments[alnIdx].seqId = seqId;
