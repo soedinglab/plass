@@ -19,10 +19,10 @@
 class CompareResultBySeqId {
 public:
     bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
-        if(r1.seqId < r2.seqId )
-            return true;
-        if(r2.seqId < r1.seqId )
-            return false;
+//        if(r1.seqId < r2.seqId )
+//            return true;
+//        if(r2.seqId < r1.seqId )
+//            return false;
         if(r1.score > r2.score )
             return true;
         if(r2.score > r1.score )
@@ -187,7 +187,7 @@ int doassembly(LocalParameters &par) {
 
                     } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
                         if (queryCouldBeExtendedLeft == true) {
-                            float alnLen = qEndPos - qStartPos;
+                            float alnLen = (qEndPos - qStartPos);
                             float scorePerCol = static_cast<float>(score) / alnLen;
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
                             tmpAlignments.push_back(besttHitToExtend);
