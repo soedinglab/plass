@@ -18,18 +18,22 @@ public:
 
     std::vector<MMseqsParameter> assembleresults;
     std::vector<MMseqsParameter> extractorfssubset;
+    std::vector<MMseqsParameter> filternoncoding;
     std::vector<MMseqsParameter> hybridassembleresults;
     std::vector<MMseqsParameter> assemblerworkflow;
     std::vector<MMseqsParameter> nuclassemblerworkflow;
 
     PARAMETER(PARAM_FILTER_PROTEINS)
+    PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
+
     int filterProteins;
+    float proteinFilterThreshold;
 
 private:
     LocalParameters() :
             Parameters(),
-    PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$")
-
+            PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
+            PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$")
     {
         // assembleresult
         assembleresults.push_back(PARAM_MIN_SEQ_ID);
@@ -41,10 +45,16 @@ private:
         extractorfssubset.push_back(PARAM_THREADS);
         extractorfssubset.push_back(PARAM_V);
 
+        filternoncoding.push_back(PARAM_PROTEIN_FILTER_THRESHOLD);
+        filternoncoding.push_back(PARAM_THREADS);
+        filternoncoding.push_back(PARAM_V);
+
         // assembler workflow
         assemblerworkflow = combineList(rescorediagonal, kmermatcher);
         assemblerworkflow = combineList(assemblerworkflow, extractorfs);
         assemblerworkflow = combineList(assemblerworkflow, assembleresults);
+        assemblerworkflow = combineList(assemblerworkflow, filternoncoding);
+
         assemblerworkflow.push_back(PARAM_FILTER_PROTEINS);
         assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
         assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
@@ -64,6 +74,8 @@ private:
         hybridassembleresults.push_back(PARAM_RUNNER);
 
         filterProteins = 1;
+        proteinFilterThreshold = 0.2;
+
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};

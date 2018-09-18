@@ -126,7 +126,7 @@ if [ -n "${PROTEIN_FILTER}" ]; then
     RESULT="${TMP_PATH}/assembly_${STEP}_filtered"
     if notExists "${TMP_PATH}/assembly_${STEP}_filtered"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" filternoncoding "${TMP_PATH}/assembly_${STEP}" "${TMP_PATH}/assembly_${STEP}_filtered" ${THREADS_PAR} \
+        "$MMSEQS" filternoncoding "${TMP_PATH}/assembly_${STEP}" "${TMP_PATH}/assembly_${STEP}_filtered" ${FILTERNONCODING_PAR} \
             || fail "filternoncoding died"
     fi
 fi

@@ -5,6 +5,8 @@ set(COMPILED_RESOURCES
         hybridassembler.sh
         nuclassembler.sh
         predict_coding_acc9260_56x96.model
+        predict_coding_acc9623_57x32x64.model
+        predict_coding_acc9540_57x32x64.model
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

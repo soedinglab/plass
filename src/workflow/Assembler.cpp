@@ -140,12 +140,12 @@ int assembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
 
 
-
     par.addOrfStop = true;
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
     cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
+    cmd.addVariable("FILTERNONCODING_PAR", par.createParameterString(par.filternoncoding).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());

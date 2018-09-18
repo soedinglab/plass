@@ -154,7 +154,7 @@ std::vector<struct Command> commands = {
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
                 "<i:sequenceDB> <i:alignmentDB> <o:sequenceDB>",
                 CITATION_MMSEQS2},
-        {"filternoncoding",      filternoncoding,      &par.onlythreads,          COMMAND_HIDDEN,
+        {"filternoncoding",      filternoncoding,      &par.filternoncoding,          COMMAND_HIDDEN,
                 "Filter non-coding protein sequences",
                 NULL,
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
