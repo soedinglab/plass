@@ -53,10 +53,6 @@ int mergereads(int argn, const char **argv, const Command& command) {
                 const KSeqWrapper::KSeqEntry &read1 = kseq1->entry;
                 const KSeqWrapper::KSeqEntry &read2 = kseq2->entry;
 
-                if (read1.qual.l != read2.qual.l) {
-                    Debug(Debug::ERROR) << "Invalid FASTQ entry " << i << ".\n";
-                    return EXIT_FAILURE;
-                }
 
                 r1->seq =  read1.sequence.s;
                 r1->seq_len = read1.sequence.l;
