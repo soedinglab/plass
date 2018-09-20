@@ -11,7 +11,11 @@
 #include "LocalParameters.h"
 
 #include "kerasify/keras_model.h"
-#include "predict_coding_acc9540_57x32x64.model.h"
+//#include "predict_coding_acc9540_57x32x64.model.h"
+//#include "predict_coding_acc9642_57x32x64.model.h"
+//#include "predict_coding_acc9598_57x32x64.model.h"
+#include "predict_coding_acc9743_57x32x64.model.h"
+
 //#include "predict_coding_acc9260_56x96.model.h"
 //#include "predict_coding_acc9623_57x32x64.model.h"
 
@@ -34,7 +38,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     // Initialize model.
     KerasModel model;
 //    model.LoadModel(std::string((const char *)predict_coding_acc9623_57x32x64_model, predict_coding_acc9623_57x32x64_model_len));
-    model.LoadModel(std::string((const char *)predict_coding_acc9540_57x32x64_model, predict_coding_acc9540_57x32x64_model_len));
+    model.LoadModel(std::string((const char *)predict_coding_acc9743_57x32x64_model, predict_coding_acc9743_57x32x64_model_len));
 
     SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0, 0.0);
     ReducedMatrix redMat7(subMat.probMatrix, subMat.subMatrixPseudoCounts, 7, subMat.getBitFactor());
