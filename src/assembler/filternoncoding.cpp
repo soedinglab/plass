@@ -41,8 +41,8 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     model.LoadModel(std::string((const char *)predict_coding_acc9743_57x32x64_model, predict_coding_acc9743_57x32x64_model_len));
 
     SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0, 0.0);
-    ReducedMatrix redMat7(subMat.probMatrix, subMat.subMatrixPseudoCounts, 7, subMat.getBitFactor());
-//    ReducedMatrix redMat3(subMat.probMatrix, subMat.subMatrixPseudoCounts, 3, subMat.getBitFactor());
+    ReducedMatrix redMat7(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2int, subMat.int2aa, subMat.alphabetSize, 7, subMat.getBitFactor());
+//    ReducedMatrix redMat3(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2int, subMat.int2aa, subMat.alphabetSize, 3, subMat.getBitFactor());
 
     // Create a 1D Tensor on length 20 for input data.
 #pragma omp parallel
