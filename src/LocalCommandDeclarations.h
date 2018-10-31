@@ -11,5 +11,5 @@ extern int hybridassembleresults(int argc, const char** argv, const Command &com
 extern int filternoncoding(int argc, const char** argv, const Command &command);
 extern int mergereads(int argc, const char** argv, const Command &command);
 extern int findassemblystart(int argc, const char** argv, const Command &command);
-
+extern int correctreads(int argc, const char** argv, const Command &command);
 #endif
