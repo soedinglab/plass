@@ -1,4 +1,5 @@
 # PLASS - Protein-Level ASSembler
+[![BioConda Install](https://img.shields.io/conda/dn/bioconda/plass.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/plass)
 [ ![Codeship Status for soedinglab/plass](https://app.codeship.com/projects/fc7c4e70-e188-0135-0db2-569fac09cf96/status?branch=master)](https://app.codeship.com/projects/266646)
 [![Build Status](https://travis-ci.org/soedinglab/plass.svg?branch=master)](https://travis-ci.org/soedinglab/plass)
 [![DOI](https://zenodo.org/badge/118119513.svg)](https://zenodo.org/badge/latestdoi/118119513)
@@ -14,11 +15,12 @@ Each catalog is a single FASTA file containing the sequences, the header identif
 The catalogues can be downloaded [here](http://wwwuser.gwdg.de/~compbiol/plass/current_release/).
  
 ### Install static Linux version
-The following command will download the last Plass version, extract it and set the `PATH` environment variable. This version runs only on Linux. If you want to run it on a Mac please compile it from [source](#compile-from-source).
+Plass can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version. Plass requires a 64-bit Linux/MacOS system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set.
 
-      wget https://mmseqs.com/plass/plass-static_sse41.tar.gz
-      tar xvzf plass-static_sse41.tar.gz
-      export PATH=$(pwd)/plass/bin/:$PATH
+     conda install -c biocore plass 
+     # latest static linux build s
+     wget https://mmseqs.com/plass/plass-static_sse41.tar.gz; tar xvfz plass-static_sse41.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
+ 
 
 ## How to assemble
 Plass can assemble both paired-end reads (FASTQ) and single reads (FASTA or FASTQ):
