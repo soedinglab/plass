@@ -5,6 +5,12 @@ fail() {
     exit 1
 }
 
+deleteIncremental() {
+    if [ -n "$REMOVE_INCREMENTAL_TMP" ] &&  [ ! -z "$1" ]; then
+        rm "$1"*
+    fi
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
@@ -73,46 +79,64 @@ if [ -z "$NUM_IT" ]; then
     NUM_IT=1
 fi
 
+
 while [ "$STEP" -lt "$NUM_IT" ]; do
     echo "STEP: $STEP"
 
     # 1. Finding exact $k$-mer matches.
-    if notExists "${TMP_PATH}/pref_$STEP"; then
+    if notExists "${TMP_PATH}/pref_$STEP.done"; then
         PARAM=KMERMATCHER${STEP}_PAR
         eval KMERMATCHER_TMP="\$$PARAM"
         # shellcheck disable=SC2086
         $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_TMP} \
             || fail "Kmer matching step died"
+        deleteIncremental $PREV_KMER_PREF
+        touch "${TMP_PATH}/pref_$STEP.done"
+        PREV_KMER_PREF="${TMP_PATH}/pref_$STEP"
+
     fi
 
     # 2. Ungapped alignment
-    if notExists "${TMP_PATH}/aln_$STEP"; then
+    if notExists "${TMP_PATH}/aln_$STEP.done"; then
         # shellcheck disable=SC2086
         $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_$STEP" ${UNGAPPED_ALN_PAR} \
             || fail "Ungapped alignment step died"
+        touch "${TMP_PATH}/aln_$STEP.done"
+        deleteIncremental $PREV_ALN
+        PREV_ALN="${TMP_PATH}/aln_$STEP"
     fi
 
     ALN="${TMP_PATH}/aln_$STEP"
     if [ $STEP -eq 0 ]; then
-        if notExists "${TMP_PATH}/corrected_seqs"; then
+        if notExists "${TMP_PATH}/corrected_seqs.done"; then
             # shellcheck disable=SC2086
             "$MMSEQS" findassemblystart "$INPUT" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/corrected_seqs" ${THREADS_PAR} \
                 || fail "Findassemblystart alignment step died"
+              touch "${TMP_PATH}/corrected_seqs.done"
+              # delete at the end of the first iteration
+              PREV_ASSEMBLY="${TMP_PATH}/corrected_seqs"
         fi
         INPUT="${TMP_PATH}/corrected_seqs"
-        if notExists "${TMP_PATH}/aln_corrected_$STEP"; then
+        if notExists "${TMP_PATH}/aln_corrected_$STEP.done"; then
             # shellcheck disable=SC2086
             $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
                 || fail "Ungapped alignment step died"
+           touch "${TMP_PATH}/aln_corrected_$STEP.done"
+           deleteIncremental $PREV_ALN
+           PREV_ALN="${TMP_PATH}/aln_corrected_$STEP"
         fi
         ALN="${TMP_PATH}/aln_corrected_$STEP"
     fi
 
     # 3. Assemble
-    if notExists "${TMP_PATH}/assembly_$STEP"; then
+    if notExists "${TMP_PATH}/assembly_$STEP.done"; then
         # shellcheck disable=SC2086
         "$MMSEQS" assembleresults "$INPUT" "${ALN}" "${TMP_PATH}/assembly_$STEP" ${ASSEMBLE_RESULT_PAR} \
             || fail "Assembly step died"
+
+        touch "${TMP_PATH}/assembly_$STEP.done"
+        deleteIncremental $PREV_ASSEMBLY
+        PREV_ASSEMBLY="${TMP_PATH}/assembly_$STEP"
     fi
 
     INPUT="${TMP_PATH}/assembly_$STEP"

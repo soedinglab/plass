@@ -25,15 +25,18 @@ public:
 
     PARAMETER(PARAM_FILTER_PROTEINS)
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
-
+    PARAMETER(PARAM_DELETE_TMP_INC)
     int filterProteins;
+    int deleteFilesInc;
     float proteinFilterThreshold;
 
 private:
     LocalParameters() :
             Parameters(),
             PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
-            PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$")
+            PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+            PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$")
+
     {
         // assembleresult
         assembleresults.push_back(PARAM_MIN_SEQ_ID);
@@ -57,6 +60,7 @@ private:
 
         assemblerworkflow.push_back(PARAM_FILTER_PROTEINS);
         assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
+        assemblerworkflow.push_back(PARAM_DELETE_TMP_INC);
         assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
         assemblerworkflow.push_back(PARAM_RUNNER);
 
@@ -74,6 +78,7 @@ private:
         hybridassembleresults.push_back(PARAM_RUNNER);
 
         filterProteins = 1;
+        deleteFilesInc = 1;
         proteinFilterThreshold = 0.2;
 
     }
