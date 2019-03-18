@@ -90,7 +90,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         # shellcheck disable=SC2086
         $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_TMP} \
             || fail "Kmer matching step died"
-        deleteIncremental $PREV_KMER_PREF
+        deleteIncremental "$PREV_KMER_PREF"
         touch "${TMP_PATH}/pref_$STEP.done"
         PREV_KMER_PREF="${TMP_PATH}/pref_$STEP"
 
@@ -102,7 +102,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_$STEP" ${UNGAPPED_ALN_PAR} \
             || fail "Ungapped alignment step died"
         touch "${TMP_PATH}/aln_$STEP.done"
-        deleteIncremental $PREV_ALN
+        deleteIncremental "$PREV_ALN"
         PREV_ALN="${TMP_PATH}/aln_$STEP"
     fi
 
@@ -122,7 +122,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
             $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
                 || fail "Ungapped alignment step died"
            touch "${TMP_PATH}/aln_corrected_$STEP.done"
-           deleteIncremental $PREV_ALN
+           deleteIncremental "$PREV_ALN"
            PREV_ALN="${TMP_PATH}/aln_corrected_$STEP"
         fi
         ALN="${TMP_PATH}/aln_corrected_$STEP"
@@ -135,7 +135,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
             || fail "Assembly step died"
 
         touch "${TMP_PATH}/assembly_$STEP.done"
-        deleteIncremental $PREV_ASSEMBLY
+        deleteIncremental "$PREV_ASSEMBLY"
         PREV_ASSEMBLY="${TMP_PATH}/assembly_$STEP"
     fi
 
