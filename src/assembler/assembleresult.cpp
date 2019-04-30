@@ -273,7 +273,7 @@ int doassembly(LocalParameters &par) {
 
     // cleanup
 
-    resultWriter.close(sequenceDbr->getDbtype());
+    resultWriter.close(true);
     alnReader->close();
     delete [] wasExtended;
     delete alnReader;

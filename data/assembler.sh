@@ -7,7 +7,7 @@ fail() {
 
 deleteIncremental() {
     if [ -n "$REMOVE_INCREMENTAL_TMP" ] &&  [ ! -z "$1" ]; then
-        rm "$1"*
+         "$MMSEQS" rmdb "$1"
     fi
 }
 

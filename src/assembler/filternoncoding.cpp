@@ -173,7 +173,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
 //        delete[] pentaAACnt;
     }
 //    std::cout << "Filtered: " << static_cast<float>(cnt)/ static_cast<float>(seqDb.getSize()) << std::endl;
-    dbw.close();
+    dbw.close(true);
     seqDb.close();
 
     return EXIT_SUCCESS;
