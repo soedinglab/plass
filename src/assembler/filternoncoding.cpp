@@ -28,11 +28,11 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     par.parseParameters(argc, argv, command, 2);
 
     Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
-    DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     seqDb.open(DBReader<unsigned int>::NOSORT);
 
     Debug(Debug::INFO) << "Output file: " << par.db2 << "\n";
-    DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads));
+    DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, seqDb.getDbtype());
     dbw.open();
 
     // Initialize model.
@@ -55,8 +55,8 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
         Tensor in(56);
         float counter[255];
         std::fill(counter, counter + 255, 1.0);
-        Sequence seq(par.maxSeqLen, Sequence::AMINO_ACIDS, &subMat,  par.kmerSize, false, false);
-        Sequence rseq2mer(par.maxSeqLen, Sequence::AMINO_ACIDS, &redMat7, 2, false, false);
+        Sequence seq(par.maxSeqLen, seqDb.getDbtype(), &subMat,  par.kmerSize, false, false);
+        Sequence rseq2mer(par.maxSeqLen, seqDb.getDbtype(), &redMat7, 2, false, false);
 //        Sequence rseq5mer(par.maxSeqLen, Sequence::AMINO_ACIDS, &redMat3, 5, false, false);
         Indexer indexerDi(redMat7.alphabetSize, 2);
 //        Indexer indexerPenta(redMat3.alphabetSize, 5);
@@ -71,7 +71,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
 #pragma omp for schedule(static)
         for (size_t id = 0; id < seqDb.getSize(); id++) {
             std::vector<float> data;
-            char *seqData = seqDb.getData(id);
+            char *seqData = seqDb.getData(id, thread_idx);
             unsigned int dbKey = seqDb.getDbKey(id);
             seq.mapSequence(id, dbKey, seqData);
 //            printf("%5d ", seq.L);
@@ -173,7 +173,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
 //        delete[] pentaAACnt;
     }
 //    std::cout << "Filtered: " << static_cast<float>(cnt)/ static_cast<float>(seqDb.getSize()) << std::endl;
-    dbw.close(Sequence::AMINO_ACIDS);
+    dbw.close();
     seqDb.close();
 
     return EXIT_SUCCESS;

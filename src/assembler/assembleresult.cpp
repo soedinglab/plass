@@ -62,20 +62,20 @@ Matcher::result_t selectFragmentToExtend(QueueBySeqId &alignments,
 
 
 int doassembly(LocalParameters &par) {
-    DBReader<unsigned int> *sequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> *sequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     sequenceDbr->open(DBReader<unsigned int>::NOSORT);
 
-    DBReader<unsigned int> * alnReader = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str());
+    DBReader<unsigned int> * alnReader = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     alnReader->open(DBReader<unsigned int>::NOSORT);
 
-    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads);
+    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, sequenceDbr->getDbtype());
     resultWriter.open();
     SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0f, 0.0f);
     SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(subMat);
 
     unsigned char * wasExtended = new unsigned char[sequenceDbr->getSize()];
     std::fill(wasExtended, wasExtended+sequenceDbr->getSize(), 0);
-
+    Debug::Progress progress(sequenceDbr->getSize());
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -87,14 +87,14 @@ int doassembly(LocalParameters &par) {
         alignments.reserve(300);
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
-            Debug::printProgress(id);
+            progress.updateProgress();
             unsigned int queryId = sequenceDbr->getDbKey(id);
-            char *querySeq = sequenceDbr->getData(id);
+            char *querySeq = sequenceDbr->getData(id, thread_idx);
             unsigned int querySeqLen = sequenceDbr->getSeqLens(id) - 2;
             unsigned int leftQueryOffset = 0;
             unsigned int rightQueryOffset = 0;
             std::string query(querySeq, querySeqLen); // no /n/0
-            char *alnData = alnReader->getDataByDBKey(queryId);
+            char *alnData = alnReader->getDataByDBKey(queryId, thread_idx);
             alignments.clear();
             Matcher::readAlignmentResults(alignments, alnData);
             QueueBySeqId alnQueue;
@@ -127,7 +127,7 @@ int doassembly(LocalParameters &par) {
                                             << " in database " << sequenceDbr->getDataFileName() << "\n";
                         EXIT(EXIT_FAILURE);
                     }
-                    char *targetSeq = sequenceDbr->getData(targetId);
+                    char *targetSeq = sequenceDbr->getData(targetId, thread_idx);
                     unsigned int targetSeqLen = sequenceDbr->getSeqLens(targetId) - 2;
                     // check if alignment still make sense (can extend the query)
                     if (besttHitToExtend.dbStartPos == 0) {
@@ -230,7 +230,7 @@ int doassembly(LocalParameters &par) {
                         dbStartPos+=dist;
                     }
                     unsigned int targetId = sequenceDbr->getId(tmpAlignments[alnIdx].dbKey);
-                    char *targetSeq = sequenceDbr->getData(targetId);
+                    char *targetSeq = sequenceDbr->getData(targetId, thread_idx);
                     for(int i = qStartPos; i <= qEndPos; i++){
                         int targetRes = static_cast<int>(targetSeq[dbStartPos+(i-qStartPos)]);
                         int queryRes = static_cast<int>(querySeq[i]);
@@ -265,7 +265,7 @@ int doassembly(LocalParameters &par) {
         //    bool wasUsed    =  (wasExtended[id] & 0x40);
         //if(isNotContig && wasNotExtended ){
         if (isNotContig){
-            char *querySeqData = sequenceDbr->getData(id);
+            char *querySeqData = sequenceDbr->getData(id, thread_idx);
             unsigned int queryLen = sequenceDbr->getSeqLens(id) - 1; //skip null byte
             resultWriter.writeData(querySeqData, queryLen, sequenceDbr->getDbKey(id), thread_idx);
         }

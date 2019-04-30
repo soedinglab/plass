@@ -28,15 +28,15 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argn, argv, command, 3, true, true);
 
-    DBReader<unsigned int> qDbr(par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> qDbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     qDbr.open(DBReader<unsigned int>::NOSORT);
 
     DBReader<unsigned int> *tDbr = &qDbr;
 
-    DBReader<unsigned int> resultReader(par.db2.c_str(), par.db2Index.c_str());
+    DBReader<unsigned int> resultReader(par.db2.c_str(), par.db2Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     resultReader.open(DBReader<unsigned int>::LINEAR_ACCCESS);
 
-    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads);
+    DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     resultWriter.open();
 
     // + 1 for query
@@ -44,15 +44,23 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
     Debug(Debug::INFO) << "Start computing start in sequences.\n";
     int *addStopAtPosition = new int[qDbr.getSize()];
     std::fill(addStopAtPosition, addStopAtPosition + qDbr.getSize(), -1);
-
+    Debug::Progress progress(resultReader.getSize());
     const float threshold = 0.2;
-#pragma omp parallel for schedule(dynamic, 100)
+
+#pragma omp parallel
+    {
+    unsigned int thread_idx = 0;
+#ifdef OPENMP
+    thread_idx = (unsigned int) omp_get_thread_num();
+#endif
+
+#pragma omp for schedule(dynamic, 100)
     for (size_t id = 0; id < resultReader.getSize(); id++) {
-        Debug::printProgress(id);
+        progress.updateProgress();
         // Get the sequence from the queryDB
         unsigned int queryKey = resultReader.getDbKey(id);
         const size_t qId = tDbr->getId(queryKey);
-        char *querySeqData = tDbr->getData(qId);
+        char *querySeqData = tDbr->getData(qId, thread_idx);
         int queryPosOfM = findPosOfM(querySeqData);
         if (queryPosOfM == -1){
             continue;
@@ -70,12 +78,12 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
         std::vector<PositionOfM> stopPositions;
         stopPositions.emplace_back(qId,queryPosOfM, true, hasStopM);
 
-        char *results = resultReader.getData(id);
+        char *results = resultReader.getData(id, thread_idx);
         while (*results != '\0') {
             char dbKey[255 + 1];
             Util::parseKey(results, dbKey);
             const unsigned int key = (unsigned int) strtoul(dbKey, NULL, 10);
-            char *entry[255];
+            const char *entry[255];
             const size_t columns = Util::getWordsOfLine(results, entry, 255);
             Matcher::result_t res;
             if (columns >= Matcher::ALN_RES_WITH_OUT_BT_COL_CNT) {
@@ -90,7 +98,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
                 results = Util::skipLine(results);
                 continue;
             }
-            char *dbSeqData = tDbr->getData(edgeId);
+            char *dbSeqData = tDbr->getData(edgeId, thread_idx);
             int posOfM = -1;
             bool hasM = false;
             bool hasStopM = false;
@@ -134,6 +142,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
         }
     }
 
+    }
 #pragma omp parallel
     {
         std::string str;
@@ -147,7 +156,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
 #pragma omp for schedule(dynamic, 100)
         for(size_t id = 0; id < qDbr.getSize(); id++){
             unsigned int queryKey = qDbr.getDbKey(id);
-            char *querySeqData = tDbr->getData(id);
+            char *querySeqData = tDbr->getData(id, thread_idx);
             int mPos = addStopAtPosition[id];
             if (mPos == -1){
                 resultWriter.writeData(querySeqData, strlen(querySeqData), queryKey, thread_idx);
@@ -161,7 +170,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
     }
 
     // cleanup
-    resultWriter.close(Sequence::AMINO_ACIDS);
+    resultWriter.close();
     resultReader.close();
     qDbr.close();
     delete [] addStopAtPosition;

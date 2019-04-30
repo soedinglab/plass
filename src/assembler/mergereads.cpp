@@ -30,9 +30,9 @@ int mergereads(int argn, const char **argv, const Command& command) {
     std::vector<std::string> filenames(par.filenames);
     std::string outFile = par.filenames.back();
     std::string outIndexFile = outFile + ".index";
-    DBWriter resultWriter(outFile.c_str(), outIndexFile.c_str());
+    DBWriter resultWriter(outFile.c_str(), outIndexFile.c_str(), par.threads, par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
     resultWriter.open();
-    DBWriter headerResultWriter((outFile+"_h").c_str(), (outFile+"_h.index").c_str());
+    DBWriter headerResultWriter((outFile+"_h").c_str(), (outFile+"_h.index").c_str(), par.threads, par.compressed, Parameters::DBTYPE_GENERIC_DB);
     headerResultWriter.open();
     unsigned int id = 0;
     {
@@ -99,7 +99,7 @@ int mergereads(int argn, const char **argv, const Command& command) {
         free(r2);
         free(r1);
     }
-    resultWriter.close(Sequence::NUCLEOTIDES);
+    resultWriter.close();
     headerResultWriter.close();
 
     Debug(Debug::INFO) << "\nDone.\n";

@@ -16,12 +16,12 @@ public:
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
 
-    std::vector<MMseqsParameter> assembleresults;
-    std::vector<MMseqsParameter> extractorfssubset;
-    std::vector<MMseqsParameter> filternoncoding;
-    std::vector<MMseqsParameter> hybridassembleresults;
-    std::vector<MMseqsParameter> assemblerworkflow;
-    std::vector<MMseqsParameter> nuclassemblerworkflow;
+    std::vector<MMseqsParameter *> assembleresults;
+    std::vector<MMseqsParameter *> extractorfssubset;
+    std::vector<MMseqsParameter *> filternoncoding;
+    std::vector<MMseqsParameter *> hybridassembleresults;
+    std::vector<MMseqsParameter *> assemblerworkflow;
+    std::vector<MMseqsParameter *> nuclassemblerworkflow;
 
     PARAMETER(PARAM_FILTER_PROTEINS)
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
@@ -39,18 +39,18 @@ private:
 
     {
         // assembleresult
-        assembleresults.push_back(PARAM_MIN_SEQ_ID);
-        assembleresults.push_back(PARAM_THREADS);
-        assembleresults.push_back(PARAM_V);
+        assembleresults.push_back(&PARAM_MIN_SEQ_ID);
+        assembleresults.push_back(&PARAM_THREADS);
+        assembleresults.push_back(&PARAM_V);
 
-        extractorfssubset.push_back(PARAM_TRANSLATION_TABLE);
-        extractorfssubset.push_back(PARAM_USE_ALL_TABLE_STARTS);
-        extractorfssubset.push_back(PARAM_THREADS);
-        extractorfssubset.push_back(PARAM_V);
+        extractorfssubset.push_back(&PARAM_TRANSLATION_TABLE);
+        extractorfssubset.push_back(&PARAM_USE_ALL_TABLE_STARTS);
+        extractorfssubset.push_back(&PARAM_THREADS);
+        extractorfssubset.push_back(&PARAM_V);
 
-        filternoncoding.push_back(PARAM_PROTEIN_FILTER_THRESHOLD);
-        filternoncoding.push_back(PARAM_THREADS);
-        filternoncoding.push_back(PARAM_V);
+        filternoncoding.push_back(&PARAM_PROTEIN_FILTER_THRESHOLD);
+        filternoncoding.push_back(&PARAM_THREADS);
+        filternoncoding.push_back(&PARAM_V);
 
         // assembler workflow
         assemblerworkflow = combineList(rescorediagonal, kmermatcher);
@@ -58,24 +58,24 @@ private:
         assemblerworkflow = combineList(assemblerworkflow, assembleresults);
         assemblerworkflow = combineList(assemblerworkflow, filternoncoding);
 
-        assemblerworkflow.push_back(PARAM_FILTER_PROTEINS);
-        assemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
-        assemblerworkflow.push_back(PARAM_DELETE_TMP_INC);
-        assemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
-        assemblerworkflow.push_back(PARAM_RUNNER);
+        assemblerworkflow.push_back(&PARAM_FILTER_PROTEINS);
+        assemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        assemblerworkflow.push_back(&PARAM_DELETE_TMP_INC);
+        assemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        assemblerworkflow.push_back(&PARAM_RUNNER);
 
         // nucl assembler workflow
         nuclassemblerworkflow = combineList(rescorediagonal, kmermatcher);
         nuclassemblerworkflow = combineList(nuclassemblerworkflow, assembleresults);
-        nuclassemblerworkflow.push_back(PARAM_NUM_ITERATIONS);
-        nuclassemblerworkflow.push_back(PARAM_REMOVE_TMP_FILES);
-        nuclassemblerworkflow.push_back(PARAM_RUNNER);
+        nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        nuclassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        nuclassemblerworkflow.push_back(&PARAM_RUNNER);
 
         // hybridassembleresults
         hybridassembleresults = combineList(rescorediagonal, kmermatcher);
-        hybridassembleresults.push_back(PARAM_NUM_ITERATIONS);
-        hybridassembleresults.push_back(PARAM_REMOVE_TMP_FILES);
-        hybridassembleresults.push_back(PARAM_RUNNER);
+        hybridassembleresults.push_back(&PARAM_NUM_ITERATIONS);
+        hybridassembleresults.push_back(&PARAM_REMOVE_TMP_FILES);
+        hybridassembleresults.push_back(&PARAM_RUNNER);
 
         filterProteins = 1;
         deleteFilesInc = 1;

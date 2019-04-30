@@ -102,11 +102,11 @@ int correctreads(int argc, const char **argv, const Command& command)  {
     par.parseParameters(argc, argv, command, 2);
 
     Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
-    DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     seqDb.open(DBReader<unsigned int>::NOSORT);
     NucleotideMatrix subMat(par.scoringMatrixFile.c_str(), 1.0, 0.0);
     Debug(Debug::INFO) << "Output database: " << par.db2 << "\n";
-    DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads));
+    DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
     dbw.open();
     const unsigned int BUFFER_SIZE = 1024;
 
@@ -127,13 +127,11 @@ int correctreads(int argc, const char **argv, const Command& command)  {
         thread_idx = static_cast<unsigned int>(omp_get_thread_num());
 #endif
 
-        Sequence seq(par.maxSeqLen, Sequence::NUCLEOTIDES, &subMat,  par.kmerSize, false, false);
-
-
+        Sequence seq(par.maxSeqLen, seqDb.getDbtype(), &subMat,  par.kmerSize, false, false);
 
 #pragma omp for schedule(static)
         for (size_t id = 0; id < seqDb.getSize(); id++) {
-            char *seqData = seqDb.getData(id);
+            char *seqData = seqDb.getData(id, thread_idx);
             unsigned int seqLen = seqDb.getSeqLens(id)-2;
 
             unsigned int dbKey = seqDb.getDbKey(id);
@@ -205,7 +203,7 @@ int correctreads(int argc, const char **argv, const Command& command)  {
         }
     }
 
-    dbw.close(Sequence::NUCLEOTIDES);
+    dbw.close();
     seqDb.close();
 
     return EXIT_SUCCESS;

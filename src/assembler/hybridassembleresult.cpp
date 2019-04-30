@@ -58,19 +58,19 @@ Matcher::result_t selectBestFragmentToExtend(QueueBySeqId &alignments,
 
 
 int dohybridassembleresult(LocalParameters &par) {
-    DBReader<unsigned int> *nuclSequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str());
+    DBReader<unsigned int> *nuclSequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(),  par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     nuclSequenceDbr->open(DBReader<unsigned int>::NOSORT);
 
-    DBReader<unsigned int> *aaSequenceDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str());
+    DBReader<unsigned int> *aaSequenceDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(),  par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     aaSequenceDbr->open(DBReader<unsigned int>::NOSORT);
 
-    DBReader<unsigned int> * nuclAlnReader = new DBReader<unsigned int>(par.db3.c_str(), par.db3Index.c_str());
+    DBReader<unsigned int> * nuclAlnReader = new DBReader<unsigned int>(par.db3.c_str(), par.db3Index.c_str(),  par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     nuclAlnReader->open(DBReader<unsigned int>::NOSORT);
 
-    DBWriter nuclResultWriter(par.db4.c_str(), par.db4Index.c_str(), par.threads);
+    DBWriter nuclResultWriter(par.db4.c_str(), par.db4Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
     nuclResultWriter.open();
 
-    DBWriter aaResultWriter(par.db5.c_str(), par.db5Index.c_str(), par.threads);
+    DBWriter aaResultWriter(par.db5.c_str(), par.db5Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aaResultWriter.open();
 
     NucleotideMatrix subMat(par.scoringMatrixFile.c_str(), 1.0f, 0.0f);
@@ -78,7 +78,7 @@ int dohybridassembleresult(LocalParameters &par) {
 
     unsigned char * wasExtended = new unsigned char[nuclSequenceDbr->getSize()];
     std::fill(wasExtended, wasExtended+nuclSequenceDbr->getSize(), 0);
-
+    Debug::Progress progress(nuclSequenceDbr->getSize());
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -90,13 +90,12 @@ int dohybridassembleresult(LocalParameters &par) {
 
         #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < nuclSequenceDbr->getSize(); id++) {
-            Debug::printProgress(id);
-
+            progress.updateProgress();
             unsigned int queryId = nuclSequenceDbr->getDbKey(id);
 
-            char *nuclQuerySeq = nuclSequenceDbr->getData(id);
+            char *nuclQuerySeq = nuclSequenceDbr->getData(id, thread_idx);
             unsigned int nuclQuerySeqLen = nuclSequenceDbr->getSeqLens(id) - 2;
-            char *aaQuerySeq = aaSequenceDbr->getData(id);
+            char *aaQuerySeq = aaSequenceDbr->getData(id, thread_idx);
             unsigned int aaQuerySeqLen = aaSequenceDbr->getSeqLens(id) - 2;
 
             unsigned int nuclLeftQueryOffset = 0;
@@ -104,7 +103,7 @@ int dohybridassembleresult(LocalParameters &par) {
             std::string nuclQuery(nuclQuerySeq, nuclQuerySeqLen); // no /n/0
             std::string aaQuery(aaQuerySeq, aaQuerySeqLen); // no /n/0
 
-            char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryId);
+            char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryId, thread_idx);
 
             nuclAlignments.clear();
             Matcher::readAlignmentResults(nuclAlignments, nuclAlnData, true);
@@ -138,10 +137,10 @@ int dohybridassembleresult(LocalParameters &par) {
                         EXIT(EXIT_FAILURE);
                     }
 
-                    char *nuclTargetSeq = nuclSequenceDbr->getData(targetId);
+                    char *nuclTargetSeq = nuclSequenceDbr->getData(targetId, thread_idx);
                     unsigned int nuclTargetSeqLen = nuclSequenceDbr->getSeqLens(targetId) - 2;
                     //TODO is this right?
-                    char *aaTargetSeq = aaSequenceDbr->getData(targetId);
+                    char *aaTargetSeq = aaSequenceDbr->getData(targetId, thread_idx);
 
                     // check if alignment still make sense (can extend the nuclQuery)
                     if (nuclBesttHitToExtend.dbStartPos == 0) {
@@ -246,7 +245,7 @@ int dohybridassembleresult(LocalParameters &par) {
                         dbStartPos+=dist;
                     }
                     unsigned int targetId = nuclSequenceDbr->getId(tmpNuclAlignments[alnIdx].dbKey);
-                    char *nuclTargetSeq = nuclSequenceDbr->getData(targetId);
+                    char *nuclTargetSeq = nuclSequenceDbr->getData(targetId, thread_idx);
                     for(int i = qStartPos; i < qEndPos; i++){
                         idCnt += (nuclQuerySeq[i] == nuclTargetSeq[dbStartPos+(i-qStartPos)]) ? 1 : 0;
                     }
@@ -281,10 +280,10 @@ int dohybridassembleresult(LocalParameters &par) {
         //    bool wasUsed    =  (wasExtended[id] & 0x40);
         //if(isNotContig && wasNotExtended ){
         if (isNotContig){
-            char *querySeqData = nuclSequenceDbr->getData(id);
+            char *querySeqData = nuclSequenceDbr->getData(id, thread_idx);
             unsigned int queryLen = nuclSequenceDbr->getSeqLens(id) - 1; //skip null byte
             nuclResultWriter.writeData(querySeqData, queryLen, nuclSequenceDbr->getDbKey(id), thread_idx);
-            char *queryAASeqData = aaSequenceDbr->getData(id);
+            char *queryAASeqData = aaSequenceDbr->getData(id, thread_idx);
             unsigned int queryAALen = aaSequenceDbr->getSeqLens(id) - 1; //skip null byte
             aaResultWriter.writeData(queryAASeqData, queryAALen, aaSequenceDbr->getDbKey(id), thread_idx);
         }
