@@ -137,7 +137,7 @@ int assembler(int argc, const char **argv, const Command &command) {
     par.contigEndMode = 0;
     par.orfStartMode = 0;
     par.orfMaxLength = par.orfMinLength;
-    par.orfMinLength = 20;
+    par.orfMinLength = std::min(par.orfMinLength, 20);
     par.orfMaxGaps = 0;
     cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
 
