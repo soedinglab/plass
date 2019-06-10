@@ -70,8 +70,16 @@ int doassembly(LocalParameters &par) {
 
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, sequenceDbr->getDbtype());
     resultWriter.open();
-    SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0f, 0.0f);
-    SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(subMat);
+
+    int seqType = sequenceDbr->getDbtype();
+    BaseMatrix *subMat;
+    if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES)) {
+        subMat = new NucleotideMatrix(par.scoringMatrixFile.c_str(), 1.0, 0.0);
+    } else {
+        subMat = new SubstitutionMatrix(par.scoringMatrixFile.c_str(), 2.0, 0.0);
+    }
+
+    SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(*subMat);
 
     unsigned char * wasExtended = new unsigned char[sequenceDbr->getSize()];
     std::fill(wasExtended, wasExtended+sequenceDbr->getSize(), 0);
