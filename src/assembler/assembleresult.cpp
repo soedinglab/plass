@@ -23,9 +23,11 @@ public:
 //            return true;
 //        if(r2.seqId < r1.seqId )
 //            return false;
-        if(r1.score < r2.score )
+        int score1 = BIT_CLEAR(r1.score, 31);
+        int score2 = BIT_CLEAR(r2.score, 31);
+        if(score1 < score2 )
             return true;
-        if(r2.score < r1.score )
+        if(score2 < score1 )
             return false;
         if(r1.dbKey > r2.dbKey )
             return true;
@@ -49,10 +51,12 @@ Matcher::result_t selectFragmentToExtend(QueueBySeqId &alignments,
         Matcher::result_t res = alignments.top();
         alignments.pop();
         size_t dbKey = res.dbKey;
-        const bool notRightStartAndLeftStart = !(res.dbStartPos == 0 && res.qStartPos == 0);
+        const bool isReverse = res.score<0;
+        const bool notRightStartAndLeftStart = !(res.dbStartPos == 0 &&  res.qStartPos == 0 );
         const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != res.dbLen-1);
         const bool leftStart = res.qStartPos == 0   && (res.qEndPos != res.qLen-1);
         const bool isNotIdentity = (dbKey != queryKey);
+
         if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
             return res;
         }
@@ -71,10 +75,12 @@ int doassembly(LocalParameters &par) {
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, sequenceDbr->getDbtype());
     resultWriter.open();
 
+    bool reverseResult = false;
     int seqType = sequenceDbr->getDbtype();
     BaseMatrix *subMat;
     if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES)) {
         subMat = new NucleotideMatrix(par.scoringMatrixFile.c_str(), 1.0, 0.0);
+        reverseResult = true;
     } else {
         subMat = new SubstitutionMatrix(par.scoringMatrixFile.c_str(), 2.0, 0.0);
     }
@@ -93,29 +99,53 @@ int doassembly(LocalParameters &par) {
 
         std::vector<Matcher::result_t> alignments;
         alignments.reserve(300);
+        char *queryRevSeq = NULL;
+        int queryRevSeqLen = par.maxSeqLen;
+        if (reverseResult == true) {
+            queryRevSeq = new char[queryRevSeqLen];
+        }
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
             progress.updateProgress();
             unsigned int queryId = sequenceDbr->getDbKey(id);
             char *querySeq = sequenceDbr->getData(id, thread_idx);
+            char *querySeqToUse;
             unsigned int querySeqLen = sequenceDbr->getSeqLens(id) - 2;
             unsigned int leftQueryOffset = 0;
             unsigned int rightQueryOffset = 0;
             std::string query(querySeq, querySeqLen); // no /n/0
+
+            if (reverseResult == true) {
+                NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
+                for (int pos = querySeqLen - 1; pos > -1; pos--) {
+                    int res = subMat->aa2int[static_cast<int>(querySeq[pos])];
+                    queryRevSeq[(querySeqLen - 1) - pos] = subMat->int2aa[nuclMatrix->reverseResidue(res)];
+                }
+            }
+            std::string queryRev(queryRevSeq,querySeqLen);
+
             char *alnData = alnReader->getDataByDBKey(queryId, thread_idx);
             alignments.clear();
             Matcher::readAlignmentResults(alignments, alnData);
             QueueBySeqId alnQueue;
             bool queryCouldBeExtended = false;
+            bool isReverse;
             while(alignments.size() > 1){
                 bool queryCouldBeExtendedLeft = false;
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-                    float scorePerCol = static_cast<float>(alignments[alnIdx].score) / static_cast<float>(alignments[alnIdx].alnLength);
+                    float scorePerCol = static_cast<float>(BIT_CLEAR(alignments[alnIdx].score,31)) / static_cast<float>(alignments[alnIdx].alnLength);
                     float alnLen = static_cast<float>(alignments[alnIdx].alnLength);
                     float ids = static_cast<float>(alignments[alnIdx].seqId) * alnLen;
                     alignments[alnIdx].seqId = ids / (alnLen + 0.5);
                     alignments[alnIdx].score = static_cast<int>(scorePerCol*100);
+                    alignments[alnIdx].score = BIT_SET(alignments[alnIdx].score, 31);
+                    if(alignments[alnIdx].qStartPos > alignments[alnIdx].qEndPos  && reverseResult){
+                        // alignment is on reverse of query sequence
+                        alignments[alnIdx].qStartPos = alignments[alnIdx].qLen-alignments[alnIdx].qStartPos-1;
+                        alignments[alnIdx].qEndPos = alignments[alnIdx].qLen-alignments[alnIdx].qEndPos-1;
+                        alignments[alnIdx].score = BIT_CLEAR(alignments[alnIdx].score, 31);
+                    }
 
                     alnQueue.push(alignments[alnIdx]);
                     if (alignments.size() > 1)
@@ -125,9 +155,16 @@ int doassembly(LocalParameters &par) {
                 std::vector<Matcher::result_t> tmpAlignments;
                 Matcher::result_t besttHitToExtend;
                 while ((besttHitToExtend = selectFragmentToExtend(alnQueue, queryId)).dbKey != UINT_MAX) {
+                    querySeqToUse = (char *) query.c_str();
+                    isReverse = false;
                     querySeqLen = query.size();
-                    querySeq = (char *) query.c_str();
-
+                    if (reverseResult && BIT_CHECK(besttHitToExtend.score,31)==false){
+                        querySeqToUse = (char *) queryRev.c_str();
+                        size_t temp = leftQueryOffset;
+                        leftQueryOffset = rightQueryOffset;
+                        rightQueryOffset = temp;
+                        isReverse = true;
+                    }
 //                querySeq.mapSequence(id, queryKey, query.c_str());
                     unsigned int targetId = sequenceDbr->getId(besttHitToExtend.dbKey);
                     if (targetId == UINT_MAX) {
@@ -150,12 +187,13 @@ int doassembly(LocalParameters &par) {
                     __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x10));
                     int qStartPos, qEndPos, dbStartPos, dbEndPos, score;
                     int diagonal = (leftQueryOffset + besttHitToExtend.qStartPos) - besttHitToExtend.dbStartPos;
+
                     int dist = std::max(abs(diagonal), 0);
                     if (diagonal >= 0) {
 //                    targetSeq.mapSequence(targetId, besttHitToExtend.dbKey, dbSeq);
                         size_t diagonalLen = std::min(targetSeqLen, querySeqLen - abs(diagonal));
                         DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
-                                querySeq + abs(diagonal),
+                                querySeqToUse + abs(diagonal),
                                 targetSeq, diagonalLen, fastMatrix.matrix);
                         qStartPos = alignment.startPos + dist;
                         qEndPos = alignment.endPos + dist;
@@ -165,7 +203,7 @@ int doassembly(LocalParameters &par) {
                     } else {
                         size_t diagonalLen = std::min(targetSeqLen - abs(diagonal), querySeqLen);
                         DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
-                                querySeq,
+                                querySeqToUse,
                                 targetSeq + abs(diagonal),
                                 diagonalLen, fastMatrix.matrix);
                         qStartPos = alignment.startPos;
@@ -176,10 +214,13 @@ int doassembly(LocalParameters &par) {
                     }
 
                     if (dbStartPos == 0 && qEndPos == (querySeqLen - 1) ) {
-                        if(queryCouldBeExtendedRight == true) {
+                        if((!isReverse && queryCouldBeExtendedRight == true) || (isReverse && queryCouldBeExtendedLeft == true)) {
                             float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
+                            if(!isReverse){
+                                besttHitToExtend.score = BIT_SET(besttHitToExtend.score,31);
+                            }
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
                         }
@@ -192,19 +233,44 @@ int doassembly(LocalParameters &par) {
                         }
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
-                        queryCouldBeExtendedRight = true;
-                        query += fragment;
+                        if (reverseResult) {
+                            NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
+                            const char *c_fragment = fragment.c_str();
+                            char *c_fragmentRev = new char[dbFragLen];
+                            for (int pos = dbFragLen - 1; pos > -1; pos--) {
+                                int res = subMat->aa2int[static_cast<int>(c_fragment[pos])];
+                                c_fragmentRev[(dbFragLen - 1) - pos] = subMat->int2aa[nuclMatrix->reverseResidue(res)];
+                            }
+                            std::string fragmentRev = std::string(c_fragmentRev,dbFragLen);
+                            if (!isReverse) {
+                                queryCouldBeExtendedRight = true;
+                                query = query + fragment;
+                                queryRev = fragmentRev + queryRev;
+                            } else {
+                                queryCouldBeExtendedLeft = true;
+                                queryRev = queryRev + fragment;
+                                query = fragmentRev + query;
+                            }
+                        }
+                        else {
+                            query += fragment;
+                            queryCouldBeExtendedRight = true;
+                        }
                         rightQueryOffset += dbFragLen;
 
                     } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
-                        if (queryCouldBeExtendedLeft == true) {
+                        if ((!isReverse && queryCouldBeExtendedLeft == true)|| (isReverse && queryCouldBeExtendedRight == true)) {
                             float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
+                            if(!isReverse){
+                                besttHitToExtend.score = BIT_SET(besttHitToExtend.score,31);
+                            }
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
                         }
-                        std::string fragment = std::string(targetSeq, dbStartPos); // +1 get not aligned element
+                        size_t dbFragLen = dbStartPos;
+                        std::string fragment = std::string(targetSeq, dbFragLen); // +1 get not aligned element
                         if (fragment.size() + query.size() >= par.maxSeqLen) {
                             Debug(Debug::WARNING) << "Sequence too long in query id: " << queryId << ". "
                                     "Max length allowed would is " << par.maxSeqLen << "\n";
@@ -212,9 +278,35 @@ int doassembly(LocalParameters &par) {
                         }
                         // update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
-                        queryCouldBeExtendedLeft = true;
-                        query = fragment + query;
+                        if (reverseResult) {
+                            NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
+                            const char *c_fragment = fragment.c_str();
+                            char *c_fragmentRev = new char[dbFragLen];
+                            for (int pos = dbFragLen - 1; pos > -1; pos--) {
+                                int res = subMat->aa2int[static_cast<int>(c_fragment[pos])];
+                                c_fragmentRev[(dbFragLen - 1) - pos] = subMat->int2aa[nuclMatrix->reverseResidue(res)];
+                            }
+                            std::string fragmentRev = std::string(c_fragmentRev,dbFragLen);
+                            if (!isReverse) {
+                                queryCouldBeExtendedLeft = true;
+                                query = fragment + query;
+                                queryRev = queryRev + fragmentRev;
+                            } else {
+                                queryCouldBeExtendedRight = true;
+                                queryRev = fragment + queryRev;
+                                query = query + fragmentRev;
+                            }
+                        }
+                        else {
+                            queryCouldBeExtendedLeft = true;
+                            query = fragment + query;
+                        }
                         leftQueryOffset += dbStartPos;
+                    }
+                    if (isReverse){
+                        size_t temp = leftQueryOffset;
+                        leftQueryOffset = rightQueryOffset;
+                        rightQueryOffset = temp;
                     }
 
                 }
@@ -222,6 +314,7 @@ int doassembly(LocalParameters &par) {
                     queryCouldBeExtended = true;
                 }
                 alignments.clear();
+                break;
                 querySeqLen = query.size();
                 querySeq = (char *) query.c_str();
                 for(size_t alnIdx = 0; alnIdx < tmpAlignments.size(); alnIdx++){
