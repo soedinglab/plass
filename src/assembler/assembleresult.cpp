@@ -114,15 +114,15 @@ int doassembly(LocalParameters &par) {
             unsigned int leftQueryOffset = 0;
             unsigned int rightQueryOffset = 0;
             std::string query(querySeq, querySeqLen); // no /n/0
-
+            std::string queryRev;
             if (reverseResult == true) {
                 NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
                 for (int pos = querySeqLen - 1; pos > -1; pos--) {
                     int res = subMat->aa2int[static_cast<int>(querySeq[pos])];
                     queryRevSeq[(querySeqLen - 1) - pos] = subMat->int2aa[nuclMatrix->reverseResidue(res)];
                 }
+                queryRev = std::string(queryRevSeq,querySeqLen);
             }
-            std::string queryRev(queryRevSeq,querySeqLen);
 
             char *alnData = alnReader->getDataByDBKey(queryId, thread_idx);
             alignments.clear();
@@ -139,7 +139,8 @@ int doassembly(LocalParameters &par) {
                     float ids = static_cast<float>(alignments[alnIdx].seqId) * alnLen;
                     alignments[alnIdx].seqId = ids / (alnLen + 0.5);
                     alignments[alnIdx].score = static_cast<int>(scorePerCol*100);
-                    alignments[alnIdx].score = BIT_SET(alignments[alnIdx].score, 31);
+                    if(reverseResult)
+                        alignments[alnIdx].score = BIT_SET(alignments[alnIdx].score, 31);
                     if(alignments[alnIdx].qStartPos > alignments[alnIdx].qEndPos  && reverseResult){
                         // alignment is on reverse of query sequence
                         alignments[alnIdx].qStartPos = alignments[alnIdx].qLen-alignments[alnIdx].qStartPos-1;
@@ -218,7 +219,7 @@ int doassembly(LocalParameters &par) {
                             float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
-                            if(!isReverse){
+                            if(reverseResult && !isReverse){
                                 besttHitToExtend.score = BIT_SET(besttHitToExtend.score,31);
                             }
                             tmpAlignments.push_back(besttHitToExtend);
@@ -263,7 +264,7 @@ int doassembly(LocalParameters &par) {
                             float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
                             besttHitToExtend.score = static_cast<int>(scorePerCol*100);
-                            if(!isReverse){
+                            if(reverseResult && !isReverse){
                                 besttHitToExtend.score = BIT_SET(besttHitToExtend.score,31);
                             }
                             tmpAlignments.push_back(besttHitToExtend);
