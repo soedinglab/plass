@@ -99,7 +99,7 @@ int doassembly(LocalParameters &par) {
             Matcher::readAlignmentResults(alignments, alnData);
             QueueBySeqId alnQueue;
             bool queryCouldBeExtended = false;
-            while(alignments.size() > 1){
+            while(alignments.size() > 0){
                 bool queryCouldBeExtendedLeft = false;
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
@@ -236,7 +236,7 @@ int doassembly(LocalParameters &par) {
                         int queryRes = static_cast<int>(querySeq[i]);
                         idCnt += (queryRes == targetRes) ? 1 : 0;
                     }
-                    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos) + 0.5);
+                    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos) + 1);
                     tmpAlignments[alnIdx].seqId = seqId;
                     if(seqId >= par.seqIdThr){
                         alignments.push_back(tmpAlignments[alnIdx]);
