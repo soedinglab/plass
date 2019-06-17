@@ -103,6 +103,9 @@ int dohybridassembleresult(LocalParameters &par) {
             std::string nuclQuery(nuclQuerySeq, nuclQuerySeqLen); // no /n/0
             std::string aaQuery(aaQuerySeq, aaQuerySeqLen); // no /n/0
 
+            bool excludeLeftExtension = (aaQuery[0] == '*');
+            bool excludeRightExtension = (aaQuery[aaQuerySeqLen-1] == '*');
+
             char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryId, thread_idx);
 
             nuclAlignments.clear();
@@ -141,14 +144,18 @@ int dohybridassembleresult(LocalParameters &par) {
                     unsigned int nuclTargetSeqLen = nuclSequenceDbr->getSeqLens(targetId) - 2;
                     //TODO is this right?
                     char *aaTargetSeq = aaSequenceDbr->getData(targetId, thread_idx);
+                    unsigned int aaTargetSeqLen = aaSequenceDbr->getSeqLens(targetId) - 2;
 
                     // check if alignment still make sense (can extend the nuclQuery)
+                    // avoid extension over start/stoppcodons
                     if (nuclBesttHitToExtend.dbStartPos == 0) {
-                        if ((nuclTargetSeqLen - (nuclBesttHitToExtend.dbEndPos + 1)) <= nuclRightQueryOffset) {
+                        if (((nuclTargetSeqLen - (nuclBesttHitToExtend.dbEndPos + 1)) <= nuclRightQueryOffset) || excludeRightExtension ||
+                              aaTargetSeq[0] == '*') {
                             continue;
                         }
                     } else if (nuclBesttHitToExtend.qStartPos == 0) {
-                        if (nuclBesttHitToExtend.dbStartPos <= nuclLeftQueryOffset) {
+                        if ((nuclBesttHitToExtend.dbStartPos <= nuclLeftQueryOffset) || excludeLeftExtension ||
+                           aaTargetSeq[aaTargetSeqLen-1] == '*') {
                             continue;
                         }
                     }
