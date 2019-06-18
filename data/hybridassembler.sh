@@ -139,12 +139,8 @@ if notExists "${RESULT_NUCL}.fasta"; then
 fi
 
 if notExists "${RESULT_NUCL}.merged.fasta"; then
-    if [ -n "${PAIRED_END}" ]; then
-       "$MMSEQS" convert2fasta "${TMP_PATH}/nucl_reads" "${TMP_PATH}/nucl_reads.fasta"
-       cat "${RESULT_NUCL}.fasta" "${TMP_PATH}/nucl_reads.fasta" > "${RESULT_NUCL}.merged.fasta"
-    else
-       cat "${RESULT_NUCL}.fasta" "$INPUT" > "${RESULT_NUCL}.merged.fasta"
-    fi
+    "$MMSEQS" convert2fasta "${INPUT}" "${INPUT}.fasta"
+    cat "${RESULT_NUCL}.fasta" "${INPUT}.fasta" > "${RESULT_NUCL}.merged.fasta"
 fi
 
 # shellcheck disable=SC2086
