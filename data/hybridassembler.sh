@@ -19,7 +19,6 @@ notExists() {
 [   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
 [ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
-
 if notExists "${TMP_PATH}/nucl_reads"; then
     if [ -n "${PAIRED_END}" ]; then
         echo "PAIRED END MODE"
@@ -122,25 +121,33 @@ STEP="$((STEP-1))"
 RESULT_NUCL="${TMP_PATH}/assembly_nucl_$STEP"
 #RESULT_AA="${TMP_PATH}/assembly_aa_$STEP"
 
+# select only assembled orfs
+if notExists "${RESULT_NUCL}_only_assembled.index"; then
+    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT_NUCL}.index" "${TMP_PATH}/nucl_6f_start_long.index" > "${RESULT_NUCL}_tmp.index"
+    awk '$3 > $6 { print }' "${RESULT_NUCL}_tmp.index" > "${RESULT_NUCL}_only_assembled.index"
+fi
 
+if notExists "${RESULT_NUCL}_only_assembled"; then
+    ln -s "${RESULT_NUCL}" "${RESULT_NUCL}_only_assembled"
+fi
 
 if notExists "${RESULT_NUCL}_h"; then
-    ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_h"
+    ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_only_assembled_h"
 fi
 
 if notExists "${RESULT_NUCL}_h.index"; then
-    ln -s "${TMP_PATH}/nucl_6f_start_long_h.index" "${RESULT_NUCL}_h.index"
+    ln -s "${TMP_PATH}/nucl_6f_start_long_h.index" "${RESULT_NUCL}_only_assembled_h.index"
 fi
 
 if notExists "${RESULT_NUCL}.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${RESULT_NUCL}" "${RESULT_NUCL}.fasta" ${VERBOSITY_PAR} \
+    "$MMSEQS" convert2fasta "${RESULT_NUCL}_only_assembled" "${RESULT_NUCL}_only_assembled.fasta" ${VERBOSITY_PAR} \
         || fail "convert2fasta died"
 fi
 
 if notExists "${RESULT_NUCL}.merged.fasta"; then
     "$MMSEQS" convert2fasta "${INPUT}" "${INPUT}.fasta"
-    cat "${RESULT_NUCL}.fasta" "${INPUT}.fasta" > "${RESULT_NUCL}.merged.fasta"
+    cat "${RESULT_NUCL}_only_assembled.fasta" "${INPUT}.fasta" > "${RESULT_NUCL}.merged.fasta"
 fi
 
 # shellcheck disable=SC2086
