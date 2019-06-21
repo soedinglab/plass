@@ -91,12 +91,14 @@ int dohybridassembleresult(LocalParameters &par) {
         #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < nuclSequenceDbr->getSize(); id++) {
             progress.updateProgress();
-            unsigned int queryId = nuclSequenceDbr->getDbKey(id);
+            unsigned int queryKey = nuclSequenceDbr->getDbKey(id);
 
             char *nuclQuerySeq = nuclSequenceDbr->getData(id, thread_idx);
             unsigned int nuclQuerySeqLen = nuclSequenceDbr->getSeqLens(id) - 2;
-            char *aaQuerySeq = aaSequenceDbr->getData(id, thread_idx);
-            unsigned int aaQuerySeqLen = aaSequenceDbr->getSeqLens(id) - 2;
+
+            unsigned int aaQueryId = aaSequenceDbr->getId(queryKey);
+            char *aaQuerySeq = aaSequenceDbr->getData(aaQueryId, thread_idx);
+            unsigned int aaQuerySeqLen = aaSequenceDbr->getSeqLens(aaQueryId) - 2;
 
             unsigned int nuclLeftQueryOffset = 0;
             unsigned int nuclRightQueryOffset = 0;
@@ -106,7 +108,7 @@ int dohybridassembleresult(LocalParameters &par) {
             bool excludeLeftExtension = (aaQuery[0] == '*');
             bool excludeRightExtension = (aaQuery[aaQuerySeqLen-1] == '*');
 
-            char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryId, thread_idx);
+            char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryKey, thread_idx);
 
             nuclAlignments.clear();
             Matcher::readAlignmentResults(nuclAlignments, nuclAlnData, true);
@@ -128,23 +130,24 @@ int dohybridassembleresult(LocalParameters &par) {
 
                 Matcher::result_t nuclBesttHitToExtend;
 
-                while ((nuclBesttHitToExtend = selectBestFragmentToExtend(alnQueue, queryId)).dbKey != UINT_MAX) {
+                while ((nuclBesttHitToExtend = selectBestFragmentToExtend(alnQueue, queryKey)).dbKey != UINT_MAX) {
                     nuclQuerySeqLen = nuclQuery.size();
                     nuclQuerySeq = (char *) nuclQuery.c_str();
 
 //                nuclQuerySeq.mapSequence(id, queryKey, nuclQuery.c_str());
-                    unsigned int targetId = nuclSequenceDbr->getId(nuclBesttHitToExtend.dbKey);
-                    if (targetId == UINT_MAX) {
-                        Debug(Debug::ERROR) << "Could not find targetId  " << nuclBesttHitToExtend.dbKey
+                    unsigned int nuclTargetId = nuclSequenceDbr->getId(nuclBesttHitToExtend.dbKey);
+                    if (nuclTargetId == UINT_MAX) {
+                        Debug(Debug::ERROR) << "Could not find nuclTargetId  " << nuclBesttHitToExtend.dbKey
                                             << " in database " << nuclSequenceDbr->getDataFileName() << "\n";
                         EXIT(EXIT_FAILURE);
                     }
 
-                    char *nuclTargetSeq = nuclSequenceDbr->getData(targetId, thread_idx);
-                    unsigned int nuclTargetSeqLen = nuclSequenceDbr->getSeqLens(targetId) - 2;
-                    //TODO is this right?
-                    char *aaTargetSeq = aaSequenceDbr->getData(targetId, thread_idx);
-                    unsigned int aaTargetSeqLen = aaSequenceDbr->getSeqLens(targetId) - 2;
+                    char *nuclTargetSeq = nuclSequenceDbr->getData(nuclTargetId, thread_idx);
+                    unsigned int nuclTargetSeqLen = nuclSequenceDbr->getSeqLens(nuclTargetId) - 2;
+                    
+                    unsigned int aaTargetId = aaSequenceDbr->getId(nuclBesttHitToExtend.dbKey);
+                    char *aaTargetSeq = aaSequenceDbr->getData(aaTargetId, thread_idx);
+                    unsigned int aaTargetSeqLen = aaSequenceDbr->getSeqLens(aaTargetId) - 2;
 
                     // check if alignment still make sense (can extend the nuclQuery)
                     // avoid extension over start/stoppcodons
@@ -159,12 +162,12 @@ int dohybridassembleresult(LocalParameters &par) {
                             continue;
                         }
                     }
-                    __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x10));
+                    __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x10));
                     int qStartPos, qEndPos, nuclDbStartPos, nuclDbEndPos;
                     int diagonal = (nuclLeftQueryOffset + nuclBesttHitToExtend.qStartPos) - nuclBesttHitToExtend.dbStartPos;
                     int dist = std::max(abs(diagonal), 0);
                     if (diagonal >= 0) {
-//                    nuclTargetSeq.mapSequence(targetId, nuclBesttHitToExtend.dbKey, dbSeq);
+//                    nuclTargetSeq.mapSequence(nuclTargetId, nuclBesttHitToExtend.dbKey, dbSeq);
                         size_t diagonalLen = std::min(nuclTargetSeqLen, nuclQuerySeqLen - abs(diagonal));
                         DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
                                 nuclQuerySeq + abs(diagonal),
@@ -197,12 +200,12 @@ int dohybridassembleresult(LocalParameters &par) {
                         std::string aaFragment = std::string(aaTargetSeq + nuclDbEndPos/3 + 1, aaDbFragLen);
 
                         if (fragment.size() + nuclQuery.size() >= par.maxSeqLen) {
-                            Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryId << ". "
+                            Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryKey << ". "
                                     "Max length allowed would is " << par.maxSeqLen << "\n";
                             break;
                         }
                         //update that dbKey was used in assembly
-                        __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
+                        __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x80));
                         queryCouldBeExtendedRight = true;
                         nuclQuery += fragment;
                         aaQuery += aaFragment;
@@ -218,12 +221,12 @@ int dohybridassembleresult(LocalParameters &par) {
                         std::string aaFragment = std::string(aaTargetSeq, nuclDbStartPos/3); // +1 get not aligned element
 
                         if (fragment.size() + nuclQuery.size() >= par.maxSeqLen) {
-                            Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryId << ". "
+                            Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryKey << ". "
                                     "Max length allowed would is " << par.maxSeqLen << "\n";
                             break;
                         }
                         // update that dbKey was used in assembly
-                        __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
+                        __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x80));
                         queryCouldBeExtendedLeft = true;
                         nuclQuery = fragment + nuclQuery;
                         aaQuery = aaFragment + aaQuery;
@@ -267,8 +270,8 @@ int dohybridassembleresult(LocalParameters &par) {
                 nuclQuery.push_back('\n');
                 aaQuery.push_back('\n');
                 __sync_or_and_fetch(&wasExtended[id], static_cast<unsigned char>(0x20));
-                nuclResultWriter.writeData(nuclQuery.c_str(), nuclQuery.size(), queryId, thread_idx);
-                aaResultWriter.writeData(aaQuery.c_str(), aaQuery.size(), queryId, thread_idx);
+                nuclResultWriter.writeData(nuclQuery.c_str(), nuclQuery.size(), queryKey, thread_idx);
+                aaResultWriter.writeData(aaQuery.c_str(), aaQuery.size(), queryKey, thread_idx);
             }
         }
     } // end parallel
