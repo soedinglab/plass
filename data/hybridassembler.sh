@@ -40,27 +40,10 @@ if notExists "${TMP_PATH}/nucl_6f_start"; then
         || fail "extractorfs start step died"
 fi
 
-
-if notExists "${TMP_PATH}/aa_6f_start"; then
-    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" --add-orf-stop \
-        || fail "translatenucs start step died"
-fi
-
 if notExists "${TMP_PATH}/nucl_6f_long"; then
     # shellcheck disable=SC2086
     "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${EXTRACTORFS_LONG_PAR} \
         || fail "extractorfs longest step died"
-fi
-
-if notExists "${TMP_PATH}/aa_6f_long"; then
-    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/aa_6f_long" --add-orf-stop \
-        || fail "translatenucs long step died"
-fi
-
-# $MMSEQS concatdbs "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_end" "${TMP_PATH}/aa_6f_start_end"
-if notExists "${TMP_PATH}/aa_6f_start_long"; then
-    "$MMSEQS" concatdbs "${TMP_PATH}/aa_6f_long" "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_start_long" \
-        || fail "concatdbs start long step died"
 fi
 
 if notExists "${TMP_PATH}/nucl_6f_start_long"; then
@@ -74,6 +57,10 @@ if notExists "${TMP_PATH}/nucl_6f_start_long_h"; then
         || fail "concatdbs start long step died"
 fi
 
+if notExists "${TMP_PATH}/aa_6f_start_long"; then
+    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_start_long" "${TMP_PATH}/aa_6f_start_long" --add-orf-stop \
+        || fail "translatenucs step died"
+fi
 
 INPUT_AA="${TMP_PATH}/aa_6f_start_long"
 INPUT_NUCL="${TMP_PATH}/nucl_6f_start_long"
