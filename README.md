@@ -7,7 +7,7 @@
 
 Plass (Protein-Level ASSembler) is a software to assemble short read sequencing data on a protein level. The main purpose of Plass is the assembly of complex metagenomic datasets. It assembles 10 times more protein residues in soil metagenomes than Megahit. Plass is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS. The software is designed to run on multiple cores. Plass was used to create a Soil Reference Catalog (SRC) and a Marine Eukaryotic Reference Catalog (MERC).
 
-[Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. biorxiv, doi: doi.org/10.1101/386110  (2018)](https://www.biorxiv.org/content/early/2018/08/07/386110).
+[Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, doi: doi.org/10.1038/s41592-019-0437-4 (2019)](https://www.nature.com/articles/s41592-019-0437-4).
 
 <p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/Plass.jpeg" height="256" /></p>
 
