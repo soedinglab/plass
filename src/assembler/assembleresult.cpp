@@ -143,7 +143,9 @@ int doassembly(LocalParameters &par) {
                         alignments[alnIdx].qEndPos = alignments[alnIdx].qLen-alignments[alnIdx].qEndPos-1;
                         useQueryReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = true;
                     }
-                    useQueryReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = false;
+                    else {
+                        useQueryReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = false;
+                    }
                 }
             }
 
