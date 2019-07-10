@@ -26,7 +26,7 @@ int findPosOfM(const char *seq) {
 
 int findassemblystart(int argn, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argn, argv, command, 3, true, true);
+    par.parseParameters(argn, argv, command, true, 0, 0);
 
     DBReader<unsigned int> qDbr(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     qDbr.open(DBReader<unsigned int>::NOSORT);

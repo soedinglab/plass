@@ -14,7 +14,7 @@
 
 int mergereads(int argn, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argn, argv, command, 2, true, Parameters::PARSE_VARIADIC);
+    par.parseParameters(argn, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
     // + 1 for query
     Debug(Debug::INFO) << "Start merging reads.\n";

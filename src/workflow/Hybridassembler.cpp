@@ -48,7 +48,7 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription((Command &)command, par.PARAM_TRANSLATION_TABLE.uniqid, NULL, NULL, par.PARAM_TRANSLATION_TABLE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_USE_ALL_TABLE_STARTS.uniqid, NULL, NULL, par.PARAM_USE_ALL_TABLE_STARTS.category | MMseqsParameter::COMMAND_EXPERT);
 
-    par.parseParameters(argc, argv, command, 3);
+    par.parseParameters(argc, argv, command, true, 0, 0);
     CommandCaller cmd;
     if ((par.filenames.size() - 2) % 2 == 0) {
         // paired end reads

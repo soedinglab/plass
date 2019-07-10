@@ -319,7 +319,7 @@ int dohybridassembleresult(LocalParameters &par) {
 
 int hybridassembleresults(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
-    par.parseParameters(argc, argv, command, 5);
+    par.parseParameters(argc, argv, command, true, 0, 0);
 
     MMseqsMPI::init(argc, argv);
 
