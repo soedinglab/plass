@@ -89,7 +89,7 @@ while [ $STEP -lt $NUM_IT ]; do
     # 3. Ungapped alignment protein 2 nucl
     if notExists "${TMP_PATH}/aln_nucl_$STEP"; then
         "$MMSEQS" proteinaln2nucl "$INPUT_NUCL" "$INPUT_NUCL" "$INPUT_AA"  "$INPUT_AA"  "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/aln_nucl_$STEP"  \
-            || fail "Ungapped alignment step died"
+            || fail "Ungapped alignment 2 nucl step died"
     fi
 
     # 4. Assemble

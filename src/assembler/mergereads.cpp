@@ -99,8 +99,8 @@ int mergereads(int argn, const char **argv, const Command& command) {
         free(r2);
         free(r1);
     }
-    resultWriter.close();
-    headerResultWriter.close();
+    resultWriter.close(true);
+    headerResultWriter.close(true);
 
     Debug(Debug::INFO) << "\nDone.\n";
 
