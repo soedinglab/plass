@@ -68,8 +68,8 @@ if notExists "${TMP_PATH}/aa_6f_start_long"; then
 fi
 
 if notExists "${TMP_PATH}/aa_6f_start_long_h"; then
-    awk 'BEGIN { printf("%c%c%c%c",12,0,0,0); exit; }' > "${TMP_PATH}/nucl_6f_long_h.dbtype"
-    awk 'BEGIN { printf("%c%c%c%c",12,0,0,0); exit; }' > "${TMP_PATH}/nucl_6f_start_h.dbtype"
+    #awk 'BEGIN { printf("%c%c%c%c",12,0,0,0); exit; }' > "${TMP_PATH}/nucl_6f_long_h.dbtype"
+    #awk 'BEGIN { printf("%c%c%c%c",12,0,0,0); exit; }' > "${TMP_PATH}/nucl_6f_start_h.dbtype"
     # shellcheck disable=SC2086
     "$MMSEQS" concatdbs "${TMP_PATH}/nucl_6f_long_h" "${TMP_PATH}/nucl_6f_start_h" "${TMP_PATH}/aa_6f_start_long_h" ${VERBOSITY_PAR} \
         || fail "concatdbs start long step died"
@@ -81,10 +81,8 @@ if [ -z "$NUM_IT" ]; then
     NUM_IT=1
 fi
 
-
 while [ "$STEP" -lt "$NUM_IT" ]; do
     echo "STEP: $STEP"
-
     # 1. Finding exact $k$-mer matches.
     if notExists "${TMP_PATH}/pref_$STEP.done"; then
         PARAM=KMERMATCHER${STEP}_PAR
@@ -143,6 +141,7 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
 
     INPUT="${TMP_PATH}/assembly_$STEP"
     STEP="$((STEP+1))"
+
 done
 STEP="$((STEP-1))"
 
@@ -171,6 +170,7 @@ fi
 # create fasta output
 if notExists "${RESULT}_only_assembled"; then
     ln -s "${RESULT}" "${RESULT}_only_assembled"
+    ln -s "${RESULT}.dbtype" "${RESULT}_only_assembled.dbtype"
 fi
 
 if notExists "${RESULT}_only_assembled_h"; then

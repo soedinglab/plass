@@ -52,8 +52,6 @@ if notExists "${TMP_PATH}/nucl_6f_start_long"; then
 fi
 
 if notExists "${TMP_PATH}/nucl_6f_start_long_h"; then
-    awk 'BEGIN { printf("%c%c%c%c",12,0,0,0); exit; }' > "${TMP_PATH}/nucl_6f_start_h.dbtype"
-    awk 'BEGIN { printf("%c%c%c%c",12,0,0,0); exit; }' > "${TMP_PATH}/nucl_6f_long_h.dbtype"
     # shellcheck disable=SC2086
     "$MMSEQS" concatdbs "${TMP_PATH}/nucl_6f_long_h" "${TMP_PATH}/nucl_6f_start_h" "${TMP_PATH}/nucl_6f_start_long_h" ${VERBOSITY_PAR} \
         || fail "concatdbs start long step died"
@@ -118,6 +116,7 @@ fi
 
 if notExists "${RESULT_NUCL}_only_assembled"; then
     ln -s "${RESULT_NUCL}" "${RESULT_NUCL}_only_assembled"
+    ln -s "${RESULT_NUCL}.dbtype" "${RESULT_NUCL}_only_assembled.dbtype"
 fi
 
 if notExists "${RESULT_NUCL}_h"; then
