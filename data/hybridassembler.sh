@@ -116,6 +116,9 @@ fi
 
 if notExists "${RESULT_NUCL}_only_assembled"; then
     ln -s "${RESULT_NUCL}" "${RESULT_NUCL}_only_assembled"
+fi
+
+if notExists "${RESULT_NUCL}_only_assembled.dbtype"; then
     ln -s "${RESULT_NUCL}.dbtype" "${RESULT_NUCL}_only_assembled.dbtype"
 fi
 

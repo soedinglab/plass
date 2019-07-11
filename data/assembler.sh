@@ -170,6 +170,9 @@ fi
 # create fasta output
 if notExists "${RESULT}_only_assembled"; then
     ln -s "${RESULT}" "${RESULT}_only_assembled"
+fi
+
+if notExists "${RESULT}_only_assembled.dbtype"; then
     ln -s "${RESULT}.dbtype" "${RESULT}_only_assembled.dbtype"
 fi
 
