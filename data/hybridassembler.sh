@@ -19,7 +19,6 @@ notExists() {
 [   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
 [ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
-
 if notExists "${TMP_PATH}/nucl_reads"; then
     if [ -n "${PAIRED_END}" ]; then
         echo "PAIRED END MODE"
@@ -41,27 +40,10 @@ if notExists "${TMP_PATH}/nucl_6f_start"; then
         || fail "extractorfs start step died"
 fi
 
-
-if notExists "${TMP_PATH}/aa_6f_start"; then
-    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_start" "${TMP_PATH}/aa_6f_start" --add-orf-stop \
-        || fail "translatenucs start step died"
-fi
-
 if notExists "${TMP_PATH}/nucl_6f_long"; then
     # shellcheck disable=SC2086
     "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_long" ${EXTRACTORFS_LONG_PAR} \
         || fail "extractorfs longest step died"
-fi
-
-if notExists "${TMP_PATH}/aa_6f_long"; then
-    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_long" "${TMP_PATH}/aa_6f_long" --add-orf-stop \
-        || fail "translatenucs long step died"
-fi
-
-# $MMSEQS concatdbs "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_end" "${TMP_PATH}/aa_6f_start_end"
-if notExists "${TMP_PATH}/aa_6f_start_long"; then
-    "$MMSEQS" concatdbs "${TMP_PATH}/aa_6f_long" "${TMP_PATH}/aa_6f_start" "${TMP_PATH}/aa_6f_start_long" \
-        || fail "concatdbs start long step died"
 fi
 
 if notExists "${TMP_PATH}/nucl_6f_start_long"; then
@@ -75,6 +57,10 @@ if notExists "${TMP_PATH}/nucl_6f_start_long_h"; then
         || fail "concatdbs start long step died"
 fi
 
+if notExists "${TMP_PATH}/aa_6f_start_long"; then
+    "$MMSEQS" translatenucs "${TMP_PATH}/nucl_6f_start_long" "${TMP_PATH}/aa_6f_start_long" --add-orf-stop \
+        || fail "translatenucs step died"
+fi
 
 INPUT_AA="${TMP_PATH}/aa_6f_start_long"
 INPUT_NUCL="${TMP_PATH}/nucl_6f_start_long"
@@ -102,7 +88,7 @@ while [ $STEP -lt $NUM_IT ]; do
 
     # 3. Ungapped alignment protein 2 nucl
     if notExists "${TMP_PATH}/aln_nucl_$STEP"; then
-        "$MMSEQS" proteinaln2nucl "$INPUT_NUCL" "$INPUT_NUCL" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/aln_nucl_$STEP"  \
+        "$MMSEQS" proteinaln2nucl "$INPUT_NUCL" "$INPUT_NUCL" "$INPUT_AA"  "$INPUT_AA"  "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/aln_nucl_$STEP"  \
             || fail "Ungapped alignment step died"
     fi
 
@@ -122,29 +108,34 @@ STEP="$((STEP-1))"
 RESULT_NUCL="${TMP_PATH}/assembly_nucl_$STEP"
 #RESULT_AA="${TMP_PATH}/assembly_aa_$STEP"
 
+# select only assembled orfs
+if notExists "${RESULT_NUCL}_only_assembled.index"; then
+    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT_NUCL}.index" "${TMP_PATH}/nucl_6f_start_long.index" > "${RESULT_NUCL}_tmp.index"
+    awk '$3 > $6 { print }' "${RESULT_NUCL}_tmp.index" > "${RESULT_NUCL}_only_assembled.index"
+fi
 
+if notExists "${RESULT_NUCL}_only_assembled"; then
+    ln -s "${RESULT_NUCL}" "${RESULT_NUCL}_only_assembled"
+    ln -s "${RESULT_NUCL}.dbtype" "${RESULT_NUCL}_only_assembled.dbtype"
+fi
 
 if notExists "${RESULT_NUCL}_h"; then
-    ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_h"
+    ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_only_assembled_h"
 fi
 
 if notExists "${RESULT_NUCL}_h.index"; then
-    ln -s "${TMP_PATH}/nucl_6f_start_long_h.index" "${RESULT_NUCL}_h.index"
+    ln -s "${TMP_PATH}/nucl_6f_start_long_h.index" "${RESULT_NUCL}_only_assembled_h.index"
 fi
 
 if notExists "${RESULT_NUCL}.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${RESULT_NUCL}" "${RESULT_NUCL}.fasta" ${VERBOSITY_PAR} \
+    "$MMSEQS" convert2fasta "${RESULT_NUCL}_only_assembled" "${RESULT_NUCL}_only_assembled.fasta" ${VERBOSITY_PAR} \
         || fail "convert2fasta died"
 fi
 
 if notExists "${RESULT_NUCL}.merged.fasta"; then
-    if [ -n "${PAIRED_END}" ]; then
-       "$MMSEQS" convert2fasta "${TMP_PATH}/nucl_reads" "${TMP_PATH}/nucl_reads.fasta"
-       cat "${RESULT_NUCL}.fasta" "${TMP_PATH}/nucl_reads.fasta" > "${RESULT_NUCL}.merged.fasta"
-    else
-       cat "${RESULT_NUCL}.fasta" "$INPUT" > "${RESULT_NUCL}.merged.fasta"
-    fi
+    "$MMSEQS" convert2fasta "${INPUT}" "${INPUT}.fasta"
+    cat "${RESULT_NUCL}_only_assembled.fasta" "${INPUT}.fasta" > "${RESULT_NUCL}.merged.fasta"
 fi
 
 # shellcheck disable=SC2086

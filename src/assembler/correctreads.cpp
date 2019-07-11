@@ -99,7 +99,7 @@ uint64_t revComplement(const uint64_t kmer, const int k) {
 int correctreads(int argc, const char **argv, const Command& command)  {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.kmerSize = 5;
-    par.parseParameters(argc, argv, command, 2);
+    par.parseParameters(argc, argv, command, true, 0, 0);
 
     Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
     DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);

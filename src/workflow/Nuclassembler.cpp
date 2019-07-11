@@ -35,7 +35,7 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription((Command &)command, par.PARAM_INCLUDE_ONLY_EXTENDABLE.uniqid, NULL, NULL,  par.PARAM_INCLUDE_ONLY_EXTENDABLE.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_KMER_PER_SEQ.uniqid, NULL, NULL,  par.PARAM_KMER_PER_SEQ.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_SORT_RESULTS.uniqid, NULL, NULL,  par.PARAM_SORT_RESULTS.category | MMseqsParameter::COMMAND_EXPERT);
-    par.parseParameters(argc, argv, command, 2, true, Parameters::PARSE_VARIADIC);
+    par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
     CommandCaller cmd;
     // paired end reads
