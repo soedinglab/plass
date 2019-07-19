@@ -40,6 +40,7 @@ private:
     {
         // assembleresult
         assembleresults.push_back(&PARAM_MIN_SEQ_ID);
+        assembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         assembleresults.push_back(&PARAM_THREADS);
         assembleresults.push_back(&PARAM_V);
 
