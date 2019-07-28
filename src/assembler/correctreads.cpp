@@ -104,7 +104,7 @@ int correctreads(int argc, const char **argv, const Command& command)  {
     Debug(Debug::INFO) << "Sequence database: " << par.db1 << "\n";
     DBReader<unsigned int> seqDb (par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     seqDb.open(DBReader<unsigned int>::NOSORT);
-    NucleotideMatrix subMat(par.scoringMatrixFile.c_str(), 1.0, 0.0);
+    NucleotideMatrix subMat(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
     Debug(Debug::INFO) << "Output database: " << par.db2 << "\n";
     DBWriter dbw(par.db2.c_str(), par.db2Index.c_str(), static_cast<unsigned int>(par.threads), par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
     dbw.open();

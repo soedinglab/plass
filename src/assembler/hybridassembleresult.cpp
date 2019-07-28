@@ -73,7 +73,7 @@ int dohybridassembleresult(LocalParameters &par) {
     DBWriter aaResultWriter(par.db5.c_str(), par.db5Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_AMINO_ACIDS);
     aaResultWriter.open();
 
-    NucleotideMatrix subMat(par.scoringMatrixFile.c_str(), 1.0f, 0.0f);
+    NucleotideMatrix subMat(par.scoringMatrixFile.nucleotides, 1.0f, 0.0f);
     SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(subMat);
 
     unsigned char * wasExtended = new unsigned char[nuclSequenceDbr->getSize()];

@@ -40,7 +40,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
     resultWriter.open();
 
     // + 1 for query
-    SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0f, 0.0f);
+    SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0f, 0.0f);
     Debug(Debug::INFO) << "Start computing start in sequences.\n";
     int *addStopAtPosition = new int[qDbr.getSize()];
     std::fill(addStopAtPosition, addStopAtPosition + qDbr.getSize(), -1);

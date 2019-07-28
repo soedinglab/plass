@@ -40,7 +40,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
 //    model.LoadModel(std::string((const char *)predict_coding_acc9623_57x32x64_model, predict_coding_acc9623_57x32x64_model_len));
     model.LoadModel(std::string((const char *)predict_coding_acc9743_57x32x64_model, predict_coding_acc9743_57x32x64_model_len));
 
-    SubstitutionMatrix subMat(par.scoringMatrixFile.c_str(), 2.0, 0.0);
+    SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
     ReducedMatrix redMat7(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2int, subMat.int2aa, subMat.alphabetSize, 7, subMat.getBitFactor());
 //    ReducedMatrix redMat3(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2int, subMat.int2aa, subMat.alphabetSize, 3, subMat.getBitFactor());
 
