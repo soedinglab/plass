@@ -217,8 +217,9 @@ int dohybridassembleresult(LocalParameters &par) {
                             tmpNuclAlignments.push_back(nuclBesttHitToExtend);
                             continue;
                         }
+                        int hasStart = (aaTargetSeq[0] == '*')? 1:0;
                         std::string fragment = std::string(nuclTargetSeq, nuclDbStartPos); // +1 get not aligned element
-                        std::string aaFragment = std::string(aaTargetSeq, nuclDbStartPos/3); // +1 get not aligned element
+                        std::string aaFragment = std::string(aaTargetSeq, nuclDbStartPos/3 + hasStart); // +1 get not aligned element
 
                         if (fragment.size() + nuclQuery.size() >= par.maxSeqLen) {
                             Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryKey << ". "
