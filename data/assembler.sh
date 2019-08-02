@@ -6,7 +6,7 @@ fail() {
 }
 
 deleteIncremental() {
-    if [ -n "$REMOVE_INCREMENTAL_TMP" ] &&  [ ! -z "$1" ]; then
+    if [ -n "$REMOVE_INCREMENTAL_TMP" ] &&  [ -n "$1" ]; then
          "$MMSEQS" rmdb "$1"
     fi
 }
@@ -16,8 +16,8 @@ notExists() {
 }
 
 # check input variables
-[ ! -n "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
-[ ! -n "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
+[ -z "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
+[ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
 
 # check if files exists
 [   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
