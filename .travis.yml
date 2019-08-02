@@ -3,6 +3,7 @@ language: minimal
 env:
 
 matrix:
+  include:
   - os: linux
     dist: trusty
     addons:
