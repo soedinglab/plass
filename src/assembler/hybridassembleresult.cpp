@@ -166,22 +166,20 @@ int dohybridassembleresult(LocalParameters &par) {
                     int qStartPos, qEndPos, nuclDbStartPos, nuclDbEndPos;
                     int diagonal = (nuclLeftQueryOffset + nuclBesttHitToExtend.qStartPos) - nuclBesttHitToExtend.dbStartPos;
                     int dist = std::max(abs(diagonal), 0);
+                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
+                            nuclQuerySeq, nuclQuerySeqLen,
+                            nuclTargetSeq, nuclTargetSeqLen,
+                            diagonal, fastMatrix.matrix, par.rescoreMode);
                     if (diagonal >= 0) {
+
 //                    nuclTargetSeq.mapSequence(nuclTargetId, nuclBesttHitToExtend.dbKey, dbSeq);
-                        size_t diagonalLen = std::min(nuclTargetSeqLen, nuclQuerySeqLen - abs(diagonal));
-                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
-                                nuclQuerySeq + abs(diagonal),
-                                nuclTargetSeq, diagonalLen, fastMatrix.matrix);
+
                         qStartPos = alignment.startPos + dist;
                         qEndPos = alignment.endPos + dist;
                         nuclDbStartPos = alignment.startPos;
                         nuclDbEndPos = alignment.endPos;
                     } else {
-                        size_t diagonalLen = std::min(nuclTargetSeqLen - abs(diagonal), nuclQuerySeqLen);
-                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
-                                nuclQuerySeq,
-                                nuclTargetSeq + abs(diagonal),
-                                diagonalLen, fastMatrix.matrix);
+
                         qStartPos = alignment.startPos;
                         qEndPos = alignment.endPos;
                         nuclDbStartPos = alignment.startPos + dist;

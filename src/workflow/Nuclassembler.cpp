@@ -91,7 +91,7 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
 
     // # 2. Hamming distance pre-clustering
     par.filterHits = false;
-    par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
+    par.rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 

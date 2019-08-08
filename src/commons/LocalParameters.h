@@ -43,6 +43,7 @@ private:
         assembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         assembleresults.push_back(&PARAM_THREADS);
         assembleresults.push_back(&PARAM_V);
+        assembleresults.push_back(&PARAM_RESCORE_MODE);
 
         extractorfssubset.push_back(&PARAM_TRANSLATION_TABLE);
         extractorfssubset.push_back(&PARAM_USE_ALL_TABLE_STARTS);
@@ -77,6 +78,7 @@ private:
         hybridassembleresults.push_back(&PARAM_NUM_ITERATIONS);
         hybridassembleresults.push_back(&PARAM_REMOVE_TMP_FILES);
         hybridassembleresults.push_back(&PARAM_RUNNER);
+        hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
 
         filterProteins = 1;
         deleteFilesInc = 1;

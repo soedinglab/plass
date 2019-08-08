@@ -215,24 +215,20 @@ int doassembly(LocalParameters &par) {
                     int qStartPos, qEndPos, dbStartPos, dbEndPos, score;
                     int diagonal = (leftQueryOffsetToUse + besttHitToExtend.qStartPos) - besttHitToExtend.dbStartPos;
                     int dist = std::max(abs(diagonal), 0);
+                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
+                                                                    querySeqToUse, querySeqLen,
+                                                                    targetSeq, targetSeqLen,
+                                                                    diagonal, fastMatrix.matrix, par.rescoreMode);
                     if (diagonal >= 0) {
 //                    targetSeq.mapSequence(targetId, besttHitToExtend.dbKey, dbSeq);
-                        size_t diagonalLen = std::min(targetSeqLen, querySeqLen - abs(diagonal));
 
-                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
-                                querySeqToUse + abs(diagonal),
-                                targetSeq, diagonalLen, fastMatrix.matrix);
                         qStartPos = alignment.startPos + dist;
                         qEndPos = alignment.endPos + dist;
                         dbStartPos = alignment.startPos;
                         dbEndPos = alignment.endPos;
                         score = alignment.score;
                     } else {
-                        size_t diagonalLen = std::min(targetSeqLen - abs(diagonal), querySeqLen);
-                        DistanceCalculator::LocalAlignment alignment = DistanceCalculator::computeSubstitutionStartEndDistance(
-                                querySeqToUse,
-                                targetSeq + abs(diagonal),
-                                diagonalLen, fastMatrix.matrix);
+
                         qStartPos = alignment.startPos;
                         qEndPos = alignment.endPos;
                         dbStartPos = alignment.startPos + dist;
