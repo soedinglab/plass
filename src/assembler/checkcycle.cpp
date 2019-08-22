@@ -1,8 +1,7 @@
 //
-// Created by Annika Seidel on 2019-08-09
+// Written by Annika Seidel <annika.seidel@mpibpc.mpg.de>
 //
-
-//#include "checkcycle.h"
+// detect circular fragments
 
 #include "DBReader.h"
 #include "DBWriter.h"
@@ -11,6 +10,10 @@
 #include "NucleotideMatrix.h"
 
 #include <algorithm>
+
+#define HIT_RATE_THRESHOLD 0.24
+// threshold to distinguish cyclic/terminal redundant genomes from random hits on linear genomes
+// chosen based on analysis on ftp://ftp.ncbi.nlm.nih.gov/refseq/release/viral/ (last modified 7/11/19)
 
 int checkcycle(int argc, const char **argv, const Command& command) {
 
@@ -106,8 +109,8 @@ int checkcycle(int argc, const char **argv, const Command& command) {
 
         unsigned int kmermatches = 0;
         //TODO: better solution than diag array?
-        unsigned int *diagKmerCounter = new unsigned int[seqLen/2+1];
-        std::fill(diagKmerCounter, diagKmerCounter + seqLen/2 +1 , 0);
+        unsigned int *diagHits = new unsigned int[seqLen/2+1];
+        std::fill(diagHits, diagHits + seqLen/2 +1 , 0);
 
         unsigned int idx = 0;
         unsigned int jdx = 0;
@@ -130,7 +133,7 @@ int checkcycle(int argc, const char **argv, const Command& command) {
                     int diag = backKmers[rangeIdx].pos - pos;
                     if (diag >= static_cast<int>(seqLen/2)) {
                         //diag = abs(diag);
-                        diagKmerCounter[diag-seqLen/2] ++;
+                        diagHits[diag-seqLen/2]++;
                         kmermatches++;
                     }
                 }
@@ -143,13 +146,46 @@ int checkcycle(int argc, const char **argv, const Command& command) {
 
         //std:: cout << "number of kmermatches " << kmermatches << std::endl;
         for (size_t i=0; i < seqLen/2; i++) {
-            if (diagKmerCounter[i] != 0)
-                std:: cout << id << "\t" << seqLen << "\t"  << i+seqLen/2 << "\t" << diagKmerCounter[i] << std::endl;
+            if (diagHits[i] != 0)
+                std:: cout << id << "\t" << seqLen << "\t"  << i+seqLen/2 << "\t" << diagHits[i] << std::endl;
         }
-        //TODO: sort by diag to find diag with most matches
+        
+        //TODO: check number of kmermatches, skip following if kmermatches=0
+
+        int splitDiagonal = -1;
+        float maxDiagbandHitRate = 0.0;
+        for (unsigned int d = 0; d < seqLen/2; d++) {
+            if (diagHits[d] != 0) {
+                unsigned int diag = d + seqLen / 2;
+                unsigned int diaglen = seqLen - diag;
+                unsigned int gapwindow = diaglen * 0.01;
+                unsigned int lower = std::max(static_cast<unsigned int>(0), d-gapwindow);
+                unsigned int upper = std::min(d+gapwindow, seqLen/2);
+                unsigned int diagbandHits = 0;
+
+                for (size_t i = lower; i <= upper; i++) {
+                    diagbandHits += diagHits[i];
+                }
+
+                float diagbandHitRate = static_cast<float>(diagbandHits)/(diaglen-kmerSize+1);
+                if (diagbandHitRate > maxDiagbandHitRate) {
+                    maxDiagbandHitRate = diagbandHitRate;
+                    splitDiagonal = diag;
+                }
+            }
+        }
+
+        if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
+            std::cout << "cyclic" << std::endl;
+        }
+        else {
+            std::cout << "linear" << std::endl;
+        }
+
 
     }
 
 
+    //TODO: split main in functions
     //TODO: remap?
 }
