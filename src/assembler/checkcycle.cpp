@@ -1,7 +1,7 @@
-//
-// Written by Annika Seidel <annika.seidel@mpibpc.mpg.de>
-//
-// detect circular fragments
+/*
+ * Written by Annika Seidel <annika.seidel@mpibpc.mpg.de>
+ * detect circular fragments
+ */
 
 #include "DBReader.h"
 #include "DBWriter.h"
@@ -64,7 +64,6 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         EXIT(EXIT_FAILURE);
     }
 
-    std::cout << "subMat->alphabetSize - 1: " << subMat->alphabetSize - 1 << std::endl;
     Indexer indexer(subMat->alphabetSize - 1, kmerSize);
 
     //TODO: better solution than maxseqlen? at least warning
@@ -108,9 +107,10 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         std::sort(backKmers, backKmers + backKmersCount, kmerSeqPos::compareByKmer);
 
         unsigned int kmermatches = 0;
-        //TODO: better solution than diag array?
+
         unsigned int *diagHits = new unsigned int[seqLen/2+1];
         std::fill(diagHits, diagHits + seqLen/2 +1 , 0);
+        //std::map<int, unsigned int> diagHits;
 
         unsigned int idx = 0;
         unsigned int jdx = 0;
@@ -145,15 +145,16 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         }
 
         //std:: cout << "number of kmermatches " << kmermatches << std::endl;
-        for (size_t i=0; i < seqLen/2; i++) {
+        /*for (size_t i=0; i < seqLen/2; i++) {
             if (diagHits[i] != 0)
                 std:: cout << id << "\t" << seqLen << "\t"  << i+seqLen/2 << "\t" << diagHits[i] << std::endl;
-        }
+        }*/
         
         //TODO: check number of kmermatches, skip following if kmermatches=0
 
         int splitDiagonal = -1;
         float maxDiagbandHitRate = 0.0;
+        std::map<int, unsigned ,int>::iterator it;
         for (unsigned int d = 0; d < seqLen/2; d++) {
             if (diagHits[d] != 0) {
                 unsigned int diag = d + seqLen / 2;
@@ -173,19 +174,28 @@ int checkcycle(int argc, const char **argv, const Command& command) {
                     splitDiagonal = diag;
                 }
             }
+            delete diagHits;
         }
 
         if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
-            std::cout << "cyclic" << std::endl;
+            //std::cout << "cyclic" << std::endl;
+            unsigned int len = seqDbr->getSeqLens(id) - 1;
+            cycleResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), 0);//thread_idx);
         }
         else {
-            std::cout << "linear" << std::endl;
+            //std::cout << "linear" << std::endl;
+            unsigned int len = seqDbr->getSeqLens(id) - 1;
+            linearResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), 0);
         }
 
 
     }
 
+    cycleResultWriter.close(true);
+    linearResultWriter.close(true);
+
 
     //TODO: split main in functions
     //TODO: remap?
+    //TODO: chop cycle
 }
