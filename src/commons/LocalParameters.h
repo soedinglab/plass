@@ -20,6 +20,7 @@ public:
     std::vector<MMseqsParameter *> extractorfssubset;
     std::vector<MMseqsParameter *> filternoncoding;
     std::vector<MMseqsParameter *> hybridassembleresults;
+    std::vector<MMseqsParameter *> checkcycle;
     std::vector<MMseqsParameter *> assemblerworkflow;
     std::vector<MMseqsParameter *> nuclassemblerworkflow;
 
@@ -79,6 +80,11 @@ private:
         hybridassembleresults.push_back(&PARAM_REMOVE_TMP_FILES);
         hybridassembleresults.push_back(&PARAM_RUNNER);
         hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
+
+        //checkcycle
+        checkcycle.push_back(&PARAM_MIN_SEQ_ID);
+        checkcycle.push_back(&PARAM_K);
+        checkcycle.push_back(&PARAM_MAX_SEQ_LEN);
 
         filterProteins = 1;
         deleteFilesInc = 1;

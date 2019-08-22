@@ -76,6 +76,14 @@ std::vector<struct Command> commands = {
                 NULL,
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
                 "<i:fastaFile1[.gz]> ... <i:fastaFileN[.gz]> <o:sequenceDB>",
-                CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
+                CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
+        {"checkcycle",      checkcycle,      &localPar.checkcycle,          COMMAND_HIDDEN,
+                 "",
+                NULL,
+                "Annika Seidel <annika.seidel@mpibpc.mpg.de>",
+                "",
+                CITATION_PLASS, {{"sequenceDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::nuclDb },
+                                 {"cycleResult", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::nuclDb },
+                                 {"linearResult", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::nuclDb }}}
 
 };
