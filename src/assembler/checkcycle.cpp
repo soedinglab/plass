@@ -64,17 +64,38 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         EXIT(EXIT_FAILURE);
     }
 
-    Indexer indexer(subMat->alphabetSize - 1, kmerSize);
 
-    //TODO: better solution than maxseqlen? at least warning
-    Sequence seq(par.maxSeqLen, seqType, subMat, kmerSize, false, false);
-    kmerSeqPos *frontKmers = new kmerSeqPos[par.maxSeqLen+1];
-    kmerSeqPos *backKmers = new kmerSeqPos[par.maxSeqLen+1];
-
+    /* unsigned int maxSeqLen = 0;
     for (size_t id = 0; id < seqDbr->getSize(); id++) {
 
         char *nuclSeq = seqDbr->getData(id, thread_idx);
         unsigned int seqLen = seqDbr->getSeqLens(id) - 2;
+        if(seqLen > maxSeqLen)
+            maxSeqLen = seqLen;
+    } */
+
+
+    Indexer indexer(subMat->alphabetSize - 1, kmerSize);
+
+    Sequence seq(par.maxSeqLen, seqType, subMat, kmerSize, false, false);
+    kmerSeqPos *frontKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen/2+1];
+    Util::checkAllocation(frontKmers, "Can not allocate memory");
+    kmerSeqPos *backKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen/2+1];
+    Util::checkAllocation(backKmers, "Can not allocate memory");
+
+    unsigned int *diagHits = new unsigned int[par.maxSeqLen/2+1];
+    for (size_t id = 0; id < seqDbr->getSize(); id++) {
+
+        char *nuclSeq = seqDbr->getData(id, thread_idx);
+        unsigned int seqLen = seqDbr->getSeqLens(id) - 2;
+
+        if (seqLen >= par.maxSeqLen) {
+            Debug(Debug::WARNING) << "Sequence too long: " << seqDbr->getDbKey(id) << ". It will be skipped."
+                                     "Max length allowed is " << par.maxSeqLen << "\n";
+            continue;
+        }
+
+
         seq.mapSequence(id, seqDbr->getDbKey(id), nuclSeq);
 
         //TODO: try spaced kmers?
@@ -108,7 +129,7 @@ int checkcycle(int argc, const char **argv, const Command& command) {
 
         unsigned int kmermatches = 0;
 
-        unsigned int *diagHits = new unsigned int[seqLen/2+1];
+        //unsigned int *diagHits = new unsigned int[seqLen/2+1];
         std::fill(diagHits, diagHits + seqLen/2 +1 , 0);
         //std::map<int, unsigned int> diagHits;
 
@@ -122,20 +143,16 @@ int checkcycle(int argc, const char **argv, const Command& command) {
                 jdx++;
             else {
                 size_t kmerIdx= frontKmers[idx].kmer;
-                unsigned int rangeStart = jdx;
-                while (jdx < backKmersCount && kmerIdx == backKmers[jdx].kmer) {
-                    jdx++;
-                }
-                unsigned int rangeEnd = jdx;
-
                 unsigned int pos = frontKmers[idx].pos;
-                for (size_t rangeIdx=rangeStart; rangeIdx < rangeEnd; rangeIdx++){
-                    int diag = backKmers[rangeIdx].pos - pos;
+                while (jdx < backKmersCount && kmerIdx == backKmers[jdx].kmer) {
+
+                    int diag = backKmers[jdx].pos - pos;
                     if (diag >= static_cast<int>(seqLen/2)) {
                         //diag = abs(diag);
                         diagHits[diag-seqLen/2]++;
                         kmermatches++;
                     }
+                    jdx++;
                 }
                 while(idx < frontKmersCount && kmerIdx == frontKmers[idx].kmer) {
                     idx++;
@@ -154,7 +171,6 @@ int checkcycle(int argc, const char **argv, const Command& command) {
 
         int splitDiagonal = -1;
         float maxDiagbandHitRate = 0.0;
-        std::map<int, unsigned ,int>::iterator it;
         for (unsigned int d = 0; d < seqLen/2; d++) {
             if (diagHits[d] != 0) {
                 unsigned int diag = d + seqLen / 2;
@@ -174,8 +190,10 @@ int checkcycle(int argc, const char **argv, const Command& command) {
                     splitDiagonal = diag;
                 }
             }
-            delete diagHits;
+
         }
+
+        delete diagHits;
 
         if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
             //std::cout << "cyclic" << std::endl;
@@ -190,6 +208,8 @@ int checkcycle(int argc, const char **argv, const Command& command) {
 
 
     }
+
+    delete diagHits;
 
     cycleResultWriter.close(true);
     linearResultWriter.close(true);
