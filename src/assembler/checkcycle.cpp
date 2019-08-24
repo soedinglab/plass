@@ -15,6 +15,7 @@
 // threshold to distinguish cyclic/terminal redundant genomes from random hits on linear genomes
 // chosen based on analysis on ftp://ftp.ncbi.nlm.nih.gov/refseq/release/viral/ (last modified 7/11/19)
 
+
 int checkcycle(int argc, const char **argv, const Command& command) {
 
     LocalParameters &par = LocalParameters::getLocalInstance();
@@ -36,6 +37,16 @@ int checkcycle(int argc, const char **argv, const Command& command) {
     //TODO: splits
     unsigned int thread_idx = 0;
 
+    int seqType  =  seqDbr->getDbtype();
+    BaseMatrix *subMat;
+
+    if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES)) {
+        subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
+    }else {
+        Debug(Debug::ERROR) << "Module checkcyle only supports nucleotide input database" << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+
     struct kmerSeqPos {
         size_t kmer;
         unsigned int pos;
@@ -53,30 +64,7 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         }
     };
 
-
-    int seqType  =  seqDbr->getDbtype();
-    BaseMatrix *subMat;
-
-    if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES)) {
-        subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
-    }else {
-        Debug(Debug::ERROR) << "Module checkcyle only supports nucleotide input database" << "\n";
-        EXIT(EXIT_FAILURE);
-    }
-
-
-    /* unsigned int maxSeqLen = 0;
-    for (size_t id = 0; id < seqDbr->getSize(); id++) {
-
-        char *nuclSeq = seqDbr->getData(id, thread_idx);
-        unsigned int seqLen = seqDbr->getSeqLens(id) - 2;
-        if(seqLen > maxSeqLen)
-            maxSeqLen = seqLen;
-    } */
-
-
     Indexer indexer(subMat->alphabetSize - 1, kmerSize);
-
     Sequence seq(par.maxSeqLen, seqType, subMat, kmerSize, false, false);
     kmerSeqPos *frontKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen/2+1];
     Util::checkAllocation(frontKmers, "Can not allocate memory");
@@ -90,16 +78,16 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         unsigned int seqLen = seqDbr->getSeqLens(id) - 2;
 
         if (seqLen >= par.maxSeqLen) {
-            Debug(Debug::WARNING) << "Sequence too long: " << seqDbr->getDbKey(id) << ". It will be skipped."
+            Debug(Debug::WARNING) << "Sequence too long: " << seqDbr->getDbKey(id) << ". It will be skipped. "
                                      "Max length allowed is " << par.maxSeqLen << "\n";
             continue;
         }
-
-
         seq.mapSequence(id, seqDbr->getDbKey(id), nuclSeq);
 
         //TODO: try spaced kmers?
         //TODO: limit the number of kmers in the first half of the sequence? only first 15%?
+
+        /* extract front and back kmers */
         unsigned int frontKmersCount = 0;
         while (seq.hasNextKmer() && frontKmersCount < seqLen/2+1) {
 
@@ -127,11 +115,9 @@ int checkcycle(int argc, const char **argv, const Command& command) {
         std::sort(frontKmers, frontKmers + frontKmersCount, kmerSeqPos::compareByKmer);
         std::sort(backKmers, backKmers + backKmersCount, kmerSeqPos::compareByKmer);
 
+        /* calculate front-back-kmermatches */
         unsigned int kmermatches = 0;
-
-        //unsigned int *diagHits = new unsigned int[seqLen/2+1];
         std::fill(diagHits, diagHits + seqLen/2 +1 , 0);
-        //std::map<int, unsigned int> diagHits;
 
         unsigned int idx = 0;
         unsigned int jdx = 0;
@@ -160,56 +146,63 @@ int checkcycle(int argc, const char **argv, const Command& command) {
             }
 
         }
-
         //std:: cout << "number of kmermatches " << kmermatches << std::endl;
         /*for (size_t i=0; i < seqLen/2; i++) {
             if (diagHits[i] != 0)
                 std:: cout << id << "\t" << seqLen << "\t"  << i+seqLen/2 << "\t" << diagHits[i] << std::endl;
         }*/
-        
-        //TODO: check number of kmermatches, skip following if kmermatches=0
 
+        /* calculate maximal hit rate on diagonal bands */
         int splitDiagonal = -1;
         float maxDiagbandHitRate = 0.0;
-        for (unsigned int d = 0; d < seqLen/2; d++) {
-            if (diagHits[d] != 0) {
-                unsigned int diag = d + seqLen / 2;
-                unsigned int diaglen = seqLen - diag;
-                unsigned int gapwindow = diaglen * 0.01;
-                unsigned int lower = std::max(static_cast<unsigned int>(0), d-gapwindow);
-                unsigned int upper = std::min(d+gapwindow, seqLen/2);
-                unsigned int diagbandHits = 0;
 
-                for (size_t i = lower; i <= upper; i++) {
-                    diagbandHits += diagHits[i];
+        if (kmermatches > 0) {
+            for (unsigned int d = 0; d < seqLen / 2; d++) {
+                if (diagHits[d] != 0) {
+                    unsigned int diag = d + seqLen / 2;
+                    unsigned int diaglen = seqLen - diag;
+                    unsigned int gapwindow = diaglen * 0.01;
+                    unsigned int lower = std::max(0, static_cast<int>(d - gapwindow));
+                    unsigned int upper = std::min(d + gapwindow, seqLen / 2);
+                    unsigned int diagbandHits = 0;
+
+                    for (size_t i = lower; i <= upper; i++) {
+                        diagbandHits += diagHits[i];
+                    }
+
+                    float diagbandHitRate = static_cast<float>(diagbandHits) / (diaglen - kmerSize + 1);
+                    if (diagbandHitRate > maxDiagbandHitRate) {
+                        maxDiagbandHitRate = diagbandHitRate;
+                        splitDiagonal = diag;
+                    }
                 }
 
-                float diagbandHitRate = static_cast<float>(diagbandHits)/(diaglen-kmerSize+1);
-                if (diagbandHitRate > maxDiagbandHitRate) {
-                    maxDiagbandHitRate = diagbandHitRate;
-                    splitDiagonal = diag;
-                }
             }
-
         }
-
-        delete diagHits;
 
         if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
             //std::cout << "cyclic" << std::endl;
-            unsigned int len = seqDbr->getSeqLens(id) - 1;
+
+            unsigned int len = seqDbr->getSeqLens(id) - 1; //skip null byte
+            std::string seq;
+            if (par.chopCycle) {
+                seq = std::string(nuclSeq, splitDiagonal);
+                nuclSeq = (char *) seq.c_str();
+                len = splitDiagonal;
+            }
+
             cycleResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), 0);//thread_idx);
         }
         else {
             //std::cout << "linear" << std::endl;
-            unsigned int len = seqDbr->getSeqLens(id) - 1;
+            unsigned int len = seqDbr->getSeqLens(id) - 1; //skip null byte
             linearResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), 0);
         }
-
-
     }
-
     delete diagHits;
+    delete frontKmers;
+    delete backKmers;
+
 
     cycleResultWriter.close(true);
     linearResultWriter.close(true);
