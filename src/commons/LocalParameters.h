@@ -23,6 +23,7 @@ public:
     std::vector<MMseqsParameter *> checkcycle;
     std::vector<MMseqsParameter *> assemblerworkflow;
     std::vector<MMseqsParameter *> nuclassemblerworkflow;
+    std::vector<MMseqsParameter *> hybridassemblerworkflow;
 
     PARAMETER(PARAM_FILTER_PROTEINS)
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
@@ -39,7 +40,7 @@ private:
             PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
             PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
             PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$"),
-            PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superflous part of cycle fragment [0,1]",typeid(bool), (void *) &chopCycle, "")
+            PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superflous part of circular fragments",typeid(bool), (void *) &chopCycle, "")
 
 
     {
@@ -48,7 +49,6 @@ private:
         assembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         assembleresults.push_back(&PARAM_THREADS);
         assembleresults.push_back(&PARAM_V);
-        assembleresults.push_back(&PARAM_RESCORE_MODE);
 
         extractorfssubset.push_back(&PARAM_TRANSLATION_TABLE);
         extractorfssubset.push_back(&PARAM_USE_ALL_TABLE_STARTS);
@@ -71,25 +71,35 @@ private:
         assemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
         assemblerworkflow.push_back(&PARAM_RUNNER);
 
+
+        //checkcycle
+        checkcycle.push_back(&PARAM_MAX_SEQ_LEN);
+        checkcycle.push_back(&PARAM_CHOP_CYCLE);
+        checkcycle.push_back(&PARAM_THREADS);
+
         // nucl assembler workflow
         nuclassemblerworkflow = combineList(rescorediagonal, kmermatcher);
         nuclassemblerworkflow = combineList(nuclassemblerworkflow, assembleresults);
+        nuclassemblerworkflow = combineList(nuclassemblerworkflow, checkcycle);
         nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
         nuclassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
         nuclassemblerworkflow.push_back(&PARAM_RUNNER);
 
         // hybridassembleresults
-        hybridassembleresults = combineList(rescorediagonal, kmermatcher);
+        hybridassembleresults.push_back(&PARAM_MIN_SEQ_ID);
+        hybridassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
+        hybridassembleresults.push_back(&PARAM_THREADS);
+        hybridassembleresults.push_back(&PARAM_V);
+
+
+        // hybridassemblerworkflow
+        hybridassemblerworkflow = combineList(rescorediagonal, kmermatcher);
+        hybridassemblerworkflow = combineList(hybridassemblerworkflow, hybridassembleresults);
+        hybridassemblerworkflow = combineList(hybridassemblerworkflow, checkcycle);
         hybridassembleresults.push_back(&PARAM_NUM_ITERATIONS);
         hybridassembleresults.push_back(&PARAM_REMOVE_TMP_FILES);
         hybridassembleresults.push_back(&PARAM_RUNNER);
-        hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
 
-        //checkcycle
-        checkcycle.push_back(&PARAM_K);
-        checkcycle.push_back(&PARAM_MAX_SEQ_LEN);
-        checkcycle.push_back(&PARAM_CHOP_CYCLE);
-        checkcycle.push_back(&PARAM_THREADS);
 
         filterProteins = 1;
         deleteFilesInc = 1;

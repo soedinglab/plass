@@ -18,16 +18,20 @@
 #define HIT_RATE_THRESHOLD 0.24
 // threshold to distinguish cyclic/terminal redundant genomes from random hits on linear genomes
 // chosen based on analysis on ftp://ftp.ncbi.nlm.nih.gov/refseq/release/viral/ (last modified 7/11/19)
+// verified for kmerSize = 22
 
+void setCycleCheckDefaults(LocalParameters *p) {
+    p->kmerSize = 22;
+}
 
 int checkcycle(int argc, const char **argv, const Command& command) {
 
     LocalParameters &par = LocalParameters::getLocalInstance();
+    setCycleCheckDefaults(&par);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     DBReader<unsigned int> *seqDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(),  par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     seqDbr->open(DBReader<unsigned int>::NOSORT);
-    //TODO: DBReader<unsigned int> *seqDbr ?
 
     DBWriter cycleResultWriter(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
     cycleResultWriter.open();
@@ -213,8 +217,9 @@ int checkcycle(int argc, const char **argv, const Command& command) {
     cycleResultWriter.close(true);
     linearResultWriter.close(true);
 
+    seqDbr->close();
+    delete seqDbr;
 
     //TODO: split main in functions
-    //TODO: remap?
-    //TODO: chop cycle
+
 }
