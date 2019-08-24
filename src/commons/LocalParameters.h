@@ -86,10 +86,10 @@ private:
         hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
 
         //checkcycle
-        checkcycle.push_back(&PARAM_MIN_SEQ_ID);
         checkcycle.push_back(&PARAM_K);
         checkcycle.push_back(&PARAM_MAX_SEQ_LEN);
         checkcycle.push_back(&PARAM_CHOP_CYCLE);
+        checkcycle.push_back(&PARAM_THREADS);
 
         filterProteins = 1;
         deleteFilesInc = 1;
