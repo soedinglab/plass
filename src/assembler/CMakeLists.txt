@@ -5,6 +5,6 @@ set(assembler_source_files
         assembler/findassemblystart.cpp
         assembler/filternoncoding.cpp
         assembler/mergereads.cpp
-        assembler/checkcycle.cpp
+        assembler/cyclecheck.cpp
         PARENT_SCOPE
         )

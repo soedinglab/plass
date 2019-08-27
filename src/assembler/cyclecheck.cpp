@@ -22,9 +22,10 @@
 
 void setCycleCheckDefaults(LocalParameters *p) {
     p->kmerSize = 22;
+    p->chopCycle = false;
 }
 
-int checkcycle(int argc, const char **argv, const Command& command) {
+int cyclecheck(int argc, const char **argv, const Command& command) {
 
     LocalParameters &par = LocalParameters::getLocalInstance();
     setCycleCheckDefaults(&par);
@@ -36,9 +37,6 @@ int checkcycle(int argc, const char **argv, const Command& command) {
     DBWriter cycleResultWriter(par.db2.c_str(), par.db2Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
     cycleResultWriter.open();
 
-    DBWriter linearResultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, Parameters::DBTYPE_NUCLEOTIDES);
-    linearResultWriter.open();
-
     const size_t kmerSize = par.kmerSize;
     int seqType  =  seqDbr->getDbtype();
     BaseMatrix *subMat;
@@ -46,7 +44,7 @@ int checkcycle(int argc, const char **argv, const Command& command) {
     if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES)) {
         subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
     }else {
-        Debug(Debug::ERROR) << "Module checkcyle only supports nucleotide input database" << "\n";
+        Debug(Debug::ERROR) << "Module cyclecheck only supports nucleotide input database" << "\n";
         EXIT(EXIT_FAILURE);
     }
 
@@ -88,7 +86,7 @@ int checkcycle(int argc, const char **argv, const Command& command) {
             unsigned int seqLen = seqDbr->getSeqLens(id) - 2;
 
             if (seqLen >= par.maxSeqLen) {
-                Debug(Debug::WARNING) << "Sequence too long: " << seqDbr->getDbKey(id) << ". It will be skipped. "
+                Debug(Debug::WARNING) << "Sequence " << seqDbr->getDbKey(id) << " too long. It will be skipped. "
                                                                                           "Max length allowed is "
                                       << par.maxSeqLen << "\n";
                 continue;
@@ -192,7 +190,6 @@ int checkcycle(int argc, const char **argv, const Command& command) {
             }
 
             if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
-                //std::cout << "cyclic" << std::endl;
 
                 unsigned int len = seqDbr->getSeqLens(id) - 1; //skip null byte
                 std::string seq;
@@ -203,10 +200,6 @@ int checkcycle(int argc, const char **argv, const Command& command) {
                 }
                 cycleResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), thread_idx);
 
-            } else {
-                //std::cout << "linear" << std::endl;
-                unsigned int len = seqDbr->getSeqLens(id) - 1; //skip null byte
-                linearResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), thread_idx);
             }
         }
         delete diagHits;
@@ -215,11 +208,11 @@ int checkcycle(int argc, const char **argv, const Command& command) {
     }
 
     cycleResultWriter.close(true);
-    linearResultWriter.close(true);
 
     seqDbr->close();
     delete seqDbr;
 
-    //TODO: split main in functions
+    return EXIT_SUCCESS;
+    //TODO: split main in functionsq
 
 }

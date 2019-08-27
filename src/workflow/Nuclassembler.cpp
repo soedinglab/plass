@@ -21,6 +21,8 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->kmerSize = 22;
     p->skipNRepeatKmer = 8;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->cycleCheck = true;
+    p->chopCycle = true;
 }
 
 int nuclassembler(int argc, const char **argv, const Command &command) {
@@ -94,6 +96,9 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     par.rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
+
+    cmd.addVariable("CALL_CYCLE_CHECK", par.cycleCheck ? "TRUE" : NULL);
+    cmd.addVariable("CYCLE_CHECK_PAR", par.createParameterString(par.cyclecheck).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());

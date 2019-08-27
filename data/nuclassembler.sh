@@ -10,6 +10,38 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+cyclecheck() {
+	if [ -n "$CALL_CYCLE_CHECK" ]; then
+        if notExists "${1}_cycle"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" cyclecheck "$1" "${1}_cycle" ${CYCLE_CHECK_PAR} \
+                || fail "Cycle check step died"
+        fi
+
+        if [ -s "${1}_cycle" ]; then
+
+            if notExists "${1}_noneCycle"; then
+                awk 'NR==FNR { a[$1]=$0; next } !($1 in a) {print $0}' "${1}_cycle.index" \
+                "${1}.index" > "${1}_noneCycle.index"
+                ln -s "$1" "${1}_noneCycle"
+                ln -s "${1}.dbtype" "${1}_noneCycle.dbtype"
+            fi
+
+            if [ -z "$RESULT_CYC" ]; then
+                RESULT_CYC="${1}_cycle"
+            else
+                if notExists "${1}_cycle__all"; then
+                    # shellcheck disable=SC2086
+                    "$MMSEQS" concatdbs "${RESULT_CYC}" "${1}_cycle" "${1}_cycle_all" --preserve-keys
+                fi
+                RESULT_CYC="${1}_cycle_all"
+            fi
+
+            INPUT="${1}_noneCycle"
+        fi
+    fi
+}
+
 # check input variables
 [ -z "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
 [ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
@@ -62,11 +94,17 @@ while [ $STEP -lt $NUM_IT ]; do
     fi
 
     INPUT="${TMP_PATH}/assembly_$STEP"
+    cyclecheck "${TMP_PATH}/assembly_$STEP"
     STEP="$((STEP+1))"
 done
 STEP="$((STEP-1))"
-
 RESULT="${TMP_PATH}/assembly_${STEP}"
+
+if [ -n "$RESULT_CYC" ]; then
+
+    "$MMSEQS" concatdbs "${INPUT}" "${RESULT_CYC}" "${TMP_PATH}/assembly_final" --preserve-keys
+    RESULT="${TMP_PATH}/assembly_final"
+fi
 
 # select only assembled sequences
 if notExists "${RESULT}_only_assembled.index"; then

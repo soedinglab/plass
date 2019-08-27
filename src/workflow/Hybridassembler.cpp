@@ -19,6 +19,8 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->orfMinLength = 45;
     p->skipNRepeatKmer = 8;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->cycleCheck = true;
+    p->chopCycle = true;
 }
 
 int hybridassembler(int argc, const char **argv, const Command &command) {
