@@ -42,7 +42,7 @@ private:
             PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
             PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
             PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$"),
-            PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycyle-check", "Check for circular sequences", "Check for circular sequences",typeid(bool), (void *) &cycleCheck, ""),
+            PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycle-check", "Check for circular sequences", "Check for circular sequences",typeid(bool), (void *) &cycleCheck, ""),
             PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superflous part of circular fragments",typeid(bool), (void *) &chopCycle, "")
 
 
@@ -82,13 +82,14 @@ private:
         cyclecheck.push_back(&PARAM_THREADS);
 
         // nucl assembler workflow
-        nuclassemblerworkflow = combineList(rescorediagonal, kmermatcher);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, assembleresults);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, cyclecheck);
         nuclassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
         nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
         nuclassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
         nuclassemblerworkflow.push_back(&PARAM_RUNNER);
+        nuclassemblerworkflow = combineList(nuclassemblerworkflow, kmermatcher);
+        nuclassemblerworkflow = combineList(nuclassemblerworkflow, rescorediagonal);
+        nuclassemblerworkflow = combineList(nuclassemblerworkflow, assembleresults);
+        nuclassemblerworkflow = combineList(nuclassemblerworkflow, cyclecheck);
 
         // hybridassembleresults
         hybridassembleresults.push_back(&PARAM_MIN_SEQ_ID);
@@ -99,12 +100,12 @@ private:
 
 
         // hybridassemblerworkflow
-        hybridassemblerworkflow = combineList(hybridassemblerworkflow, hybridassembleresults);
-        hybridassemblerworkflow = combineList(hybridassemblerworkflow, nuclassemblerworkflow);
         hybridassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
         hybridassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
         hybridassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
         hybridassemblerworkflow.push_back(&PARAM_RUNNER);
+        hybridassemblerworkflow = combineList(hybridassemblerworkflow, hybridassembleresults);
+        hybridassemblerworkflow = combineList(hybridassemblerworkflow, nuclassemblerworkflow);
 
 
         filterProteins = 1;

@@ -15,7 +15,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.9;
     p->kmersPerSequence = 60;
     p->kmersPerSequenceScale = 0.1;
-    p->numIterations = 12;
+    p->numIterations = 40;
     p->includeOnlyExtendable = true;
     p->alphabetSize = 5;
     p->kmerSize = 22;

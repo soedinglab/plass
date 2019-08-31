@@ -195,8 +195,9 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
                 std::string seq;
                 if (par.chopCycle) {
                     seq = std::string(nuclSeq, splitDiagonal);
+                    seq.push_back('\n');
                     nuclSeq = (char *) seq.c_str();
-                    len = splitDiagonal;
+                    len = seq.size();
                 }
                 cycleResultWriter.writeData(nuclSeq, len, seqDbr->getDbKey(id), thread_idx);
 
