@@ -92,7 +92,7 @@ int correctreads(int argc, const char **argv, const Command& command)  {
             progress.updateProgress();
 
             char *seqData = seqDb.getData(id, thread_idx);
-            unsigned int seqLen = seqDb.getSeqLens(id)-2;
+            unsigned int seqLen = seqDb.getSeqLen(id);
 
             unsigned int dbKey = seqDb.getDbKey(id);
             unsigned int pos = 0;

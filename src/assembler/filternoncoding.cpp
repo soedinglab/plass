@@ -73,7 +73,8 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
             std::vector<float> data;
             char *seqData = seqDb.getData(id, thread_idx);
             unsigned int dbKey = seqDb.getDbKey(id);
-            seq.mapSequence(id, dbKey, seqData);
+            unsigned int seqLen = seqDb.getSeqLen(id);
+            seq.mapSequence(id, dbKey, seqData, seqLen);
 //            printf("%5d ", seq.L);
 //            float chargeFlt = Util::averageValueOnAminoAcids(charge.values, seqData);
 //            float doolittleFlt = Util::averageValueOnAminoAcids(doolittle.values, seqData);
@@ -94,7 +95,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
             }
             // di matrix
             {
-                rseq2mer.mapSequence(id, dbKey, seqData);
+                rseq2mer.mapSequence(id, dbKey, seqData, seqLen);
                 float totalDiAACnt = 0;
                 while (rseq2mer.hasNextKmer()) {
                     const int *kmer = rseq2mer.nextKmer();
@@ -162,7 +163,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
             model.Apply(&in, &out);
             if (out.data_[0] > par.proteinFilterThreshold) {
                 // -1 dont write \0 byte
-                dbw.writeData(seqData, seqDb.getSeqLens(id) - 1, dbKey, thread_idx);
+                dbw.writeData(seqData, seqDb.getEntryLen(id)-1, dbKey, thread_idx);
             } else {
                 dbw.writeData("\n",  1, dbKey, thread_idx);
             }

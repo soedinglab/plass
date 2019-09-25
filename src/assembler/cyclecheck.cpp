@@ -83,7 +83,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
         for (size_t id = 0; id < seqDbr->getSize(); id++) {
 
             char *nuclSeq = seqDbr->getData(id, thread_idx);
-            unsigned int seqLen = seqDbr->getSeqLens(id) - 2;
+            unsigned int seqLen = seqDbr->getSeqLen(id);
 
             if (seqLen >= par.maxSeqLen) {
                 Debug(Debug::WARNING) << "Sequence " << seqDbr->getDbKey(id) << " too long. It will be skipped. "
@@ -91,7 +91,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
                                       << par.maxSeqLen << "\n";
                 continue;
             }
-            seq.mapSequence(id, seqDbr->getDbKey(id), nuclSeq);
+            seq.mapSequence(id, seqDbr->getDbKey(id), nuclSeq, seqLen);
 
             //TODO: try spaced kmers?
             //TODO: limit the number of kmers in the first half of the sequence? only first 15%?
@@ -191,7 +191,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
 
             if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
 
-                unsigned int len = seqDbr->getSeqLens(id) - 1; //skip null byte
+                unsigned int len = seqDbr->getEntryLen(id)-1;
                 std::string seq;
                 if (par.chopCycle) {
                     seq = std::string(nuclSeq, splitDiagonal);

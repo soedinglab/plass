@@ -94,11 +94,11 @@ int dohybridassembleresult(LocalParameters &par) {
             unsigned int queryKey = nuclSequenceDbr->getDbKey(id);
 
             char *nuclQuerySeq = nuclSequenceDbr->getData(id, thread_idx);
-            unsigned int nuclQuerySeqLen = nuclSequenceDbr->getSeqLens(id) - 2;
+            unsigned int nuclQuerySeqLen = nuclSequenceDbr->getSeqLen(id);
 
             unsigned int aaQueryId = aaSequenceDbr->getId(queryKey);
             char *aaQuerySeq = aaSequenceDbr->getData(aaQueryId, thread_idx);
-            unsigned int aaQuerySeqLen = aaSequenceDbr->getSeqLens(aaQueryId) - 2;
+            unsigned int aaQuerySeqLen = aaSequenceDbr->getSeqLen(aaQueryId);
 
             unsigned int nuclLeftQueryOffset = 0;
             unsigned int nuclRightQueryOffset = 0;
@@ -143,11 +143,11 @@ int dohybridassembleresult(LocalParameters &par) {
                     }
 
                     char *nuclTargetSeq = nuclSequenceDbr->getData(nuclTargetId, thread_idx);
-                    unsigned int nuclTargetSeqLen = nuclSequenceDbr->getSeqLens(nuclTargetId) - 2;
+                    unsigned int nuclTargetSeqLen = nuclSequenceDbr->getSeqLen(nuclTargetId);
                     
                     unsigned int aaTargetId = aaSequenceDbr->getId(nuclBesttHitToExtend.dbKey);
                     char *aaTargetSeq = aaSequenceDbr->getData(aaTargetId, thread_idx);
-                    unsigned int aaTargetSeqLen = aaSequenceDbr->getSeqLens(aaTargetId) - 2;
+                    unsigned int aaTargetSeqLen = aaSequenceDbr->getSeqLen(aaTargetId) ;
 
                     // check if alignment still make sense (can extend the nuclQuery)
                     // avoid extension over start/stoppcodons
@@ -290,10 +290,10 @@ int dohybridassembleresult(LocalParameters &par) {
         //if(isNotContig && wasNotExtended ){
         if (isNotContig){
             char *querySeqData = nuclSequenceDbr->getData(id, thread_idx);
-            unsigned int queryLen = nuclSequenceDbr->getSeqLens(id) - 1; //skip null byte
+            unsigned int queryLen = nuclSequenceDbr->getEntryLen(id) - 1; //skip null byte
             nuclResultWriter.writeData(querySeqData, queryLen, nuclSequenceDbr->getDbKey(id), thread_idx);
             char *queryAASeqData = aaSequenceDbr->getData(id, thread_idx);
-            unsigned int queryAALen = aaSequenceDbr->getSeqLens(id) - 1; //skip null byte
+            unsigned int queryAALen = aaSequenceDbr->getEntryLen(id) - 1; //skip null byte
             aaResultWriter.writeData(queryAASeqData, queryAALen, aaSequenceDbr->getDbKey(id), thread_idx);
         }
     }

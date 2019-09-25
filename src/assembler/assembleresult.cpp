@@ -120,7 +120,7 @@ int doassembly(LocalParameters &par) {
 
             unsigned int queryId = sequenceDbr->getDbKey(id);
             char *querySeq = sequenceDbr->getData(id, thread_idx);
-            unsigned int querySeqLen = sequenceDbr->getSeqLens(id) - 2;
+            unsigned int querySeqLen = sequenceDbr->getSeqLen(id);
             std::string query(querySeq, querySeqLen); // no /n/0
 
             char *alnData = alnReader->getDataByDBKey(queryId, thread_idx);
@@ -183,7 +183,7 @@ int doassembly(LocalParameters &par) {
                         EXIT(EXIT_FAILURE);
                     }
                     char *targetSeq = sequenceDbr->getData(targetId, thread_idx);
-                    unsigned int targetSeqLen = sequenceDbr->getSeqLens(targetId) - 2;
+                    unsigned int targetSeqLen = sequenceDbr->getSeqLen(targetId) ;
 
                     char *querySeqToUse = (char *) query.c_str();
                     querySeqLen = query.size();
@@ -379,8 +379,7 @@ int doassembly(LocalParameters &par) {
         //if(isNotContig && wasNotExtended ){
         if (isNotContig){
             char *querySeqData = sequenceDbr->getData(id, thread_idx);
-            unsigned int queryLen = sequenceDbr->getSeqLens(id) - 1; //skip null byte
-            resultWriter.writeData(querySeqData, queryLen, sequenceDbr->getDbKey(id), thread_idx);
+            resultWriter.writeData(querySeqData, sequenceDbr->getEntryLen(id)-1, sequenceDbr->getDbKey(id), thread_idx);
         }
     }
 
