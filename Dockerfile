@@ -1,24 +1,28 @@
-FROM alpine:3.8 AS plass-builder
-RUN apk add --no-cache gcc g++ cmake musl-dev vim git ninja zlib-dev bzip2-dev
+FROM debian:stable-slim as builder
+RUN apt-get update && apt-get install -y \
+      build-essential cmake xxd git zlib1g-dev libbz2-dev \
+      && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/plass
+WORKDIR /opt/source
 ADD . .
 
-WORKDIR build_sse
-RUN cmake -G Ninja -DHAVE_SSE4_1=1 -DCMAKE_BUILD_TYPE=Release ..
-RUN ninja && ninja install
+WORKDIR /opt/source/build_sse
+RUN cmake -DHAVE_MPI=0 -DHAVE_TESTS=0 -DHAVE_SSE4_1=1 -DCMAKE_BUILD_TYPE=Release ..
+RUN make -j $(nproc --all)
 
-WORKDIR ../build_avx
-RUN cmake -G Ninja -DHAVE_AVX2=1 -DCMAKE_BUILD_TYPE=Release ..
-RUN ninja && ninja install
+WORKDIR /opt/source/build_avx
+RUN cmake -DHAVE_MPI=0 -DHAVE_TESTS=0 -DHAVE_AVX2=1 -DCMAKE_BUILD_TYPE=Release ..
+RUN make -j $(nproc --all)
 
-FROM alpine:3.8
+FROM debian:stable-slim
 MAINTAINER Milot Mirdita <milot@mirdita.de>
-RUN apk add --no-cache gawk bash grep libstdc++ libgomp zlib libbz2
+RUN apt-get update && apt-get install -y \
+      gawk bash grep libstdc++6 libgomp1 zlib1g libbz2-1.0 \
+      && rm -rf /var/lib/apt/lists/*
 
-COPY --from=plass-builder /opt/plass/build_sse/src/plass /usr/local/bin/plass_sse42
-COPY --from=plass-builder /opt/plass/build_avx/src/plass /usr/local/bin/plass_avx2
-RUN echo -e '#!/bin/bash\n\
+COPY --from=builder /opt/source/build_sse/src/plass /usr/local/bin/plass_sse42
+COPY --from=builder /opt/source/build_avx/src/plass /usr/local/bin/plass_avx2
+RUN echo '#!/bin/bash\n\
 if $(grep -q -E "^flags.+avx2" /proc/cpuinfo); then\n\
     exec /usr/local/bin/plass_avx2 "$@"\n\
 else\n\
