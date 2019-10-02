@@ -69,6 +69,10 @@ Compiling PLASS from source has the advantage that it will be optimized to the s
 
       CXX="$(brew --prefix)/bin/g++-8" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
 
+#### Dependencies
+
+When compiling from source, PLASS requires `zlib` and `bzip`.
+
 ### Use the docker image
 We also provide a Docker image of Plass. You can mount the current directory containing the reads to be assembled and run plass with the following command:
 
