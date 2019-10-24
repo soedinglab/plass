@@ -117,9 +117,21 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
               PREV_ASSEMBLY="${TMP_PATH}/corrected_seqs"
         fi
         INPUT="${TMP_PATH}/corrected_seqs"
+
+
+        if notExists "${TMP_PATH}/pref_corrected_$STEP.done"; then
+            # shellcheck disable=SC2086
+            $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_corrected_$STEP" ${KMERMATCHER_TMP} \
+                || fail "Kmer matching step died"
+            deleteIncremental "$PREV_KMER_PREF"
+            touch "${TMP_PATH}/pref_corrected_$STEP.done"
+            PREV_KMER_PREF="${TMP_PATH}/pref_corrected_$STEP"
+
+        fi
+
         if notExists "${TMP_PATH}/aln_corrected_$STEP.done"; then
             # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
+            $RUNNER "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_corrected_$STEP" "${TMP_PATH}/aln_corrected_$STEP" ${UNGAPPED_ALN_PAR} \
                 || fail "Ungapped alignment step died"
            touch "${TMP_PATH}/aln_corrected_$STEP.done"
            deleteIncremental "$PREV_ALN"
