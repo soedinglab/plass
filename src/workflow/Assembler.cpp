@@ -23,6 +23,7 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->skipNRepeatKmer = 8;
     p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
 }
 
 int assembler(int argc, const char **argv, const Command &command) {
@@ -123,8 +124,6 @@ int assembler(int argc, const char **argv, const Command &command) {
 
     // # 2. Hamming distance pre-clustering
     par.filterHits = false;
-    par.rescoreMode = Parameters::RESCORE_MODE_ALIGNMENT;
-
 
     // --orf-start-mode 0 --min-length 45 --max-gaps 0
     par.orfStartMode = 0;

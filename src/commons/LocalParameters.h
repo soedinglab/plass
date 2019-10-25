@@ -80,6 +80,7 @@ private:
         cyclecheck.push_back(&PARAM_MAX_SEQ_LEN);
         cyclecheck.push_back(&PARAM_CHOP_CYCLE);
         cyclecheck.push_back(&PARAM_THREADS);
+        cyclecheck.push_back(&PARAM_V);
 
         // nucl assembler workflow
         nuclassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
@@ -96,7 +97,7 @@ private:
         hybridassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         hybridassembleresults.push_back(&PARAM_THREADS);
         hybridassembleresults.push_back(&PARAM_V);
-        hybridassembleresults.push_back(&PARAM_RESCORE_MODE); //temporary added until assemble and nuclassemble use same rescoremode
+        hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
 
 
         // hybridassemblerworkflow
