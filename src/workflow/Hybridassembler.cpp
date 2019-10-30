@@ -70,7 +70,7 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     if (FileUtil::directoryExists(tmpPath.c_str()) == false) {
         Debug(Debug::INFO) << "Temporary folder " << tmpPath << " does not exist or is not a directory.\n";
         if (FileUtil::makeDir(tmpPath.c_str()) == false) {
-            Debug(Debug::ERROR) << "Could not crate tmp folder " << tmpPath << ".\n";
+            Debug(Debug::ERROR) << "Could not create tmp folder " << tmpPath << ".\n";
             return EXIT_FAILURE;
         } else {
             Debug(Debug::INFO) << "Created directory " << tmpPath << "\n";

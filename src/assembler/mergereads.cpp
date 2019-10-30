@@ -74,20 +74,30 @@ int mergereads(int argn, const char **argv, const Command& command) {
                         resultWriter.writeAdd(r_combined->seq, r_combined->seq_len, 0);
                         resultWriter.writeAdd(&newLine, 1, 0);
                         resultWriter.writeEnd(id, 0, true);
-                        headerResultWriter.writeData(read1.name.s, read1.name.l, id, 0, true );
+                        headerResultWriter.writeStart(0);
+                        headerResultWriter.writeAdd(read1.name.s, read1.name.l, 0);
+                        headerResultWriter.writeAdd(&newLine, 1, 0);
+                        headerResultWriter.writeEnd(id, 0, true);
+
                         break;
                     case NOT_COMBINED:
                         resultWriter.writeStart(0);
                         resultWriter.writeAdd(r1->seq, r1->seq_len, 0);
                         resultWriter.writeAdd(&newLine, 1, 0);
                         resultWriter.writeEnd(id, 0, true);
-                        headerResultWriter.writeData(read1.name.s, read1.name.l, id, 0, true );
+                        headerResultWriter.writeStart(0);
+                        headerResultWriter.writeAdd(read1.name.s, read1.name.l, 0);
+                        headerResultWriter.writeAdd(&newLine, 1, 0);
+                        headerResultWriter.writeEnd(id, 0, true);
                         id++;
                         resultWriter.writeStart(0);
                         resultWriter.writeAdd(r2->seq, r2->seq_len, 0);
                         resultWriter.writeAdd(&newLine, 1, 0);
                         resultWriter.writeEnd(id, 0, true);
-                        headerResultWriter.writeData(read2.name.s, read1.name.l, id, 0, true );
+                        headerResultWriter.writeStart(0);
+                        headerResultWriter.writeAdd(read2.name.s, read2.name.l, 0);
+                        headerResultWriter.writeAdd(&newLine, 1, 0);
+                        headerResultWriter.writeEnd(id, 0, true);
                         break;
                 }
                 id++;
