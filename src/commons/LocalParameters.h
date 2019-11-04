@@ -2,6 +2,7 @@
 #define LOCALPARAMETERS_H
 
 #include <Parameters.h>
+#include <algorithm>
 
 class LocalParameters : public Parameters {
 public:
@@ -28,10 +29,14 @@ public:
     PARAMETER(PARAM_FILTER_PROTEINS)
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
     PARAMETER(PARAM_DELETE_TMP_INC)
+    PARAMETER(PARAM_NUM_AA_ITERATIONS)
+    PARAMETER(PARAM_NUM_NUCL_ITERATIONS)
     PARAMETER(PARAM_CYCLE_CHECK)
     PARAMETER(PARAM_CHOP_CYCLE)
     int filterProteins;
     int deleteFilesInc;
+    int numAAIterations;
+    int numNuclIterations;
     float proteinFilterThreshold;
     bool cycleCheck;
     bool chopCycle;
@@ -42,6 +47,8 @@ private:
             PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
             PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
             PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$"),
+            PARAM_NUM_AA_ITERATIONS(PARAM_NUM_AA_ITERATIONS_ID, "--num-aa-iterations", "Number of assembly aa iteration","Number of assembly iterations performed on amino acid level [1, inf]",typeid(int),(void *) &numAAIterations, "^[1-9]{1}[0-9]*$"),
+            PARAM_NUM_NUCL_ITERATIONS(PARAM_NUM_NUCL_ITERATIONS_ID, "--num-nucl-iterations", "Number of assembly nucl iteration","Number of assembly iterations performed on nucleotide level [1, inf]",typeid(int),(void *) &numNuclIterations, "^[1-9]{1}[0-9]*$"),
             PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycle-check", "Check for circular sequences", "Check for circular sequences",typeid(bool), (void *) &cycleCheck, ""),
             PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superflous part of circular fragments",typeid(bool), (void *) &chopCycle, "")
 
@@ -107,6 +114,10 @@ private:
         hybridassemblerworkflow.push_back(&PARAM_RUNNER);
         hybridassemblerworkflow = combineList(hybridassemblerworkflow, hybridassembleresults);
         hybridassemblerworkflow = combineList(hybridassemblerworkflow, nuclassemblerworkflow);
+
+        std::remove(hybridassemblerworkflow.begin(), hybridassemblerworkflow.end(), &PARAM_NUM_ITERATIONS);
+        hybridassemblerworkflow.push_back(&PARAM_NUM_AA_ITERATIONS);
+        hybridassemblerworkflow.push_back(&PARAM_NUM_NUCL_ITERATIONS);
 
 
         filterProteins = 1;

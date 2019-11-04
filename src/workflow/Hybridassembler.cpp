@@ -14,14 +14,14 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.9;
 //    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
-    p->numIterations = 12;
+    //p->numIterations = 12;
+    p->numAAIterations = 12;
+    p->numNuclIterations = 20;
     p->includeOnlyExtendable = true;
     p->orfMinLength = 45;
     p->skipNRepeatKmer = 8;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
-    p->cycleCheck = true;
-    p->chopCycle = true;
 }
 
 int hybridassembler(int argc, const char **argv, const Command &command) {
@@ -32,7 +32,7 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription((Command &)command, par.PARAM_C.uniqid, NULL, NULL, par.PARAM_C.category | MMseqsParameter::COMMAND_EXPERT);
     par.overrideParameterDescription((Command &)command, par.PARAM_MIN_SEQ_ID.uniqid, "Overlap sequence identity threshold [0.0, 1.0]", NULL,  par.PARAM_MIN_SEQ_ID.category);
 //    par.overrideParameterDescription((Command &)command, par.PARAM_ORF_MIN_LENGTH.uniqid, "Min codons in orf", "minimum codon number in open reading frames",  par.PARAM_ORF_MIN_LENGTH.category );
-    par.overrideParameterDescription((Command &)command, par.PARAM_NUM_ITERATIONS.uniqid, "Number of assembly iterations [1, inf]", NULL,  par.PARAM_NUM_ITERATIONS.category);
+   // par.overrideParameterDescription((Command &)command, par.PARAM_NUM_ITERATIONS.uniqid, "Number of assembly iterations [1, inf]", NULL,  par.PARAM_NUM_ITERATIONS.category);
     par.overrideParameterDescription((Command &)command, par.PARAM_E.uniqid, "Extend sequences if the E-value is below [0.0, inf]", NULL,  par.PARAM_E.category);
 
     par.overrideParameterDescription((Command &)command, par.PARAM_ID_OFFSET.uniqid, NULL, NULL,  par.PARAM_ID_OFFSET.category | MMseqsParameter::COMMAND_EXPERT);
@@ -100,11 +100,14 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
-    cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
+    //cmd.addVariable("NUM_IT", SSTR(par.numNuclIterations).c_str());
+
 
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
-    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassemblerworkflow,true).c_str());
+
+
+    cmd.addVariable("NUM_IT", SSTR(par.numAAIterations).c_str());
 
     // --orf-start-mode 0 --min-length 45 --max-gaps 0
     par.orfStartMode = 0;
@@ -129,6 +132,17 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
+
+    // set nucleassemble default values when calling nucleassemble from hybridassemble
+    par.numIterations = par.numNuclIterations;
+    par.kmerSize = 22;
+    par.alphabetSize = 5;
+    //par.kmersPerSequence = 60;
+    par.kmersPerSequenceScale = 0.1;
+    par.cycleCheck = true;
+    par.chopCycle = true;
+    par.addBacktrace = false;
+    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassemblerworkflow).c_str());
 
     FileUtil::writeFile(tmpDir + "/hybridassembler.sh", hybridassembler_sh, hybridassembler_sh_len);
     std::string program(tmpDir + "/hybridassembler.sh");
