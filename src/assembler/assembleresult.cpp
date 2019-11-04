@@ -128,10 +128,12 @@ int doassembly(LocalParameters &par) {
             Matcher::readAlignmentResults(alignments, alnData);
 
             std::string queryRev;
+            /* only relevant for nucleotide sequences */
             if (!onlyForward) {
                 NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
                 for (int pos = querySeqLen - 1; pos > -1; pos--) {
                     int res = subMat->aa2int[static_cast<int>(querySeq[pos])];
+                    res = (res == 'X')? 'N' : res;
                     queryRevSeq[(querySeqLen - 1) - pos] = subMat->int2aa[nuclMatrix->reverseResidue(res)];
                 }
                 queryRev = std::string(queryRevSeq,querySeqLen);
