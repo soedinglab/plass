@@ -15,12 +15,12 @@ void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.9;
     p->kmersPerSequence = 60;
 //    p->shuffleDatabase = true;
-    p->splitSeqByLen = false;
+//    p->splitSeqByLen = false;
     p->numIterations = 12;
     p->alphabetSize = 13;
     p->kmerSize = 14;
     p->orfMinLength = 45;
-    p->skipNRepeatKmer = 8;
+    p->ignoreMultiKmer = true;
     p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;

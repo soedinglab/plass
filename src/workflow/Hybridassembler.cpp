@@ -14,14 +14,14 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.9;
 //    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
-    //p->numIterations = 12;
     p->numAAIterations = 12;
-    p->numNuclIterations = 20;
+    p->numNuclIterations = 12;
     p->includeOnlyExtendable = true;
     p->orfMinLength = 45;
-    p->skipNRepeatKmer = 8;
+    p->ignoreMultiKmer = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
+
 }
 
 int hybridassembler(int argc, const char **argv, const Command &command) {
@@ -139,9 +139,9 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     par.alphabetSize = 5;
     //par.kmersPerSequence = 60;
     par.kmersPerSequenceScale = 0.1;
+    par.addBacktrace = false;
     par.cycleCheck = true;
     par.chopCycle = true;
-    par.addBacktrace = false;
     cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassemblerworkflow).c_str());
 
     FileUtil::writeFile(tmpDir + "/hybridassembler.sh", hybridassembler_sh, hybridassembler_sh_len);
