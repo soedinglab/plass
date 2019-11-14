@@ -27,12 +27,15 @@ public:
             return true;
         if(r2.seqId < r1.seqId )
             return false;
-        /*  int seqLen1 = r1.qEndPos - r1.qStartPos;
-          int seqLen2 = r2.qEndPos - r2.qStartPos;
-          if(seqLen1 < seqLen2)
-              return true;
-          if(seqLen2 < seqLen1 )
-              return false;*/
+        if(r1.alnLength < r2.alnLength )
+            return true;
+        if(r2.alnLength < r1.alnLength )
+            return false;
+        if(r1.dbKey > r2.dbKey )
+            return true;
+        if(r2.dbKey > r1.dbKey )
+            return false;
+
         return false;
     }
 };
@@ -40,7 +43,7 @@ public:
 typedef std::priority_queue<Matcher::result_t, std::vector<Matcher::result_t> , CompareResultBySeqId> QueueBySeqId;
 Matcher::result_t selectBestFragmentToExtend(QueueBySeqId &alignments,
                                              unsigned int queryKey) {
-    // results are ordered by score
+    // results are ordered by seqid
     while (alignments.empty() == false){
         Matcher::result_t res = alignments.top();
         alignments.pop();

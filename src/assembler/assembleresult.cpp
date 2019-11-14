@@ -16,33 +16,28 @@
 #include <omp.h>
 #endif
 
-class CompareResultBySeqId {
+class CompareResultByScore {
 public:
     bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
-//        if(r1.seqId < r2.seqId )
-//            return true;
-//        if(r2.seqId < r1.seqId )
-//            return false;
         if(r1.score < r2.score )
             return true;
         if(r2.score < r1.score )
+            return false;
+        if(r1.alnLength < r2.alnLength )
+            return true;
+        if(r2.alnLength < r1.alnLength )
             return false;
         if(r1.dbKey > r2.dbKey )
             return true;
         if(r2.dbKey > r1.dbKey )
             return false;
-        /*  int seqLen1 = r1.qEndPos - r1.qStartPos;
-          int seqLen2 = r2.qEndPos - r2.qStartPos;
-          if(seqLen1 < seqLen2)
-              return true;
-          if(seqLen2 < seqLen1 )
-              return false;*/
         return false;
     }
 };
 
-typedef std::priority_queue<Matcher::result_t, std::vector<Matcher::result_t> , CompareResultBySeqId> QueueBySeqId;
-Matcher::result_t selectFragmentToExtend(QueueBySeqId &alignments,
+
+typedef std::priority_queue<Matcher::result_t, std::vector<Matcher::result_t> , CompareResultByScore> QueueByScore;
+Matcher::result_t selectFragmentToExtend(QueueByScore &alignments,
                                              unsigned int queryKey) {
     // results are ordered by score
     while (alignments.empty() == false){
@@ -94,6 +89,7 @@ int doassembly(LocalParameters &par) {
     }
 
     SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(*subMat);
+    EvalueComputation evaluer(sequenceDbr->getAminoAcidDBSize(), subMat);
 
     unsigned char * wasExtended = new unsigned char[sequenceDbr->getSize()];
     std::fill(wasExtended, wasExtended+sequenceDbr->getSize(), 0);
@@ -152,7 +148,7 @@ int doassembly(LocalParameters &par) {
                 }
             }
 
-            QueueBySeqId alnQueue;
+            QueueByScore alnQueue;
             bool queryCouldBeExtended = false;
             unsigned int leftQueryOffset = 0;
             unsigned int rightQueryOffset = 0;
@@ -162,7 +158,9 @@ int doassembly(LocalParameters &par) {
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
-                    float scorePerCol = static_cast<float>(alignments[alnIdx].score) / static_cast<float>(alignments[alnIdx].alnLength);
+                    int rawScore = static_cast<int>(evaluer.computeRawScoreFromBitScore(alignments[alnIdx].score) + 0.5);
+                    float scorePerCol = static_cast<float>(rawScore) / static_cast<float>(alignments[alnIdx].alnLength + 0.5);
+
                     float alnLen = static_cast<float>(alignments[alnIdx].alnLength);
                     float ids = static_cast<float>(alignments[alnIdx].seqId) * alnLen;
                     alignments[alnIdx].seqId = ids / (alnLen + 0.5);
