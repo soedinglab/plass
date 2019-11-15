@@ -86,6 +86,7 @@ matrix:
           - cmake
           - zlib
           - bzip2
+          - libomp
 
 before_install:
   - export CC
