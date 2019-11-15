@@ -84,13 +84,10 @@ matrix:
       homebrew:
         packages:
           - cmake
-          - gcc@8
           - zlib
           - bzip2
-    env: CC=gcc-8 CXX=g++-8
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew link gcc@8 --force; fi
   - export CC
   - export CXX
 
