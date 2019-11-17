@@ -203,9 +203,9 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
 
             }
         }
-        delete diagHits;
-        delete frontKmers;
-        delete backKmers;
+        delete[] diagHits;
+        delete[] frontKmers;
+        delete[] backKmers;
     }
 
     cycleResultWriter.close(true);
