@@ -22,7 +22,7 @@ std::vector<struct Command> commands = {
         {"nuclassemble",          nuclassembler,     &localPar.nuclassemblerworkflow,    COMMAND_MAIN,
                 "Assemble nucleotide sequences by iterative greedy overlap assembly. (experimental)",
                 "Extends sequence to the left and right using ungapped alignments.",
-                "Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
+                "Annika Seidel & Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         {"hybridassemble",         hybridassembler,            &localPar.hybridassemblerworkflow,    COMMAND_HIDDEN,
@@ -42,7 +42,7 @@ std::vector<struct Command> commands = {
         {"hybridassembleresults",      hybridassembleresults,       &localPar.hybridassembleresults,      COMMAND_HIDDEN,
                 "Extending representative sequence to the left and right side using ungapped alignments.",
                 NULL,
-                "Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
+                "Annika Seidel <annika.seidel@mpibpc.mpg.de> & Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
                 "<i:nuclSequenceDB> <i:aaSequenceDB> <i:nuclAlnResult> <o:nuclAssembly> <o:aaAssembly>",
                 CITATION_PLASS, {{"nuclSequenceDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::nuclDb },
                                  {"aaSequenceDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::aaDb },
@@ -83,6 +83,11 @@ std::vector<struct Command> commands = {
                 "Annika Seidel <annika.seidel@mpibpc.mpg.de>",
                 "<i:sequenceDB> <o:sequenceDBcycle>",
                 CITATION_PLASS, {{"sequenceDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::nuclDb },
-                                 {"cycleResult", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::nuclDb }}}
-
+                                 {"cycleResult", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::nuclDb }}},
+        {"createhdb",      createhdb,      &localPar.createhdb,          COMMAND_HIDDEN,
+                "Generate header db file for given sequence db file",
+                NULL,
+                "Annika Seidel <annika.seidel@mpibpc.mpg.de>",
+                "<i:sequenceDB> [<i:sequenceDBcycle>] <o:headerDB>",
+                CITATION_PLASS, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}}
 };

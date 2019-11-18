@@ -13,4 +13,5 @@ extern int mergereads(int argc, const char** argv, const Command &command);
 extern int findassemblystart(int argc, const char** argv, const Command &command);
 extern int correctreads(int argc, const char** argv, const Command &command);
 extern int cyclecheck(int argc, const char** argv, const Command &command);
+extern int createhdb(int argc, const char** argv, const Command &command);
 #endif

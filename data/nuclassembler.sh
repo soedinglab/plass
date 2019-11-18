@@ -102,7 +102,7 @@ RESULT="${TMP_PATH}/assembly_${STEP}"
 
 if [ -n "$RESULT_CYC" ]; then
 
-    "$MMSEQS" concatdbs "${INPUT}" "${RESULT_CYC}" "${TMP_PATH}/assembly_final" --preserve-keys
+    "$MMSEQS" concatdbs "${TMP_PATH}/assembly_${STEP}_noneCycle" "${RESULT_CYC}" "${TMP_PATH}/assembly_final" --preserve-keys
     RESULT="${TMP_PATH}/assembly_final"
 fi
 
@@ -122,11 +122,8 @@ if notExists "${RESULT}_only_assembled.dbtype"; then
 fi
 
 if notExists "${RESULT}_only_assembled_h"; then
-    ln -s "${TMP_PATH}/nucl_reads_h" "${RESULT}_only_assembled_h"
-fi
-
-if notExists "${RESULT}_only_assembled_h.index"; then
-    ln -s "${TMP_PATH}/nucl_reads_h.index" "${RESULT}_only_assembled_h.index"
+    "$MMSEQS" createhdb "${RESULT}_only_assembled" "${RESULT_CYC}" "${RESULT}_only_assembled" ${VERBOSITY_PAR} \
+            || fail "createhdb failed"
 fi
 
 if notExists "${RESULT}_only_assembled.fasta"; then

@@ -189,11 +189,8 @@ if notExists "${RESULT}_only_assembled.dbtype"; then
 fi
 
 if notExists "${RESULT}_only_assembled_h"; then
-    ln -s "${TMP_PATH}/aa_6f_start_long_h" "${RESULT}_only_assembled_h"
-fi
-
-if notExists "${RESULT}_only_assembled_h.index"; then
-    ln -s "${TMP_PATH}/aa_6f_start_long_h.index" "${RESULT}_only_assembled_h.index"
+    "$MMSEQS" createhdb "${RESULT}_only_assembled" "${RESULT}_only_assembled" ${VERBOSITY_PAR} \
+            || fail "createhdb failed"
 fi
 
 if notExists "${RESULT}_only_assembled.fasta"; then

@@ -25,6 +25,7 @@ public:
     std::vector<MMseqsParameter *> assemblerworkflow;
     std::vector<MMseqsParameter *> nuclassemblerworkflow;
     std::vector<MMseqsParameter *> hybridassemblerworkflow;
+    std::vector<MMseqsParameter *> createhdb;
 
     PARAMETER(PARAM_FILTER_PROTEINS)
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
@@ -89,6 +90,10 @@ private:
         cyclecheck.push_back(&PARAM_THREADS);
         cyclecheck.push_back(&PARAM_V);
 
+        //createhdb
+        createhdb.push_back(&PARAM_COMPRESSED);
+        createhdb.push_back(&PARAM_V);
+        
         // nucl assembler workflow
         nuclassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
         nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
