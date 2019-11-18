@@ -137,6 +137,7 @@ if notExists "${RESULT_NUCL}.fasta"; then
 fi
 
 if notExists "${RESULT_NUCL}.merged.fasta"; then
+    # shellcheck disable=SC2086
     "$MMSEQS" convert2fasta "${INPUT}" "${INPUT}.fasta"
     cat "${RESULT_NUCL}_only_assembled.fasta" "${INPUT}.fasta" > "${RESULT_NUCL}.merged.fasta"
 fi

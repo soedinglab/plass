@@ -189,6 +189,7 @@ if notExists "${RESULT}_only_assembled.dbtype"; then
 fi
 
 if notExists "${RESULT}_only_assembled_h"; then
+    # shellcheck disable=SC2086
     "$MMSEQS" createhdb "${RESULT}_only_assembled" "${RESULT}_only_assembled" ${VERBOSITY_PAR} \
             || fail "createhdb failed"
 fi
