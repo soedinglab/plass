@@ -37,7 +37,7 @@ cyclecheck() {
                 RESULT_CYC="${1}_cycle_all"
             fi
 
-            INPUT="${1}_noneCycle"
+            PREV_ASSEMBLY="${1}_noneCycle"
         fi
     fi
 }
@@ -92,9 +92,10 @@ while [ $STEP -lt $NUM_IT ]; do
         "$MMSEQS" assembleresults "$INPUT" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/assembly_$STEP" ${ASSEMBLE_RESULT_PAR} \
             || fail "Assembly step died"
     fi
+    PREV_ASSEMBLY="${TMP_PATH}/assembly_$STEP"
 
-    INPUT="${TMP_PATH}/assembly_$STEP"
-    cyclecheck "${TMP_PATH}/assembly_$STEP"
+    cyclecheck "${PREV_ASSEMBLY}"
+    INPUT="${PREV_ASSEMBLY}"
     STEP="$((STEP+1))"
 done
 STEP="$((STEP-1))"
@@ -102,8 +103,11 @@ RESULT="${TMP_PATH}/assembly_${STEP}"
 
 if [ -n "$RESULT_CYC" ]; then
 
-    "$MMSEQS" concatdbs "${TMP_PATH}/assembly_${STEP}_noneCycle" "${RESULT_CYC}" "${TMP_PATH}/assembly_final" --preserve-keys
-    RESULT="${TMP_PATH}/assembly_final"
+    RESULT="${TMP_PATH}/assembly_merged"
+    if notExists "${TMP_PATH}/assembly_merged"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" concatdbs "${PREV_ASSEMBLY}" "${RESULT_CYC}" "${TMP_PATH}/assembly_merged" --preserve-keys
+    fi
 fi
 
 # select only assembled sequences
@@ -112,28 +116,33 @@ if notExists "${RESULT}_only_assembled.index"; then
     awk '$3 > $6 { print }' "${RESULT}_tmp.index" > "${RESULT}_only_assembled.index"
 fi
 
+# select only sequences fullfilling a minimum length threshold
+if notExists "${RESULT}_filtered.index"; then
+    awk -v thr=${MIN_CONTIG_LEN}  '$3 > (thr+1) { print }' "${RESULT}_only_assembled.index" > "${RESULT}_only_assembled_filtered.index"
+fi
+
 # create fasta output
-if notExists "${RESULT}_only_assembled"; then
-    ln -s "${RESULT}" "${RESULT}_only_assembled"
+if notExists "${RESULT}_only_assembled_filtered"; then
+    ln -s "${RESULT}" "${RESULT}_only_assembled_filtered"
 fi
 
-if notExists "${RESULT}_only_assembled.dbtype"; then
-    ln -s "${RESULT}.dbtype" "${RESULT}_only_assembled.dbtype"
+if notExists "${RESULT}_only_assembled_filtered.dbtype"; then
+    ln -s "${RESULT}.dbtype" "${RESULT}_only_assembled_filtered.dbtype"
 fi
 
-if notExists "${RESULT}_only_assembled_h"; then
+if notExists "${RESULT}_only_assembled_filtered_h"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createhdb "${RESULT}_only_assembled" "${RESULT_CYC}" "${RESULT}_only_assembled" ${VERBOSITY_PAR} \
+    "$MMSEQS" createhdb "${RESULT}_only_assembled_filtered" "${RESULT_CYC}" "${RESULT}_only_assembled_filtered" ${VERBOSITY_PAR} \
             || fail "createhdb failed"
 fi
 
-if notExists "${RESULT}_only_assembled.fasta"; then
+if notExists "${RESULT}_only_assembled_filtered.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${RESULT}_only_assembled" "${RESULT}_only_assembled.fasta" ${VERBOSITY_PAR} \
+    "$MMSEQS" convert2fasta "${RESULT}_only_assembled_filtered" "${RESULT}_only_assembled_filtered.fasta" ${VERBOSITY_PAR} \
         || fail "convert2fasta died"
 fi
 
-mv -f "${RESULT}_only_assembled.fasta" "$OUT_FILE" \
+mv -f "${RESULT}_only_assembled_filtered.fasta" "$OUT_FILE" \
     || fail "Could not move result to $OUT_FILE"
 
 if [ -n "$REMOVE_TMP" ]; then

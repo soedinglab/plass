@@ -122,15 +122,15 @@ if notExists "${RESULT_NUCL}_only_assembled.dbtype"; then
     ln -s "${RESULT_NUCL}.dbtype" "${RESULT_NUCL}_only_assembled.dbtype"
 fi
 
-if notExists "${RESULT_NUCL}_h"; then
+if notExists "${RESULT_NUCL}_only_assembled_h"; then
     ln -s "${TMP_PATH}/nucl_6f_start_long_h" "${RESULT_NUCL}_only_assembled_h"
 fi
 
-if notExists "${RESULT_NUCL}_h.index"; then
+if notExists "${RESULT_NUCL}_only_assembled_h.index"; then
     ln -s "${TMP_PATH}/nucl_6f_start_long_h.index" "${RESULT_NUCL}_only_assembled_h.index"
 fi
 
-if notExists "${RESULT_NUCL}.fasta"; then
+if notExists "${RESULT_NUCL}_only_assembled.fasta"; then
     # shellcheck disable=SC2086
     "$MMSEQS" convert2fasta "${RESULT_NUCL}_only_assembled" "${RESULT_NUCL}_only_assembled.fasta" ${VERBOSITY_PAR} \
         || fail "convert2fasta died"

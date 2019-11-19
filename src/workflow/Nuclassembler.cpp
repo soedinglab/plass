@@ -100,6 +100,8 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CALL_CYCLE_CHECK", par.cycleCheck ? "TRUE" : NULL);
     cmd.addVariable("CYCLE_CHECK_PAR", par.createParameterString(par.cyclecheck).c_str());
 
+    cmd.addVariable("MIN_CONTIG_LEN", SSTR(par.minContigLen).c_str());
+
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
