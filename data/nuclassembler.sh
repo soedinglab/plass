@@ -119,31 +119,47 @@ fi
 # select only sequences fullfilling a minimum length threshold
 if notExists "${RESULT}_filtered.index"; then
     # shellcheck disable=SC208
-    awk -v thr="${MIN_CONTIG_LEN}" '$3 > (thr+1) { print }' "${RESULT}_only_assembled.index" > "${RESULT}_only_assembled_filtered.index"
+    awk -v thr="${MIN_CONTIG_LEN}" '$3 > (thr+1) { print }' "${RESULT}_only_assembled.index" > "${TMP_PATH}/assembly_final.index"
 fi
 
 # create fasta output
-if notExists "${RESULT}_only_assembled_filtered"; then
-    ln -s "${RESULT}" "${RESULT}_only_assembled_filtered"
+if notExists "${TMP_PATH}/assembly_final"; then
+    ln -s "${RESULT}" "${TMP_PATH}/assembly_final"
 fi
 
-if notExists "${RESULT}_only_assembled_filtered.dbtype"; then
-    ln -s "${RESULT}.dbtype" "${RESULT}_only_assembled_filtered.dbtype"
+if notExists "${TMP_PATH}/assembly_final.dbtype"; then
+    ln -s "${RESULT}.dbtype" "${TMP_PATH}/assembly_final.dbtype"
 fi
 
-if notExists "${RESULT}_only_assembled_filtered_h"; then
+# redundancy reduction by using linclust
+if notExists "${TMP_PATH}/assembly_final_rep"; then
+
+    CLUST_INPUT="${TMP_PATH}/assembly_final"
+    if notExists "${TMP_PATH}/clu.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" linclust "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/clu_tmp" ${CLUSTER_PAR} \
+            || fail "Search died"
+    fi
+
     # shellcheck disable=SC2086
-    "$MMSEQS" createhdb "${RESULT}_only_assembled_filtered" "${RESULT_CYC}" "${RESULT}_only_assembled_filtered" ${VERBOSITY_PAR} \
+    "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/assembly_final_rep" ${THREADS_PAR} \
+         || fail "Result2repseq  died"
+fi
+
+
+if notExists "${TMP_PATH}/assembly_final_rep_h"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${RESULT_CYC}" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
             || fail "createhdb failed"
 fi
 
-if notExists "${RESULT}_only_assembled_filtered.fasta"; then
+if notExists "${TMP_PATH}/assembly_final_rep.fasta"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${RESULT}_only_assembled_filtered" "${RESULT}_only_assembled_filtered.fasta" ${VERBOSITY_PAR} \
+    "$MMSEQS" convert2fasta "${TMP_PATH}/assembly_final_rep" "${TMP_PATH}/assembly_final_rep.fasta" ${VERBOSITY_PAR} \
         || fail "convert2fasta died"
 fi
 
-mv -f "${RESULT}_only_assembled_filtered.fasta" "$OUT_FILE" \
+mv -f "${TMP_PATH}/assembly_final_rep.fasta" "$OUT_FILE" \
     || fail "Could not move result to $OUT_FILE"
 
 if [ -n "$REMOVE_TMP" ]; then

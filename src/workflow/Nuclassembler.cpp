@@ -12,7 +12,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->maskMode = 0;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.9;
+    p->seqIdThr = 0.97;
     p->kmersPerSequence = 60;
     p->kmersPerSequenceScale = 0.1;
     p->numIterations = 12;
@@ -101,6 +101,12 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("CYCLE_CHECK_PAR", par.createParameterString(par.cyclecheck).c_str());
 
     cmd.addVariable("MIN_CONTIG_LEN", SSTR(par.minContigLen).c_str());
+
+    par.seqIdThr = par.clustThr;
+    par.covThr = 0.99;
+    par.covMode = 1;
+    par.wrappedScoring = true;
+    cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());

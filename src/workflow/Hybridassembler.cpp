@@ -11,7 +11,7 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->maskMode = 0;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.9;
+    p->seqIdThr = 0.97;
 //    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
     p->numAAIterations = 12;
