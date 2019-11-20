@@ -118,6 +118,7 @@ fi
 
 # select only sequences fullfilling a minimum length threshold
 if notExists "${RESULT}_filtered.index"; then
+    # shellcheck disable=SC208
     awk -v thr=${MIN_CONTIG_LEN}  '$3 > (thr+1) { print }' "${RESULT}_only_assembled.index" > "${RESULT}_only_assembled_filtered.index"
 fi
 
