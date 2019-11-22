@@ -31,7 +31,7 @@ public:
     PARAMETER(PARAM_FILTER_PROTEINS)
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
     PARAMETER(PARAM_DELETE_TMP_INC)
-    PARAMETER(PARAM_NUM_AA_ITERATIONS)
+    PARAMETER(PARAM_NUM_PROT_ITERATIONS)
     PARAMETER(PARAM_NUM_NUCL_ITERATIONS)
     PARAMETER(PARAM_MIN_CONTIG_LEN)
     PARAMETER(PARAM_CLUST_THR)
@@ -39,7 +39,7 @@ public:
     PARAMETER(PARAM_CHOP_CYCLE)
     int filterProteins;
     int deleteFilesInc;
-    int numAAIterations;
+    int numProtIterations;
     int numNuclIterations;
     int minContigLen;
     float clustThr;
@@ -53,7 +53,7 @@ private:
             PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
             PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
             PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$"),
-            PARAM_NUM_AA_ITERATIONS(PARAM_NUM_AA_ITERATIONS_ID, "--num-aa-iterations", "Number of assembly aa iteration","Number of assembly iterations performed on amino acid level [1, inf]",typeid(int),(void *) &numAAIterations, "^[1-9]{1}[0-9]*$"),
+            PARAM_NUM_PROT_ITERATIONS(PARAM_NUM_PROT_ITERATIONS_ID, "--num-prot-iterations", "Number of assembly prot iteration","Number of assembly iterations performed on amino acid level [1, inf]",typeid(int),(void *) &numProtIterations, "^[1-9]{1}[0-9]*$"),
             PARAM_NUM_NUCL_ITERATIONS(PARAM_NUM_NUCL_ITERATIONS_ID, "--num-nucl-iterations", "Number of assembly nucl iteration","Number of assembly iterations performed on nucleotide level [1, inf]",typeid(int),(void *) &numNuclIterations, "^[1-9]{1}[0-9]*$"),
             PARAM_MIN_CONTIG_LEN(PARAM_MIN_CONTIG_LEN_ID, "--min-contig-len", "Minimum contig length", "Minimum length of assembled contig to output", typeid(int), (void *) &minContigLen, "^[1-9]{1}[0-9]*$"),
             PARAM_CLUST_THR(PARAM_CLUST_THR_ID,"--clust-thr", "Clustering threshold","Threshold to reduce redundancy in assembly by applying the linclust algorithm (clustering threshold) (range 0.0-1.0)",typeid(float), (void *) &clustThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
@@ -140,7 +140,7 @@ private:
         hybridassemblerworkflow = combineList(hybridassemblerworkflow, nuclassemblerworkflow);
 
         std::remove(hybridassemblerworkflow.begin(), hybridassemblerworkflow.end(), &PARAM_NUM_ITERATIONS);
-        hybridassemblerworkflow.push_back(&PARAM_NUM_AA_ITERATIONS);
+        hybridassemblerworkflow.push_back(&PARAM_NUM_PROT_ITERATIONS);
         hybridassemblerworkflow.push_back(&PARAM_NUM_NUCL_ITERATIONS);
 
 
@@ -149,6 +149,8 @@ private:
         proteinFilterThreshold = 0.2;
         clustThr = 0.97;
         minContigLen = 1000;
+        chopCycle = false;
+        cycleCheck = true;
 
     }
     LocalParameters(LocalParameters const&);

@@ -14,7 +14,7 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->seqIdThr = 0.97;
 //    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
-    p->numAAIterations = 12;
+    p->numProtIterations = 12;
     p->numNuclIterations = 12;
     p->includeOnlyExtendable = true;
     p->orfMinLength = 45;
@@ -107,7 +107,7 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
 
-    cmd.addVariable("NUM_IT", SSTR(par.numAAIterations).c_str());
+    cmd.addVariable("NUM_IT", SSTR(par.numProtIterations).c_str());
 
     // --orf-start-mode 0 --min-length 45 --max-gaps 0
     par.orfStartMode = 0;

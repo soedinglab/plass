@@ -27,8 +27,9 @@ std::vector<struct Command> commands = {
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         {"hybridassemble",         hybridassembler,            &localPar.hybridassemblerworkflow,    COMMAND_HIDDEN,
                 "Assemble nucleotide sequences by iterative greedy overlap assembly using protein and nucleotide information. (under development)",
-                "Extends sequence to the left and right using first ungapped alignments on.",
-                "Annika Seidel <annika.seidel@mpibpc.mpg.de> & Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
+                "Assemble nucleotide sequences by iterative greedy overlap assembly using protein and nucleotide information (under development)."
+                "Extends sequence to the left and right using ungapped alignments on proteins followed by further processing using ungapped alignments on nucleotide level.",
+                "Annika Seidel <annika.seidel@mpibpc.mpg.de> & Martin Steinegger ",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         {"assembleresults",      assembleresult,       &localPar.assembleresults,      COMMAND_HIDDEN,
