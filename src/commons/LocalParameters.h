@@ -136,6 +136,7 @@ private:
         hybridassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
         hybridassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
         hybridassemblerworkflow.push_back(&PARAM_RUNNER);
+        hybridassemblerworkflow = combineList(hybridassemblerworkflow, extractorfs);
         hybridassemblerworkflow = combineList(hybridassemblerworkflow, hybridassembleresults);
         hybridassemblerworkflow = combineList(hybridassemblerworkflow, nuclassemblerworkflow);
 
