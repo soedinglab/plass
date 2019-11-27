@@ -118,6 +118,7 @@ private:
         nuclassemblerworkflow.push_back(&PARAM_CLUST_THR);
         nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
         nuclassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+	nuclassemblerworkflow.push_back(&PARAM_DELETE_TMP_INC);
         nuclassemblerworkflow.push_back(&PARAM_RUNNER);
         nuclassemblerworkflow = combineList(nuclassemblerworkflow, kmermatcher);
         nuclassemblerworkflow = combineList(nuclassemblerworkflow, rescorediagonal);

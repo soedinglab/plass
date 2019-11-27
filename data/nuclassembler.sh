@@ -6,39 +6,57 @@ fail() {
     exit 1
 }
 
+deleteIncremental() {
+    if [ -n "$REMOVE_INCREMENTAL_TMP" ] &&  [ -n "$1" ]; then
+         "$MMSEQS" rmdb "$1"
+    fi
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
 
 cyclecheck() {
 	if [ -n "$CALL_CYCLE_CHECK" ]; then
-        if notExists "${1}_cycle"; then
+        if notExists "${1}_cycle.done"; then
             # shellcheck disable=SC2086
             "$MMSEQS" cyclecheck "$1" "${1}_cycle" ${CYCLE_CHECK_PAR} \
                 || fail "Cycle check step died"
-        fi
 
-        if [ -s "${1}_cycle" ]; then
 
-            if notExists "${1}_noneCycle"; then
-                awk 'NR==FNR { a[$1]=$0; next } !($1 in a) {print $0}' "${1}_cycle.index" \
-                "${1}.index" > "${1}_noneCycle.index"
+            if [ -s "${1}_cycle" ]; then
+
+                if notExists "${1}_noneCycle"; then
+                    awk 'NR==FNR { a[$1]=$0; next } !($1 in a) {print $0}' "${1}_cycle.index" \
+                    "${1}.index" > "${1}_noneCycle.index"
+                    ln -s "$1" "${1}_noneCycle"
+                    ln -s "${1}.dbtype" "${1}_noneCycle.dbtype"
+                fi
+
+                if [ -z "$PREV_CYCLE_ALL" ]; then
+                    # shellcheck disable=SC2086
+                    "$MMSEQS" mvdb "${1}_cycle" "${1}_cycle_all"
+                else
+                    # shellcheck disable=SC2086
+                    "$MMSEQS" concatdbs "${PREV_CYCLE_ALL}" "${1}_cycle" "${1}_cycle_all" --preserve-keys
+                fi
+
+            else
                 ln -s "$1" "${1}_noneCycle"
+                ln -s "${1}.index" "${1}_noneCycle.index"
                 ln -s "${1}.dbtype" "${1}_noneCycle.dbtype"
             fi
-
-            if [ -z "$RESULT_CYC" ]; then
-                RESULT_CYC="${1}_cycle"
-            else
-                if notExists "${1}_cycle__all"; then
-                    # shellcheck disable=SC2086
-                    "$MMSEQS" concatdbs "${RESULT_CYC}" "${1}_cycle" "${1}_cycle_all" --preserve-keys
-                fi
-                RESULT_CYC="${1}_cycle_all"
-            fi
-
-            PREV_ASSEMBLY="${1}_noneCycle"
+            touch "${1}_cycle.done"
+            deleteIncremental "$PREV_CYCLE"
+            PREV_CYCLE="${1}_cycle"
         fi
+
+        if [ -s "${1}_cycle_all" ]; then
+            deleteIncremental "${PREV_CYCLE_ALL}"
+            PREV_CYCLE_ALL="${1}_cycle_all"
+        fi
+
+        PREV_ASSEMBLY="${1}_noneCycle"
     fi
 }
 
@@ -73,40 +91,51 @@ while [ $STEP -lt $NUM_IT ]; do
     echo "STEP: $STEP"
 
     # 1. Finding exact $k$-mer matches.
-    if notExists "${TMP_PATH}/pref_$STEP"; then
+    if notExists "${TMP_PATH}/pref_${STEP}.done"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_PAR} \
+        "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_${STEP}" ${KMERMATCHER_PAR} \
             || fail "Kmer matching step died"
+        deleteIncremental "$PREV_KMER_PREF"
+        touch "${TMP_PATH}/pref_${STEP}.done"
+        PREV_KMER_PREF="${TMP_PATH}/pref_${STEP}"
     fi
 
     # 2. Ungapped alignment
-    if notExists "${TMP_PATH}/aln_$STEP"; then
+    if notExists "${TMP_PATH}/aln_${STEP}.done"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_$STEP" ${UNGAPPED_ALN_PAR} \
+        "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_${STEP}" "${TMP_PATH}/aln_${STEP}" ${UNGAPPED_ALN_PAR} \
             || fail "Ungapped alignment step died"
+        touch "${TMP_PATH}/aln_${STEP}.done"
+        deleteIncremental "$PREV_ALN"
+        PREV_ALN="${TMP_PATH}/aln_${STEP}"
     fi
 
     # 3. Assemble
-    if notExists "${TMP_PATH}/assembly_$STEP"; then
+    if notExists "${TMP_PATH}/assembly_${STEP}.done"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" assembleresults "$INPUT" "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/assembly_$STEP" ${ASSEMBLE_RESULT_PAR} \
+        "$MMSEQS" assembleresults "$INPUT" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/assembly_${STEP}" ${ASSEMBLE_RESULT_PAR} \
             || fail "Assembly step died"
+        touch "${TMP_PATH}/assembly_${STEP}.done"
+        deleteIncremental "$PREV_ASSEMBLY"
+        deleteIncremental "$PREV_ASSEMBLY_STEP"
     fi
-    PREV_ASSEMBLY="${TMP_PATH}/assembly_$STEP"
 
+    PREV_ASSEMBLY="${TMP_PATH}/assembly_${STEP}"
+    PREV_ASSEMBLY_STEP="${TMP_PATH}/assembly_${STEP}"
     cyclecheck "${PREV_ASSEMBLY}"
+
     INPUT="${PREV_ASSEMBLY}"
     STEP="$((STEP+1))"
 done
 STEP="$((STEP-1))"
 RESULT="${TMP_PATH}/assembly_${STEP}"
 
-if [ -n "$RESULT_CYC" ]; then
+if [ -n "$PREV_CYCLE_ALL" ]; then
 
     RESULT="${TMP_PATH}/assembly_merged"
     if notExists "${TMP_PATH}/assembly_merged"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" concatdbs "${PREV_ASSEMBLY}" "${RESULT_CYC}" "${TMP_PATH}/assembly_merged" --preserve-keys
+        "$MMSEQS" concatdbs "${PREV_ASSEMBLY}" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_merged" --preserve-keys
     fi
 fi
 
@@ -149,8 +178,13 @@ fi
 
 if notExists "${TMP_PATH}/assembly_final_rep_h"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${RESULT_CYC}" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
-            || fail "createhdb failed"
+    if notExists "${PREV_CYCLE_ALL}";then
+        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
+                || fail "createhdb failed"
+    else
+        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
+                || fail "createhdb failed"
+    fi
 fi
 
 if notExists "${TMP_PATH}/assembly_final_rep.fasta"; then

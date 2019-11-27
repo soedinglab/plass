@@ -87,6 +87,8 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
+
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
     // # 1. Finding exact $k$-mer matches.

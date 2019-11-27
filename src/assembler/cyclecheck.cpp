@@ -155,11 +155,6 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
                 }
 
             }
-            //std:: cout << "number of kmermatches " << kmermatches << std::endl;
-            /*for (size_t i=0; i < seqLen/2; i++) {
-                if (diagHits[i] != 0)
-                    std:: cout << id << "\t" << seqLen << "\t"  << i+seqLen/2 << "\t" << diagHits[i] << std::endl;
-            }*/
 
             /* calculate maximal hit rate on diagonal bands */
             int splitDiagonal = -1;
@@ -214,6 +209,5 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
     delete seqDbr;
 
     return EXIT_SUCCESS;
-    //TODO: split main in functionsq
 
 }
