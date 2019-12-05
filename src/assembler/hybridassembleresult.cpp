@@ -49,8 +49,8 @@ Matcher::result_t selectBestFragmentToExtend(QueueBySeqId &alignments,
         alignments.pop();
         size_t dbKey = res.dbKey;
         const bool notRightStartAndLeftStart = !(res.dbStartPos == 0 && res.qStartPos == 0);
-        const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != res.dbLen-1);
-        const bool leftStart = res.qStartPos == 0   && (res.qEndPos != res.qLen-1);
+        const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != static_cast<int>(res.dbLen)-1);
+        const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
         const bool isNotIdentity = (dbKey != queryKey);
         if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
             return res;
@@ -160,7 +160,7 @@ int dohybridassembleresult(LocalParameters &par) {
                             continue;
                         }
                     } else if (nuclBesttHitToExtend.qStartPos == 0) {
-                        if ((nuclBesttHitToExtend.dbStartPos <= nuclLeftQueryOffset) || excludeLeftExtension ||
+                        if ((nuclBesttHitToExtend.dbStartPos <= static_cast<int>(nuclLeftQueryOffset)) || excludeLeftExtension ||
                            aaTargetSeq[aaTargetSeqLen-1] == '*') {
                             continue;
                         }
@@ -189,7 +189,7 @@ int dohybridassembleresult(LocalParameters &par) {
                         nuclDbEndPos = alignment.endPos + dist;
                     }
 
-                    if (nuclDbStartPos == 0 && qEndPos == (nuclQuerySeqLen - 1) ) {
+                    if (nuclDbStartPos == 0 && qEndPos == (static_cast<int>(nuclQuerySeqLen) - 1) ) {
                         if(queryCouldBeExtendedRight == true) {
                             tmpNuclAlignments.push_back(nuclBesttHitToExtend);
                             continue;
@@ -213,7 +213,7 @@ int dohybridassembleresult(LocalParameters &par) {
 
                         nuclRightQueryOffset += nuclDbFragLen;
 
-                    } else if (qStartPos == 0 && nuclDbEndPos == (nuclTargetSeqLen - 1)) {
+                    } else if (qStartPos == 0 && nuclDbEndPos == (static_cast<int>(nuclTargetSeqLen) - 1)) {
                         if (queryCouldBeExtendedLeft == true) {
                             tmpNuclAlignments.push_back(nuclBesttHitToExtend);
                             continue;

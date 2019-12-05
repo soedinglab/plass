@@ -1,7 +1,6 @@
 set(assembler_source_files
         assembler/assembleresult.cpp
         assembler/hybridassembleresult.cpp
-        assembler/correctreads.cpp
         assembler/findassemblystart.cpp
         assembler/filternoncoding.cpp
         assembler/mergereads.cpp

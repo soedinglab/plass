@@ -45,8 +45,8 @@ Matcher::result_t selectFragmentToExtend(QueueByScore &alignments,
         alignments.pop();
         size_t dbKey = res.dbKey;
         const bool notRightStartAndLeftStart = !(res.dbStartPos == 0 &&  res.qStartPos == 0 );
-        const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != res.dbLen-1);
-        const bool leftStart = res.qStartPos == 0   && (res.qEndPos != res.qLen-1);
+        const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != static_cast<int>(res.dbLen)-1);
+        const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
         const bool isNotIdentity = (dbKey != queryKey);
 
         if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
@@ -205,7 +205,7 @@ int doassembly(LocalParameters &par) {
                             continue;
                         }
                     } else if (besttHitToExtend.qStartPos == 0) {
-                        if (besttHitToExtend.dbStartPos <= leftQueryOffsetToUse) {
+                        if (besttHitToExtend.dbStartPos <= static_cast<int>(leftQueryOffsetToUse)) {
                             continue;
                         }
                     }
@@ -236,7 +236,7 @@ int doassembly(LocalParameters &par) {
                     }
 
                     // check right extension or reverse left
-                    if (dbStartPos == 0 && qEndPos == (querySeqLen - 1) ) {
+                    if (dbStartPos == 0 && qEndPos == (static_cast<int>(querySeqLen) - 1) ) {
                         if((!isReverse && queryCouldBeExtendedRight == true) || (isReverse && queryCouldBeExtendedLeft == true)) {
                             float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
@@ -278,7 +278,7 @@ int doassembly(LocalParameters &par) {
                         }
 
                         //check left extension
-                    } else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
+                    } else if (qStartPos == 0 && dbEndPos == (static_cast<int>(targetSeqLen) - 1)) {
                         if ((!isReverse && queryCouldBeExtendedLeft == true)|| (isReverse && queryCouldBeExtendedRight == true)) {
                             float alnLen = qEndPos - qStartPos;
                             float scorePerCol = static_cast<float>(score) / (alnLen+0.5);

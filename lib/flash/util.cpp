@@ -60,6 +60,7 @@ xmalloc(size_t size)
             return p;
     }
     fprintf(stderr, "Out of memory: tried to allocate %zu bytes", size);
+    return NULL;
 }
 
 
@@ -78,5 +79,6 @@ xrealloc(void *ptr, size_t size)
             return p;
     }
     fprintf(stderr, "Out of memory: tried to reallocate %zu bytes", size);
+    return NULL;
 }
 

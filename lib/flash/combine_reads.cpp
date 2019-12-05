@@ -54,16 +54,15 @@
 #	define __noreturn __attribute__((noreturn))
 #	define __format(type, format_str, args_start) \
 			__attribute__((format(type, format_str, args_start)))
-#	define max(a,b) ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a > _b ? _a : _b; })
-#	define min(a,b) ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a < _b ? _a : _b; })
-#	define inline inline __attribute__((always_inline))
+
 #else
 #	define __noreturn
 #	define __cold
 #	define __format(type, format_str, args_start)
+#endif
+
 #	define max(a,b) (((a) > (b)) ? (a) : (b))
 #	define min(a,b) (((a) < (b)) ? (a) : (b))
-#endif
 
 /* Sum the values an 8 x 8 bit vector and return a 32-bit result.  */
 static inline uint32_t
@@ -360,12 +359,12 @@ generate_combined_read(const struct read *read_1,
     char * combined_seq;
     char * combined_qual;
 
-    if (combined_read->seq_bufsz < combined_seq_len) {
+    if (combined_read->seq_bufsz < static_cast<size_t >(combined_seq_len)) {
         combined_read->seq = (char *)xrealloc(combined_read->seq,
                                       combined_seq_len);
         combined_read->seq_bufsz = combined_seq_len;
     }
-    if (combined_read->qual_bufsz < combined_seq_len) {
+    if (combined_read->qual_bufsz < static_cast<size_t >(combined_seq_len)) {
         combined_read->qual = (char *)xrealloc(combined_read->qual,
                                        combined_seq_len);
         combined_read->qual_bufsz = combined_seq_len;
