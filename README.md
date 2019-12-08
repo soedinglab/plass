@@ -38,8 +38,8 @@ Plass can assemble both paired-end reads (FASTQ) and single reads (FASTA or FAST
 Important parameters: 
 
      --min-seq-id         Adjusts the overlap sequence identity threshold
+     --min-length         minimum codon length for ORF prediction (default: 40)
      -e                   E-value threshold for overlaps 
-     --skip-n-repeat-kmer Sequence with >= n exact repeating k-mers are ignored
      --num-iterations     Number of iterations of assembly
      --filter-proteins    Switches the neural network protein filter off/on
 
