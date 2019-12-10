@@ -34,7 +34,11 @@ Plass can assemble both paired-end reads (FASTQ) and single reads (FASTA or FAST
 
       # assemble single-end reads 
       plass assemble examples/reads_1.fastq.gz assembly.fas tmp
-      
+
+      # assemble single-end reads using stdin
+      cat examples/reads_1.fastq.gz | plass assemble stdin assembly.fas tmp
+
+
 Important parameters: 
 
      --min-seq-id         Adjusts the overlap sequence identity threshold
