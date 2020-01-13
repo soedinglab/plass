@@ -110,6 +110,7 @@ private:
         reduceredundancy.push_back(&PARAM_MIN_SEQ_ID);
         reduceredundancy.push_back(&PARAM_COV_MODE);
         reduceredundancy.push_back(&PARAM_C);
+        reduceredundancy.push_back(&PARAM_MAX_SEQ_LEN);
         reduceredundancy.push_back(&PARAM_WRAPPED_SCORING);
         
         // nucl assembler workflow
