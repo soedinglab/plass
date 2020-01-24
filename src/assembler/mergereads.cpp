@@ -22,8 +22,8 @@ int mergereads(int argn, const char **argv, const Command& command) {
     //TODO
     combine_params alg_params;
     alg_params.max_overlap = 65;
-    alg_params.min_overlap = 10;
-    alg_params.max_mismatch_density = 0.25;
+    alg_params.min_overlap = 15;
+    alg_params.max_mismatch_density = 0.10;
     alg_params.cap_mismatch_quals = false;
     alg_params.allow_outies = false;
 
