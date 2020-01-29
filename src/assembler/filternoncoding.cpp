@@ -41,7 +41,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
     model.LoadModel(std::string((const char *)predict_coding_acc9743_57x32x64_model, predict_coding_acc9743_57x32x64_model_len));
 
     SubstitutionMatrix subMat(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
-    ReducedMatrix redMat7(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2int, subMat.int2aa, subMat.alphabetSize, 7, subMat.getBitFactor());
+    ReducedMatrix redMat7(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2num, subMat.num2aa, subMat.alphabetSize, 7, subMat.getBitFactor());
 //    ReducedMatrix redMat3(subMat.probMatrix, subMat.subMatrixPseudoCounts, subMat.aa2int, subMat.int2aa, subMat.alphabetSize, 3, subMat.getBitFactor());
 
     // Create a 1D Tensor on length 20 for input data.
@@ -83,8 +83,8 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
             float totalAACnt = 0;
             data.push_back(static_cast<float>(seq.L));
             for (int pos = 0; pos < seq.L; pos++) {
-                if (seq.int_sequence[pos] < subMat.alphabetSize - 1) {
-                    counter[seq.int_sequence[pos]] += 1.0;
+                if (seq.numSequence[pos] < subMat.alphabetSize - 1) {
+                    counter[seq.numSequence[pos]] += 1.0;
                     totalAACnt += 1.0;
                 }
             }
@@ -98,7 +98,7 @@ int filternoncoding(int argc, const char **argv, const Command& command)  {
                 rseq2mer.mapSequence(id, dbKey, seqData, seqLen);
                 float totalDiAACnt = 0;
                 while (rseq2mer.hasNextKmer()) {
-                    const int *kmer = rseq2mer.nextKmer();
+                    const unsigned char *kmer = rseq2mer.nextKmer();
                     // ignore x
                     if (static_cast<int>(kmer[0]) == redMat7.alphabetSize - 1 ||
                         static_cast<int>(kmer[1]) == redMat7.alphabetSize - 1) {

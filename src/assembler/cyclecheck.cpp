@@ -100,7 +100,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
             unsigned int frontKmersCount = 0;
             while (seq.hasNextKmer() && frontKmersCount < seqLen / 2 + 1) {
 
-                int *kmer = (int *) seq.nextKmer();
+                const unsigned char *kmer = seq.nextKmer();
 
                 uint64_t kmerIdx = indexer.int2index(kmer, 0, kmerSize);
                 (frontKmers + frontKmersCount)->kmer = kmerIdx;
@@ -112,7 +112,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
             unsigned int backKmersCount = 0;
             while (seq.hasNextKmer()) {
 
-                int *kmer = (int *) seq.nextKmer();
+                const unsigned char *kmer = seq.nextKmer();
 
                 uint64_t kmerIdx = indexer.int2index(kmer, 0, kmerSize);
                 (backKmers + backKmersCount)->kmer = kmerIdx;

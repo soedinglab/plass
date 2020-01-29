@@ -60,8 +60,8 @@ inline char* getRevFragment(const char* fragment, size_t fragLen, NucleotideMatr
 {
     char *fragmentRev = new char[fragLen];
     for (int pos = fragLen - 1; pos > -1; pos--) {
-        int res = nuclMatrix->aa2int[static_cast<int>(fragment[pos])];
-        char revRes = nuclMatrix->int2aa[nuclMatrix->reverseResidue(res)];
+        int res = nuclMatrix->aa2num[static_cast<int>(fragment[pos])];
+        char revRes = nuclMatrix->num2aa[nuclMatrix->reverseResidue(res)];
         fragmentRev[(fragLen - 1) - pos] = (revRes == 'X')? 'N' : revRes;
     }
     return fragmentRev;
@@ -129,8 +129,8 @@ int doassembly(LocalParameters &par) {
             if (!onlyForward) {
                 NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
                 for (int pos = querySeqLen - 1; pos > -1; pos--) {
-                    int res = subMat->aa2int[static_cast<int>(querySeq[pos])];
-                    char revRes = subMat->int2aa[nuclMatrix->reverseResidue(res)];
+                    int res = subMat->aa2num[static_cast<int>(querySeq[pos])];
+                    char revRes = subMat->num2aa[nuclMatrix->reverseResidue(res)];
                     queryRevSeq[(querySeqLen - 1) - pos] = (revRes == 'X')? 'N' : revRes;
                 }
                 queryRev = std::string(queryRevSeq,querySeqLen);
