@@ -108,6 +108,7 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     par.covThr = 0.99;
     par.covMode = 1;
     par.wrappedScoring = true;
+    par.ignoreMultiKmer = true;
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

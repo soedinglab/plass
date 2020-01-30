@@ -107,6 +107,7 @@ private:
         reduceredundancy.push_back(&PARAM_K);
         reduceredundancy.push_back(&PARAM_KMER_PER_SEQ);
         reduceredundancy.push_back(&PARAM_KMER_PER_SEQ_SCALE);
+        reduceredundancy.push_back(&PARAM_IGNORE_MULTI_KMER);
         reduceredundancy.push_back(&PARAM_MIN_SEQ_ID);
         reduceredundancy.push_back(&PARAM_COV_MODE);
         reduceredundancy.push_back(&PARAM_C);
@@ -119,7 +120,7 @@ private:
         nuclassemblerworkflow.push_back(&PARAM_CLUST_THR);
         nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
         nuclassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-	nuclassemblerworkflow.push_back(&PARAM_DELETE_TMP_INC);
+	    nuclassemblerworkflow.push_back(&PARAM_DELETE_TMP_INC);
         nuclassemblerworkflow.push_back(&PARAM_RUNNER);
         nuclassemblerworkflow = combineList(nuclassemblerworkflow, kmermatcher);
         nuclassemblerworkflow = combineList(nuclassemblerworkflow, rescorediagonal);
