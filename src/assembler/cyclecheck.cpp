@@ -171,7 +171,8 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
                         unsigned int diagbandHits = 0;
 
                         for (size_t i = lower; i <= upper; i++) {
-                            diagbandHits += diagHits[i];
+                            if (diagHits[i] <= diagHits[d])
+                                diagbandHits += diagHits[i];
                         }
 
                         float diagbandHitRate = static_cast<float>(diagbandHits) / (diaglen - kmerSize + 1);
