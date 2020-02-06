@@ -113,6 +113,9 @@ private:
         reduceredundancy.push_back(&PARAM_C);
         reduceredundancy.push_back(&PARAM_MAX_SEQ_LEN);
         reduceredundancy.push_back(&PARAM_WRAPPED_SCORING);
+        reduceredundancy.push_back(&PARAM_GAP_OPEN);
+        reduceredundancy.push_back(&PARAM_GAP_EXTEND);
+        reduceredundancy.push_back(&PARAM_ZDROP);
         
         // nucl assembler workflow
         nuclassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
