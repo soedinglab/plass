@@ -115,6 +115,7 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     par.zdrop = 200;
     par.gapOpen = 5;
     par.gapExtend = 2;
+    par.clusteringMode = 2;
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
