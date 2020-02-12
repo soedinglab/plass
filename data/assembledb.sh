@@ -15,28 +15,13 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-# check input variables
-[ -z "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
-[ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
-
-# check if files exists
-[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
+# check if files exist
+[ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
+[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE}.dbtype exists already!" && exit 1
 [ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
-if notExists "${TMP_PATH}/nucl_reads"; then
-    if [ -n "${PAIRED_END}" ]; then
-        echo "PAIRED END MODE"
-        # shellcheck disable=SC2086
-        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
-            || fail "mergereads failed"
-    else
-        # shellcheck disable=SC2086
-        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${CREATEDB_PAR} \
-            || fail "createdb failed"
-    fi
-fi
 
-INPUT="${TMP_PATH}/nucl_reads"
+INPUT="$1"
 if notExists "${TMP_PATH}/nucl_6f_start"; then
     # shellcheck disable=SC2086
     "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${EXTRACTORFS_START_PAR} \
@@ -118,7 +103,6 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
         fi
         INPUT="${TMP_PATH}/corrected_seqs"
 
-
         if notExists "${TMP_PATH}/pref_corrected_$STEP.done"; then
             # shellcheck disable=SC2086
             $RUNNER "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_corrected_$STEP" ${KMERMATCHER_TMP} \
@@ -126,7 +110,6 @@ while [ "$STEP" -lt "$NUM_IT" ]; do
             deleteIncremental "$PREV_KMER_PREF"
             touch "${TMP_PATH}/pref_corrected_$STEP.done"
             PREV_KMER_PREF="${TMP_PATH}/pref_corrected_$STEP"
-
         fi
 
         if notExists "${TMP_PATH}/aln_corrected_$STEP.done"; then
@@ -179,33 +162,17 @@ if notExists "${RESULT}_only_assembled.index"; then
     cat "${RESULT}_only_assembled1.index" "${RESULT}_only_assembled2.index" | sort | uniq > "${RESULT}_only_assembled.index"
 fi
 
-# create fasta output
-if notExists "${RESULT}_only_assembled"; then
-    ln -s "${RESULT}" "${RESULT}_only_assembled"
+# create db outfile
+if notExists "${OUT_FILE}.dbtype"; then
+    "$MMSEQS" createsubdb "${RESULT}_only_assembled.index" "${RESULT}" "${OUT_FILE}" --subdb-mode 0
 fi
-
-if notExists "${RESULT}_only_assembled.dbtype"; then
-    ln -s "${RESULT}.dbtype" "${RESULT}_only_assembled.dbtype"
-fi
-
-if notExists "${RESULT}_only_assembled_h"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" createhdb "${RESULT}_only_assembled" "${RESULT}_only_assembled" ${VERBOSITY_PAR} \
-            || fail "createhdb failed"
-fi
-
-if notExists "${RESULT}_only_assembled.fasta"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${RESULT}_only_assembled" "${RESULT}_only_assembled.fasta" ${VERBOSITY_PAR} \
-        || fail "convert2fasta died"
-fi
-
-mv -f "${RESULT}_only_assembled.fasta" "$OUT_FILE" \
-    || fail "Could not move result to $OUT_FILE"
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
+    rm -f "${TMP_PATH}/aa_6f_"*
+    rm -f "${TMP_PATH}/nucl_6f_"*
     rm -f "${TMP_PATH}/pref_"*
     rm -f "${TMP_PATH}/aln_"*
     rm -f "${TMP_PATH}/assembly_"*
+    rm -f "${TMP_PATH}/assembledb.sh"
 fi

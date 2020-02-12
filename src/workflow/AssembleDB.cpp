@@ -1,21 +1,21 @@
-#include <cassert>
-
-#include "CommandCaller.h"
 #include "DBReader.h"
+#include "Util.h"
+#include "CommandCaller.h"
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
-#include "Util.h"
 
-#include "easyframe.sh.h"
+#include "assembledb.sh.h"
 
-void setEasyAssemblerWorkflowDefaults(Parameters *p) {
+void setAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
     p->seqIdThr = 0.9;
     p->kmersPerSequence = 60;
+//    p->shuffleDatabase = true;
+//    p->splitSeqByLen = false;
     p->numIterations = 12;
     p->alphabetSize = 13;
     p->kmerSize = 14;
@@ -26,32 +26,14 @@ void setEasyAssemblerWorkflowDefaults(Parameters *p) {
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
 }
 
-void setEasyAssemblerMustPassAlong(Parameters *p) {
-    p->PARAM_SPACED_KMER_MODE.wasSet = true;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
-    p->PARAM_C.wasSet = true;
-    p->PARAM_E.wasSet = true;
-    p->PARAM_MIN_SEQ_ID.wasSet = true;
-    p->PARAM_KMER_PER_SEQ.wasSet = true;
-    p->PARAM_NUM_ITERATIONS.wasSet = true;
-    p->PARAM_ALPH_SIZE.wasSet = true;
-    p->PARAM_K.wasSet = true;
-    p->PARAM_ORF_MIN_LENGTH.wasSet = true;
-    p->PARAM_IGNORE_MULTI_KMER.wasSet = true;
-    p->PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet = true;
-    p->PARAM_ALIGNMENT_MODE.wasSet = true;
-    p->PARAM_RESCORE_MODE.wasSet = true;
-}
-
-int easyassembler(int argc, const char **argv, const Command &command) {
-
+int assembledb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
+    setAssemblerWorkflowDefaults(&par);
 
     par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold [0.0, 1.0]", NULL, 0);
     par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL,  0);
     par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL,  0);
 
-    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_HIDDEN);
     par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ID_OFFSET.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_CONTIG_END_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -68,23 +50,9 @@ int easyassembler(int argc, const char **argv, const Command &command) {
     par.PARAM_TRANSLATION_TABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_USE_ALL_TABLE_STARTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
-
-    setEasyAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-    setEasyAssemblerMustPassAlong(&par);
 
     CommandCaller cmd;
-    if ((par.filenames.size() - 2) % 2 == 0) {
-        cmd.addVariable("PAIRED_END", "1"); // paired end reads
-    } else {
-        if (par.filenames.size() != 3) {
-            Debug(Debug::ERROR) << "Too many input files provided.\n";
-            Debug(Debug::ERROR) << "For paired-end input provide READSETA_1.fastq READSETA_2.fastq ... OUTPUT.fasta tmpDir\n";
-            Debug(Debug::ERROR) << "For single input use READSET.fast(q|a) OUTPUT.fasta tmpDir\n";
-            return EXIT_FAILURE;
-        }
-        cmd.addVariable("PAIRED_END", NULL); // single end reads
-    }
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(par.filenames, *command.params));
@@ -99,23 +67,67 @@ int easyassembler(int argc, const char **argv, const Command &command) {
         EXIT(EXIT_FAILURE);
     }
     cmd.addVariable("TMP_PATH", p);
-    free(p);
     par.filenames.pop_back();
+    free(p);
+
     cmd.addVariable("OUT_FILE", par.filenames.back().c_str());
     par.filenames.pop_back();
-    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
-    cmd.addVariable("RUNNER", par.runner.c_str());
 
-    cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
-    cmd.addVariable("ASSEMBLER_PAR", par.createParameterString(par.assembleDBworkflow, true).c_str());
-    cmd.addVariable("ASSEMBLY_MODULE", "assembledb");
+    cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
+
+    cmd.addVariable("RUNNER", par.runner.c_str());
+    cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
+    cmd.addVariable("PROTEIN_FILTER", par.filterProteins == 1 ? "1" : NULL);
+    // # 1. Finding exact $k$-mer matches.
+
+    for(int i = 0; i < par.numIterations; i++){
+        std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
+        par.hashShift = par.hashShift + i % 2;
+        if(par.PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet == false){
+            if (i == 0) {
+                par.includeOnlyExtendable = false;
+            } else {
+                par.includeOnlyExtendable = true;
+            }
+        }
+        cmd.addVariable(key.c_str(), par.createParameterString(par.kmermatcher).c_str());
+    }
+
+    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+
+    // # 2. Hamming distance pre-clustering
+    par.filterHits = false;
+
+    // --orf-start-mode 0 --min-length 45 --max-gaps 0
+    par.orfStartMode = 0;
+    par.orfMaxGaps = 0;
+    cmd.addVariable("EXTRACTORFS_LONG_PAR", par.createParameterString(par.extractorfs).c_str());
+
+
+    // --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0
+    par.contigStartMode = 1;
+    par.contigEndMode = 0;
+    par.orfStartMode = 0;
+    par.orfMaxLength = par.orfMinLength;
+    par.orfMinLength = std::min(par.orfMinLength, 20);
+    par.orfMaxGaps = 0;
+    cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
+
+
+    par.addOrfStop = true;
+    //cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
+    cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
+    cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
+    cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
+    cmd.addVariable("FILTERNONCODING_PAR", par.createParameterString(par.filternoncoding).c_str());
+
+    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    std::string program = tmpDir + "/easyframe.sh";
-    FileUtil::writeFile(program, easyframe_sh, easyframe_sh_len);
+    FileUtil::writeFile(tmpDir + "/assembledb.sh", assembledb_sh, assembledb_sh_len);
+    std::string program(tmpDir + "/assembledb.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
-    // Should never get here
-    assert(false);
-    return 0;
+    return EXIT_SUCCESS;
 }

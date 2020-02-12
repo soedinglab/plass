@@ -12,15 +12,24 @@ bool hide_base_commands = true;
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 std::vector<struct Command> commands = {
-        // Plass tools
-        {"assemble",             assembler,            &localPar.assemblerworkflow,    COMMAND_MAIN,
+        // Plass easy workflows
+        {"assemble",             easyassembler,            &localPar.assemblerworkflow,    COMMAND_MAIN,
                 "Assemble protein sequences by iterative greedy overlap assembly.",
-                "Assemble protein sequences by iterative greedy overlap assembly. Extends sequence to the left and right using ungapped alignments.",
+                NULL,
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
+        // Plass workflows
+        {"assembledb",             assembledb,            &localPar.assembleDBworkflow,    COMMAND_HIDDEN,
+                "Assemble protein sequences by iterative greedy overlap assembly.",
+                NULL,
+                "Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
+                "<i:sequenceDB> <o:contigDB> <tmpDir>",
+                CITATION_PLASS, {{"sequenceDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                 {"contigDB",  DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                 {"tmpDir",  DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"nuclassemble",          nuclassembler,     &localPar.nuclassemblerworkflow,    COMMAND_MAIN,
-                "Assemble nucleotide sequences by iterative greedy overlap assembly. (experimental",
+                "Assemble nucleotide sequences by iterative greedy overlap assembly. (experimental)",
                 "Assemble nucleotide sequences by iterative greedy overlap assembly (experimental). Extends sequence to the left and right using ungapped alignments.",
                 "Annika Seidel <annika.seidel@mpibpc.mpg.de> & Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
@@ -32,6 +41,7 @@ std::vector<struct Command> commands = {
                 "Annika Seidel <annika.seidel@mpibpc.mpg.de> & Martin Steinegger <martin.steinegger@mpibpc.mpg.de>",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
+        // Plass tools
         {"assembleresults",      assembleresult,       &localPar.assembleresults,      COMMAND_HIDDEN,
                 "Extending representative sequence to the left and right side using ungapped alignments.",
                 NULL,

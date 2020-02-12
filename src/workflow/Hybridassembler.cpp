@@ -75,7 +75,7 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
             Debug(Debug::INFO) << "Created directory " << tmpPath << "\n";
         }
     }
-    size_t hash = par.hashParameter(par.filenames, par.assemblerworkflow);
+    size_t hash = par.hashParameter(par.filenames, *command.params);
     std::string tmpDir = tmpPath + "/" + SSTR(hash);
     if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
         if (FileUtil::makeDir(tmpDir.c_str()) == false) {

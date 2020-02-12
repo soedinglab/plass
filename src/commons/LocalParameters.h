@@ -17,12 +17,14 @@ public:
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
 
+    std::vector<MMseqsParameter *> assemblerworkflow;
+
     std::vector<MMseqsParameter *> assembleresults;
     std::vector<MMseqsParameter *> extractorfssubset;
     std::vector<MMseqsParameter *> filternoncoding;
     std::vector<MMseqsParameter *> hybridassembleresults;
     std::vector<MMseqsParameter *> cyclecheck;
-    std::vector<MMseqsParameter *> assemblerworkflow;
+    std::vector<MMseqsParameter *> assembleDBworkflow;
     std::vector<MMseqsParameter *> nuclassemblerworkflow;
     std::vector<MMseqsParameter *> hybridassemblerworkflow;
     std::vector<MMseqsParameter *> createhdb;
@@ -79,18 +81,19 @@ private:
         filternoncoding.push_back(&PARAM_THREADS);
         filternoncoding.push_back(&PARAM_V);
 
-        // assembler workflow
-        assemblerworkflow = combineList(rescorediagonal, kmermatcher);
-        assemblerworkflow = combineList(assemblerworkflow, extractorfs);
-        assemblerworkflow = combineList(assemblerworkflow, assembleresults);
-        assemblerworkflow = combineList(assemblerworkflow, filternoncoding);
+        // assembledb workflow
+        assembleDBworkflow = combineList(rescorediagonal, kmermatcher);
+        assembleDBworkflow = combineList(assembleDBworkflow, extractorfs);
+        assembleDBworkflow = combineList(assembleDBworkflow, assembleresults);
+        assembleDBworkflow = combineList(assembleDBworkflow, filternoncoding);
 
-        assemblerworkflow.push_back(&PARAM_FILTER_PROTEINS);
-        assemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
-        assemblerworkflow.push_back(&PARAM_DELETE_TMP_INC);
-        assemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-        assemblerworkflow.push_back(&PARAM_RUNNER);
+        assembleDBworkflow.push_back(&PARAM_FILTER_PROTEINS);
+        assembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        assembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
+        assembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        assembleDBworkflow.push_back(&PARAM_RUNNER);
 
+        assemblerworkflow = assembleDBworkflow;
 
         //cyclecheck
         cyclecheck.push_back(&PARAM_MAX_SEQ_LEN);
@@ -118,7 +121,7 @@ private:
         reduceredundancy.push_back(&PARAM_ZDROP);
         reduceredundancy.push_back(&PARAM_CLUSTER_MODE);
         
-        // nucl assembler workflow
+        // nucl assembledb workflow
         nuclassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
         nuclassemblerworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
         nuclassemblerworkflow.push_back(&PARAM_CLUST_THR);

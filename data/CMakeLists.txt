@@ -1,7 +1,8 @@
 include(MMseqsResourceCompiler)
 
 set(COMPILED_RESOURCES
-        assembler.sh
+        easyassemble.sh
+        assembledb.sh
         hybridassembler.sh
         nuclassembler.sh
         predict_coding_acc9260_56x96.model

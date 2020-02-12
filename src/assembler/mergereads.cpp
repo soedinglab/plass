@@ -19,6 +19,7 @@ int mergereads(int argn, const char **argv, const Command& command) {
     // + 1 for query
     Debug(Debug::INFO) << "Start merging reads.\n";
 
+    //TODO: check inputfiles exists
     //TODO
     combine_params alg_params;
     alg_params.max_overlap = 65;
