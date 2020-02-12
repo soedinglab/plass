@@ -7,7 +7,7 @@
 #include "LocalParameters.h"
 #include "Util.h"
 
-#include "easyframe.sh.h"
+#include "easyassemble.sh.h"
 
 void setEasyAssemblerWorkflowDefaults(Parameters *p) {
     p->spacedKmer = false;
@@ -112,7 +112,7 @@ int easyassembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
     std::string program = tmpDir + "/easyframe.sh";
-    FileUtil::writeFile(program, easyframe_sh, easyframe_sh_len);
+    FileUtil::writeFile(program, easyassemble_sh, easyassemble_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
