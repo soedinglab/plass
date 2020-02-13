@@ -10,30 +10,17 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
-
 # check input variables
 [ -z "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
 [ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
 
-# check if files exists
-[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
+# check if files exist
+[ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
+[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE}.dbtype exists already!" && exit 1
 [ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
-if notExists "${TMP_PATH}/nucl_reads"; then
-    if [ -n "${PAIRED_END}" ]; then
-        echo "PAIRED END MODE"
-        # shellcheck disable=SC2086
-        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
-            || fail "mergereads failed"
-    else
-        # shellcheck disable=SC2086
-        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
-            || fail "createdb failed"
-    fi
-fi
 
-
-INPUT="${TMP_PATH}/nucl_reads"
+INPUT="$1"
 if notExists "${TMP_PATH}/nucl_6f_start"; then
     # shellcheck disable=SC2086
     "$MMSEQS" extractorfs "${INPUT}" "${TMP_PATH}/nucl_6f_start" ${EXTRACTORFS_START_PAR} \
@@ -134,20 +121,35 @@ if notExists "${RESULT_NUCL}_only_assembled_h.dbtype"; then
     ln -s "${TMP_PATH}/nucl_6f_start_long_h.dbtype" "${RESULT_NUCL}_only_assembled_h.dbtype"
 fi
 
-if notExists "${RESULT_NUCL}_only_assembled.fasta"; then
+
+if notExists "${RESULT_NUCL}.merged.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${RESULT_NUCL}_only_assembled" "${RESULT_NUCL}_only_assembled.fasta" ${VERBOSITY_PAR} \
-        || fail "convert2fasta died"
+    "$MMSEQS" concatdbs "${INPUT}" "${RESULT_NUCL}_only_assembled" "${RESULT_NUCL}.merged" \
+    || fail "Concat hybridassemblies and reads died"
 fi
 
-if notExists "${RESULT_NUCL}.merged.fasta"; then
+if notExists "${TMP_PATH}/nuclassembly.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${INPUT}" "${INPUT}.fasta"
-    cat "${RESULT_NUCL}_only_assembled.fasta" "${INPUT}.fasta" > "${RESULT_NUCL}.merged.fasta"
+    "$MMSEQS" nuclassembledb "${RESULT_NUCL}.merged" "${TMP_PATH}/nuclassembly" "${TMP_PATH}/nuclassembly_tmp" ${NUCL_ASM_PAR}
 fi
 
-# shellcheck disable=SC2086
-"$MMSEQS" nuclassemble "${RESULT_NUCL}.merged.fasta" "${OUT_FILE}" "${TMP_PATH}/nuclassembly_2" ${NUCL_ASM_PAR}
+# redundancy reduction by using linclust
+if notExists "${TMP_PATH}/nuclassembly_rep.dbtype"; then
+
+    CLUST_INPUT="${TMP_PATH}/nuclassembly"
+    if notExists "${TMP_PATH}/clu.dbtype"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" linclust "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/clu_tmp" ${CLUSTER_PAR} \
+            || fail "Redundancy reduction step died"
+    fi
+
+    # shellcheck disable=SC2086
+    "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/nuclassembly_rep" ${THREADS_PAR} \
+         || fail "Result2repseq  died"
+fi
+
+"$MMSEQS" mvdb "${TMP_PATH}/nuclassembly_rep" "$OUT_FILE" \
+    || fail "Could not move result to $OUT_FILE"
 
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}" "${2}_aa" || fail "Could not move result to $2"
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}.index" "${2}_aa.index" || fail "Could not move result to $2.index"

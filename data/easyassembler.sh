@@ -39,8 +39,13 @@ fi
 
 if notExists "${TMP_PATH}/assembly_h.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
+    if [ -f "${OUT_FILE}_cycle." ]; then
+    "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${OUT_FILE}_cycle" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
             || fail "createhdb failed"
+    else
+        "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
+            || fail "createhdb failed"
+    fi
 fi
 
 if notExists "${TMP_PATH}/assembly.fasta"; then
@@ -60,5 +65,5 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/nucl_reads"
     "$MMSEQS" rmdb "${TMP_PATH}/nucl_reads_h"
     rm -rf "${TMP_PATH}/assembly_tmp"
-    rm -f "${TMP_PATH}/easyassemble.sh"
+    rm -f "${TMP_PATH}/easyassembler.sh"
 fi

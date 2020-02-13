@@ -18,16 +18,19 @@ public:
     }
 
     std::vector<MMseqsParameter *> assemblerworkflow;
+    std::vector<MMseqsParameter *> nuclassemblerworkflow;
+    std::vector<MMseqsParameter *> hybridassemblerworkflow;
+
+    std::vector<MMseqsParameter *> assembleDBworkflow;
+    std::vector<MMseqsParameter *> nuclassembleDBworkflow;
+    std::vector<MMseqsParameter *> hybridassembleDBworkflow;
 
     std::vector<MMseqsParameter *> assembleresults;
+    std::vector<MMseqsParameter *> cyclecheck;
+    std::vector<MMseqsParameter *> createhdb;
     std::vector<MMseqsParameter *> extractorfssubset;
     std::vector<MMseqsParameter *> filternoncoding;
     std::vector<MMseqsParameter *> hybridassembleresults;
-    std::vector<MMseqsParameter *> cyclecheck;
-    std::vector<MMseqsParameter *> assembleDBworkflow;
-    std::vector<MMseqsParameter *> nuclassemblerworkflow;
-    std::vector<MMseqsParameter *> hybridassemblerworkflow;
-    std::vector<MMseqsParameter *> createhdb;
     std::vector<MMseqsParameter *> reduceredundancy;
 
     PARAMETER(PARAM_FILTER_PROTEINS)
@@ -81,20 +84,6 @@ private:
         filternoncoding.push_back(&PARAM_THREADS);
         filternoncoding.push_back(&PARAM_V);
 
-        // assembledb workflow
-        assembleDBworkflow = combineList(rescorediagonal, kmermatcher);
-        assembleDBworkflow = combineList(assembleDBworkflow, extractorfs);
-        assembleDBworkflow = combineList(assembleDBworkflow, assembleresults);
-        assembleDBworkflow = combineList(assembleDBworkflow, filternoncoding);
-
-        assembleDBworkflow.push_back(&PARAM_FILTER_PROTEINS);
-        assembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
-        assembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
-        assembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-        assembleDBworkflow.push_back(&PARAM_RUNNER);
-
-        assemblerworkflow = assembleDBworkflow;
-
         //cyclecheck
         cyclecheck.push_back(&PARAM_MAX_SEQ_LEN);
         cyclecheck.push_back(&PARAM_CHOP_CYCLE);
@@ -120,19 +109,37 @@ private:
         reduceredundancy.push_back(&PARAM_GAP_EXTEND);
         reduceredundancy.push_back(&PARAM_ZDROP);
         reduceredundancy.push_back(&PARAM_CLUSTER_MODE);
+
+        // assembledb workflow
+        assembleDBworkflow = combineList(rescorediagonal, kmermatcher);
+        assembleDBworkflow = combineList(assembleDBworkflow, extractorfs);
+        assembleDBworkflow = combineList(assembleDBworkflow, assembleresults);
+        assembleDBworkflow = combineList(assembleDBworkflow, filternoncoding);
+
+        assembleDBworkflow.push_back(&PARAM_FILTER_PROTEINS);
+        assembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        assembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
+        assembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        assembleDBworkflow.push_back(&PARAM_RUNNER);
+
+        // easyassembleworkflow
+        assemblerworkflow = combineList(assembleDBworkflow, createdb);
         
         // nucl assembledb workflow
-        nuclassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
-        nuclassemblerworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
-        nuclassemblerworkflow.push_back(&PARAM_CLUST_THR);
-        nuclassemblerworkflow.push_back(&PARAM_NUM_ITERATIONS);
-        nuclassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-	    nuclassemblerworkflow.push_back(&PARAM_DELETE_TMP_INC);
-        nuclassemblerworkflow.push_back(&PARAM_RUNNER);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, kmermatcher);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, rescorediagonal);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, assembleresults);
-        nuclassemblerworkflow = combineList(nuclassemblerworkflow, cyclecheck);
+        nuclassembleDBworkflow.push_back(&PARAM_CYCLE_CHECK);
+        nuclassembleDBworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
+        nuclassembleDBworkflow.push_back(&PARAM_CLUST_THR);
+        nuclassembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        nuclassembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        nuclassembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
+        nuclassembleDBworkflow.push_back(&PARAM_RUNNER);
+        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, kmermatcher);
+        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, rescorediagonal);
+        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, assembleresults);
+        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, cyclecheck);
+
+        // easynuclassembleworkflow
+        nuclassemblerworkflow = combineList(nuclassembleDBworkflow, createdb);
 
         // hybridassembleresults
         hybridassembleresults.push_back(&PARAM_MIN_SEQ_ID);
@@ -143,17 +150,20 @@ private:
 
 
         // hybridassemblerworkflow
-        hybridassemblerworkflow.push_back(&PARAM_CYCLE_CHECK);
-        hybridassemblerworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-        hybridassemblerworkflow.push_back(&PARAM_RUNNER);
-        hybridassemblerworkflow = combineList(hybridassemblerworkflow, extractorfs);
-        hybridassemblerworkflow = combineList(hybridassemblerworkflow, hybridassembleresults);
-        hybridassemblerworkflow = combineList(hybridassemblerworkflow, nuclassemblerworkflow);
+        hybridassembleDBworkflow.push_back(&PARAM_CYCLE_CHECK);
+        hybridassembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        hybridassembleDBworkflow.push_back(&PARAM_RUNNER);
+        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, extractorfs);
+        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, hybridassembleresults);
+        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, nuclassembleDBworkflow);
+        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, reduceredundancy);
 
-        std::remove(hybridassemblerworkflow.begin(), hybridassemblerworkflow.end(), &PARAM_NUM_ITERATIONS);
-        hybridassemblerworkflow.push_back(&PARAM_NUM_PROT_ITERATIONS);
-        hybridassemblerworkflow.push_back(&PARAM_NUM_NUCL_ITERATIONS);
+        std::remove(hybridassembleDBworkflow.begin(), hybridassembleDBworkflow.end(), &PARAM_NUM_ITERATIONS);
+        hybridassembleDBworkflow.push_back(&PARAM_NUM_PROT_ITERATIONS);
+        hybridassembleDBworkflow.push_back(&PARAM_NUM_NUCL_ITERATIONS);
 
+        // easynuclassembleworkflow
+        hybridassemblerworkflow = combineList(hybridassembleDBworkflow, createdb);
 
         filterProteins = 1;
         deleteFilesInc = 1;

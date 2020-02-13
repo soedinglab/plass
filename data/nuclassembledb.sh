@@ -60,28 +60,19 @@ cyclecheck() {
     fi
 }
 
+
 # check input variables
 [ -z "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
 [ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
 
-# check if files exists
-[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
+# check if files exist
+[ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
+[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE}.dbtype exists already!" && exit 1
 [ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
-if notExists "${TMP_PATH}/nucl_reads"; then
-    if [ -n "${PAIRED_END}" ]; then
-        echo "PAIRED END MODE"
-        # shellcheck disable=SC2086
-        "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
-            || fail "mergereads failed"
-    else
-        # shellcheck disable=SC2086
-        "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
-            || fail "createdb failed"
-    fi
-fi
-INPUT="${TMP_PATH}/nucl_reads"
 
+INPUT="$1"
+SOURCE="${INPUT}"
 STEP=0
 if [ -z "$NUM_IT" ]; then
     NUM_IT=1;
@@ -135,71 +126,47 @@ if [ -n "$PREV_CYCLE_ALL" ]; then
     RESULT="${TMP_PATH}/assembly_merged"
     if notExists "${TMP_PATH}/assembly_merged"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" concatdbs "${PREV_ASSEMBLY}" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_merged" --preserve-keys
+        "$MMSEQS" concatdbs "${PREV_ASSEMBLY}" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_merged" --preserve-keys \
+             || fail "Concatenation of non cyclic and cyclic contigs died"
     fi
 fi
 
 # select only assembled sequences
 if notExists "${RESULT}_only_assembled.index"; then
-    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT}.index" "${TMP_PATH}/nucl_reads.index" > "${RESULT}_tmp.index"
+    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT}.index" "${SOURCE}.index" > "${RESULT}_tmp.index"
     awk '$3 > $6 { print }' "${RESULT}_tmp.index" > "${RESULT}_only_assembled.index"
 fi
 
 # select only sequences fullfilling a minimum length threshold
-if notExists "${RESULT}_filtered.index"; then
+if notExists "${RESULT}_only_assembled_filtered.index"; then
     # shellcheck disable=SC208
-    awk -v thr="${MIN_CONTIG_LEN}" '$3 > (thr+1) { print }' "${RESULT}_only_assembled.index" > "${TMP_PATH}/assembly_final.index"
+    awk -v thr="${MIN_CONTIG_LEN}" '$3 > (thr+1) { print }' "${RESULT}_only_assembled.index" > "${RESULT}_only_assembled_filtered.index"
 fi
 
-# create fasta output
-if notExists "${TMP_PATH}/assembly_final"; then
-    ln -s "${RESULT}" "${TMP_PATH}/assembly_final"
-fi
-
-if notExists "${TMP_PATH}/assembly_final.dbtype"; then
-    ln -s "${RESULT}.dbtype" "${TMP_PATH}/assembly_final.dbtype"
-fi
-
-# redundancy reduction by using linclust
-if notExists "${TMP_PATH}/assembly_final_rep"; then
-
-    CLUST_INPUT="${TMP_PATH}/assembly_final"
-    if notExists "${TMP_PATH}/clu.dbtype"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" linclust "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/clu_tmp" ${CLUSTER_PAR} \
-            || fail "Search died"
-    fi
-
-    # shellcheck disable=SC2086
-    "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/assembly_final_rep" ${THREADS_PAR} \
-         || fail "Result2repseq  died"
+# create db outfile
+if notExists "${OUT_FILE}.dbtype"; then
+    "$MMSEQS" createsubdb "${RESULT}_only_assembled_filtered.index" "${RESULT}" "${OUT_FILE}" --subdb-mode 0 \
+        || fail "Create filtered contig db died"
+    cp  "${PREV_CYCLE_ALL}.index" "${OUT_FILE}_cycle.index"
 fi
 
 
-if notExists "${TMP_PATH}/assembly_final_rep_h"; then
-    # shellcheck disable=SC2086
-    if notExists "${PREV_CYCLE_ALL}";then
-        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
-                || fail "createhdb failed"
-    else
-        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
-                || fail "createhdb failed"
-    fi
-fi
+#if notExists "${TMP_PATH}/assembly_final_rep_h"; then
+#    # shellcheck disable=SC2086
+#    if notExists "${PREV_CYCLE_ALL}";then
+#        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
+#                || fail "createhdb failed"
+#    else
+#        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
+#                || fail "createhdb failed"
+#    fi
+#fi
 
-if notExists "${TMP_PATH}/assembly_final_rep.fasta"; then
-    # shellcheck disable=SC2086
-    "$MMSEQS" convert2fasta "${TMP_PATH}/assembly_final_rep" "${TMP_PATH}/assembly_final_rep.fasta" ${VERBOSITY_PAR} \
-        || fail "convert2fasta died"
-fi
-
-mv -f "${TMP_PATH}/assembly_final_rep.fasta" "$OUT_FILE" \
-    || fail "Could not move result to $OUT_FILE"
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
-    rm -f "${TMP_PATH}/nucl_reads" "${TMP_PATH}/nucl_reads.index"
     rm -f "${TMP_PATH}/pref_"*
     rm -f "${TMP_PATH}/aln_"*
     rm -f "${TMP_PATH}/assembly_"*
+    rm -f "${TMP_PATH}/nuclassembledb.sh"
 fi

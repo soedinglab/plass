@@ -15,6 +15,10 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+# check input variables
+[ -z "${OUT_FILE}" ] && echo "Please provide OUT_FILE" && exit 1
+[ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
+
 # check if files exist
 [ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
 [   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE}.dbtype exists already!" && exit 1
@@ -164,7 +168,9 @@ fi
 
 # create db outfile
 if notExists "${OUT_FILE}.dbtype"; then
-    "$MMSEQS" createsubdb "${RESULT}_only_assembled.index" "${RESULT}" "${OUT_FILE}" --subdb-mode 0
+     # shellcheck disable=SC2086
+    "$MMSEQS" createsubdb "${RESULT}_only_assembled.index" "${RESULT}" "${OUT_FILE}" --subdb-mode 0 \
+        || fail "Createsubdb died"
 fi
 
 if [ -n "$REMOVE_TMP" ]; then

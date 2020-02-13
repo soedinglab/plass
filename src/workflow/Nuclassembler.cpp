@@ -1,13 +1,17 @@
-#include "DBReader.h"
-#include "Util.h"
+#include <cassert>
+
 #include "CommandCaller.h"
+#include "DBReader.h"
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
+#include "Util.h"
 
-#include "nuclassembler.sh.h"
+namespace nuclassembler {
+#include "easyassembler.sh.h"
+}
 
-void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
+void setEasyNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
@@ -26,9 +30,28 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->chopCycle = true;
 }
 
-int nuclassembler(int argc, const char **argv, const Command &command) {
+void setEasyNuclAssemblerMustPassAlong(LocalParameters *p) {
+    p->PARAM_SPACED_KMER_MODE.wasSet = true;
+    p->PARAM_MASK_RESIDUES.wasSet = true;
+    p->PARAM_C.wasSet = true;
+    p->PARAM_E.wasSet = true;
+    p->PARAM_MIN_SEQ_ID.wasSet = true;
+    p->PARAM_KMER_PER_SEQ.wasSet = true;
+    p->PARAM_KMER_PER_SEQ_SCALE.wasSet = true;
+    p->PARAM_NUM_ITERATIONS.wasSet = true;
+    p->PARAM_ALPH_SIZE.wasSet = true;
+    p->PARAM_K.wasSet = true;
+    p->PARAM_ORF_MIN_LENGTH.wasSet = true;
+    p->PARAM_IGNORE_MULTI_KMER.wasSet = true;
+    p->PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet = true;
+    p->PARAM_ALIGNMENT_MODE.wasSet = true;
+    p->PARAM_RESCORE_MODE.wasSet = true;
+    p->PARAM_CYCLE_CHECK.wasSet = true;
+    p->PARAM_CHOP_CYCLE.wasSet = true;
+}
+
+int easynuclassembler(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    setNuclAssemblerWorkflowDefaults(&par);
 
     par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold [0.0, 1.0]", NULL, 0);
     par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL, 0);
@@ -42,12 +65,17 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
     par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_SORT_RESULTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
+    setEasyNuclAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    setEasyNuclAssemblerMustPassAlong(&par);
 
     CommandCaller cmd;
-    // paired end reads
-    if ((par.filenames.size() - 2) % 2 == 0) {
-        cmd.addVariable("PAIRED_END", "1");
+    if(par.filenames.size() < 3) {
+        Debug(Debug::ERROR) << "Too few input files provided.\n";
+        return EXIT_FAILURE;
+    }
+    else if ((par.filenames.size() - 2) % 2 == 0) {
+        cmd.addVariable("PAIRED_END", "1"); // paired end reads
     } else {
         if (par.filenames.size() != 3) {
             Debug(Debug::ERROR) << "Too many input files provided.\n";
@@ -55,7 +83,7 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
             Debug(Debug::ERROR) << "For single input use READSET.fast(q|a) OUTPUT.fasta tmpDir\n";
             return EXIT_FAILURE;
         }
-        cmd.addVariable("PAIRED_END", NULL);
+        cmd.addVariable("PAIRED_END", NULL); // single end reads
     }
 
     std::string tmpPath = par.filenames.back();
@@ -88,42 +116,19 @@ int nuclassembler(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("OUT_FILE", par.filenames.back().c_str());
     par.filenames.pop_back();
-
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
-    cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
-
     cmd.addVariable("RUNNER", par.runner.c_str());
-    cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-    // # 1. Finding exact $k$-mer matches.
-    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
-    // # 2. Hamming distance pre-clustering
-    par.filterHits = false;
-    cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
-    cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
-
-    cmd.addVariable("CALL_CYCLE_CHECK", par.cycleCheck ? "TRUE" : NULL);
-    cmd.addVariable("CYCLE_CHECK_PAR", par.createParameterString(par.cyclecheck).c_str());
-
-    cmd.addVariable("MIN_CONTIG_LEN", SSTR(par.minContigLen).c_str());
-
-    par.seqIdThr = par.clustThr;
-    par.covThr = 0.99;
-    par.covMode = 1;
-    par.wrappedScoring = true;
-    par.ignoreMultiKmer = true;
-    par.zdrop = 200;
-    par.gapOpen = 5;
-    par.gapExtend = 2;
-    par.clusteringMode = 2;
-    cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
-
-    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
+    cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
+    cmd.addVariable("ASSEMBLY_PAR", par.createParameterString(par.nuclassemblerworkflow, true).c_str());
+    cmd.addVariable("ASSEMBLY_MODULE", "nuclassembledb");
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    FileUtil::writeFile(tmpDir + "/nuclassembler.sh", nuclassembler_sh, nuclassembler_sh_len);
-    std::string program(tmpDir + "/nuclassembler.sh");
+    std::string program = tmpDir + "/easyassemble.sh";
+    FileUtil::writeFile(program, nuclassembler::easyassembler_sh, nuclassembler::easyassembler_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
-    return EXIT_SUCCESS;
+    // Should never get here
+    assert(false);
+    return 0;
 }

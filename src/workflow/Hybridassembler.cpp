@@ -1,12 +1,17 @@
-#include "DBReader.h"
-#include "Util.h"
+#include <cassert>
+
 #include "CommandCaller.h"
+#include "DBReader.h"
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
-#include "hybridassembler.sh.h"
+#include "Util.h"
 
-void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
+namespace hybridassembler {
+#include "easyassembler.sh.h"
+}
+
+void setEasyHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
@@ -21,12 +26,27 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->ignoreMultiKmer = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
-
 }
 
-int hybridassembler(int argc, const char **argv, const Command &command) {
+void setEasyHybridAssemblerMustPassAlong(LocalParameters *p) {
+    p->PARAM_SPACED_KMER_MODE.wasSet = true;
+    p->PARAM_MASK_RESIDUES.wasSet = true;
+    p->PARAM_C.wasSet = true;
+    p->PARAM_E.wasSet = true;
+    p->PARAM_MIN_SEQ_ID.wasSet = true;
+    p->PARAM_KMER_PER_SEQ.wasSet = true;
+    p->PARAM_NUM_PROT_ITERATIONS.wasSet = true;
+    p->PARAM_NUM_NUCL_ITERATIONS.wasSet = true;
+    p->PARAM_ORF_MIN_LENGTH.wasSet = true;
+    p->PARAM_IGNORE_MULTI_KMER.wasSet = true;
+    p->PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet = true;
+    p->PARAM_ALIGNMENT_MODE.wasSet = true;
+    p->PARAM_RESCORE_MODE.wasSet = true;
+}
+
+int easyhybridassembler(int argc, const char **argv, const Command &command) {
+
     LocalParameters &par = LocalParameters::getLocalInstance();
-    setHybridAssemblerWorkflowDefaults(&par);
 
     par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold [0.0, 1.0]", NULL, 0);
 //    par.overrideParameterDescription(par.PARAM_ORF_MIN_LENGTH, "Min codons in orf", "minimum codon number in open reading frames", 0);
@@ -50,11 +70,18 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     par.PARAM_TRANSLATION_TABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_USE_ALL_TABLE_STARTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
-    par.parseParameters(argc, argv, command, true, 0, 0);
+
+    setEasyHybridAssemblerWorkflowDefaults(&par);
+    par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
+    setEasyHybridAssemblerMustPassAlong(&par);
+
     CommandCaller cmd;
-    if ((par.filenames.size() - 2) % 2 == 0) {
-        // paired end reads
-        cmd.addVariable("PAIRED_END", "1");
+    if(par.filenames.size() < 3) {
+        Debug(Debug::ERROR) << "Too few input files provided.\n";
+        return EXIT_FAILURE;
+    }
+    else if ((par.filenames.size() - 2) % 2 == 0) {
+        cmd.addVariable("PAIRED_END", "1"); // paired end reads
     } else {
         if (par.filenames.size() != 3) {
             Debug(Debug::ERROR) << "Too many input files provided.\n";
@@ -62,29 +89,16 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
             Debug(Debug::ERROR) << "For single input use READSET.fast(q|a) OUTPUT.fasta tmpDir\n";
             return EXIT_FAILURE;
         }
-        cmd.addVariable("PAIRED_END", NULL);
+        cmd.addVariable("PAIRED_END", NULL); // single end reads
     }
 
-    std::string tmpPath = par.filenames.back();
-    if (FileUtil::directoryExists(tmpPath.c_str()) == false) {
-        Debug(Debug::INFO) << "Temporary folder " << tmpPath << " does not exist or is not a directory.\n";
-        if (FileUtil::makeDir(tmpPath.c_str()) == false) {
-            Debug(Debug::ERROR) << "Could not create tmp folder " << tmpPath << ".\n";
-            return EXIT_FAILURE;
-        } else {
-            Debug(Debug::INFO) << "Created directory " << tmpPath << "\n";
-        }
+    std::string tmpDir = par.filenames.back();
+    std::string hash = SSTR(par.hashParameter(par.filenames, *command.params));
+    if (par.reuseLatest) {
+        hash = FileUtil::getHashFromSymLink(tmpDir + "/latest");
     }
-    size_t hash = par.hashParameter(par.filenames, *command.params);
-    std::string tmpDir = tmpPath + "/" + SSTR(hash);
-    if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
-        if (FileUtil::makeDir(tmpDir.c_str()) == false) {
-            Debug(Debug::ERROR) << "Could not create sub folder in temporary directory " << tmpDir << ".\n";
-            return EXIT_FAILURE;
-        }
-    }
-    par.filenames.pop_back();
-    FileUtil::symlinkAlias(tmpDir, "latest");
+    tmpDir = FileUtil::createTemporaryDirectory(tmpDir, hash);
+
     char *p = realpath(tmpDir.c_str(), NULL);
     if (p == NULL) {
         Debug(Debug::ERROR) << "Could not get real path of " << tmpDir << "!\n";
@@ -92,60 +106,22 @@ int hybridassembler(int argc, const char **argv, const Command &command) {
     }
     cmd.addVariable("TMP_PATH", p);
     free(p);
-
+    par.filenames.pop_back();
     cmd.addVariable("OUT_FILE", par.filenames.back().c_str());
     par.filenames.pop_back();
-
-
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
-    //cmd.addVariable("NUM_IT", SSTR(par.numNuclIterations).c_str());
 
-
-    // # 1. Finding exact $k$-mer matches.
-    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
-
-
-    cmd.addVariable("NUM_IT", SSTR(par.numProtIterations).c_str());
-
-    // --orf-start-mode 0 --min-length 45 --max-gaps 0
-    par.orfStartMode = 0;
-    par.orfMaxGaps = 0;
-    cmd.addVariable("EXTRACTORFS_LONG_PAR", par.createParameterString(par.extractorfs).c_str());
-
-    // --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0
-    par.contigStartMode = 1;
-    par.contigEndMode = 0;
-    par.orfStartMode = 0;
-    par.orfMaxLength = par.orfMinLength;
-    par.orfMinLength = std::min(par.orfMinLength, 20);
-    par.orfMaxGaps = 0;
-    cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
-
-
-    // # 2. Hamming distance pre-clustering
-    par.filterHits = false;
-    par.addBacktrace = true;
-    cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
-    cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
-
-    cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
+    cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
+    cmd.addVariable("ASSEMBLY_PAR", par.createParameterString(par.hybridassembleDBworkflow, true).c_str());
+    cmd.addVariable("ASSEMBLY_MODULE", "hybridassembledb");
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    // set nucleassemble default values when calling nucleassemble from hybridassemble
-    par.numIterations = par.numNuclIterations;
-    par.kmerSize = 22;
-    par.alphabetSize = 5;
-    //par.kmersPerSequence = 60;
-    par.kmersPerSequenceScale = 0.1;
-    par.addBacktrace = false;
-    par.cycleCheck = true;
-    par.chopCycle = true;
-    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassemblerworkflow).c_str());
-
-    FileUtil::writeFile(tmpDir + "/hybridassembler.sh", hybridassembler_sh, hybridassembler_sh_len);
-    std::string program(tmpDir + "/hybridassembler.sh");
+    std::string program = tmpDir + "/easyassembler.sh";
+    FileUtil::writeFile(program, hybridassembler::easyassembler_sh, hybridassembler::easyassembler_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
-    return EXIT_SUCCESS;
+    // Should never get here
+    assert(false);
+    return 0;
 }

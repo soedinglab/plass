@@ -5,35 +5,36 @@
 #include "FileUtil.h"
 #include "LocalParameters.h"
 
-#include "assembledb.sh.h"
+#include "hybridassembledb.sh.h"
 
-void setAssembleDBWorkflowDefaults(LocalParameters *p) {
+void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.9;
+    p->seqIdThr = 0.97;
+//    p->alphabetSize = 21;
     p->kmersPerSequence = 60;
-//    p->shuffleDatabase = true;
-//    p->splitSeqByLen = false;
-    p->numIterations = 12;
-    p->alphabetSize = 13;
-    p->kmerSize = 14;
+    p->numProtIterations = 12;
+    p->numNuclIterations = 12;
+    p->includeOnlyExtendable = true;
     p->orfMinLength = 45;
     p->ignoreMultiKmer = true;
-    p->includeOnlyExtendable = true;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
+
 }
 
-int assembledb(int argc, const char **argv, const Command &command) {
+int hybridassembledb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    setAssembleDBWorkflowDefaults(&par);
+    setHybridAssemblerWorkflowDefaults(&par);
 
     par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold [0.0, 1.0]", NULL, 0);
-    par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL,  0);
-    par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL,  0);
+//    par.overrideParameterDescription(par.PARAM_ORF_MIN_LENGTH, "Min codons in orf", "minimum codon number in open reading frames", 0);
+//    par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL, 0);
 
+    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ID_OFFSET.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_CONTIG_END_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -51,7 +52,6 @@ int assembledb(int argc, const char **argv, const Command &command) {
     par.PARAM_USE_ALL_TABLE_STARTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
-
     CommandCaller cmd;
 
     std::string tmpDir = par.filenames.back();
@@ -74,36 +74,20 @@ int assembledb(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
-    cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
-
     cmd.addVariable("RUNNER", par.runner.c_str());
-    cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
-    cmd.addVariable("PROTEIN_FILTER", par.filterProteins == 1 ? "1" : NULL);
+    //cmd.addVariable("NUM_IT", SSTR(par.numNuclIterations).c_str());
+
+
     // # 1. Finding exact $k$-mer matches.
-
-    for(int i = 0; i < par.numIterations; i++){
-        std::string key = "KMERMATCHER"+SSTR(i)+"_PAR";
-        par.hashShift = par.hashShift + i % 2;
-        if(par.PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet == false){
-            if (i == 0) {
-                par.includeOnlyExtendable = false;
-            } else {
-                par.includeOnlyExtendable = true;
-            }
-        }
-        cmd.addVariable(key.c_str(), par.createParameterString(par.kmermatcher).c_str());
-    }
-
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
-    // # 2. Hamming distance pre-clustering
-    par.filterHits = false;
+
+    cmd.addVariable("NUM_IT", SSTR(par.numProtIterations).c_str());
 
     // --orf-start-mode 0 --min-length 45 --max-gaps 0
     par.orfStartMode = 0;
     par.orfMaxGaps = 0;
     cmd.addVariable("EXTRACTORFS_LONG_PAR", par.createParameterString(par.extractorfs).c_str());
-
 
     // --contig-start-mode 1 --contig-end-mode 0 --orf-start-mode 0 --min-length 30 --max-length 45 --max-gaps 0
     par.contigStartMode = 1;
@@ -115,18 +99,39 @@ int assembledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
 
 
-    par.addOrfStop = true;
-    //cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
-    cmd.addVariable("TRANSLATENUCS_PAR", par.createParameterString(par.translatenucs).c_str());
+    // # 2. Hamming distance pre-clustering
+    par.filterHits = false;
+    par.addBacktrace = true;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
-    cmd.addVariable("FILTERNONCODING_PAR", par.createParameterString(par.filternoncoding).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    FileUtil::writeFile(tmpDir + "/assembledb.sh", assembledb_sh, assembledb_sh_len);
-    std::string program(tmpDir + "/assembledb.sh");
+    // set default values for nucleotide level assembly step when calling nucleassemble from hybridassemble
+    par.numIterations = par.numNuclIterations;
+    par.kmerSize = 22;
+    par.alphabetSize = 5;
+    //par.kmersPerSequence = 60;
+    par.kmersPerSequenceScale = 0.1;
+    par.addBacktrace = false;
+    par.cycleCheck = true;
+    par.chopCycle = true;
+    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleDBworkflow).c_str());
+
+    par.seqIdThr = par.clustThr;
+    par.covThr = 0.99;
+    par.covMode = 1;
+    par.wrappedScoring = true;
+    par.ignoreMultiKmer = true;
+    par.zdrop = 200;
+    par.gapOpen = 5;
+    par.gapExtend = 2;
+    par.clusteringMode = 2;
+    cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
+
+    FileUtil::writeFile(tmpDir + "/hybridassembledb.sh", hybridassembledb_sh, hybridassembledb_sh_len);
+    std::string program(tmpDir + "/hybridassembledb.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;

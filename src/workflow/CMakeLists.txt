@@ -2,6 +2,8 @@ set(workflow_source_files
         workflow/Assembler.cpp
         workflow/AssembleDB.cpp
         workflow/Nuclassembler.cpp
+        workflow/NuclassembleDB.cpp
         workflow/Hybridassembler.cpp
+        workflow/HybridassembleDB.cpp
         PARENT_SCOPE
         )

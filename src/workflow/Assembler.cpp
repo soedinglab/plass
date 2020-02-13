@@ -7,9 +7,9 @@
 #include "LocalParameters.h"
 #include "Util.h"
 
-#include "easyassemble.sh.h"
+#include "easyassembler.sh.h"
 
-void setEasyAssemblerWorkflowDefaults(Parameters *p) {
+void setEasyAssemblerWorkflowDefaults(LocalParameters *p) {
     p->spacedKmer = false;
     p->maskMode = 0;
     p->covThr = 0.0;
@@ -26,7 +26,7 @@ void setEasyAssemblerWorkflowDefaults(Parameters *p) {
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
 }
 
-void setEasyAssemblerMustPassAlong(Parameters *p) {
+void setEasyAssemblerMustPassAlong(LocalParameters *p) {
     p->PARAM_SPACED_KMER_MODE.wasSet = true;
     p->PARAM_MASK_RESIDUES.wasSet = true;
     p->PARAM_C.wasSet = true;
@@ -74,7 +74,11 @@ int easyassembler(int argc, const char **argv, const Command &command) {
     setEasyAssemblerMustPassAlong(&par);
 
     CommandCaller cmd;
-    if ((par.filenames.size() - 2) % 2 == 0) {
+    if(par.filenames.size() < 3) {
+        Debug(Debug::ERROR) << "Too few input files provided.\n";
+        return EXIT_FAILURE;
+    }
+    else if ((par.filenames.size() - 2) % 2 == 0) {
         cmd.addVariable("PAIRED_END", "1"); // paired end reads
     } else {
         if (par.filenames.size() != 3) {
@@ -107,12 +111,12 @@ int easyassembler(int argc, const char **argv, const Command &command) {
     cmd.addVariable("RUNNER", par.runner.c_str());
 
     cmd.addVariable("CREATEDB_PAR", par.createParameterString(par.createdb).c_str());
-    cmd.addVariable("ASSEMBLER_PAR", par.createParameterString(par.assembleDBworkflow, true).c_str());
+    cmd.addVariable("ASSEMBLY_PAR", par.createParameterString(par.assembleDBworkflow, true).c_str());
     cmd.addVariable("ASSEMBLY_MODULE", "assembledb");
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    std::string program = tmpDir + "/easyframe.sh";
-    FileUtil::writeFile(program, easyassemble_sh, easyassemble_sh_len);
+    std::string program = tmpDir + "/easyassembler.sh";
+    FileUtil::writeFile(program, easyassembler_sh, easyassembler_sh_len);
     cmd.execProgram(program.c_str(), par.filenames);
 
     // Should never get here
