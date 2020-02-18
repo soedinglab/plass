@@ -8,22 +8,23 @@
 #include "nuclassembledb.sh.h"
 
 void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
-    p->spacedKmer = false;
-    p->maskMode = 0;
+    p->addBacktrace = false;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->alphabetSize = 5;
+    p->chopCycle = true;
     p->covThr = 0.0;
+    p->cycleCheck = true;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.97;
+    p->ignoreMultiKmer = true;
+    p->includeOnlyExtendable = true;
+    p->kmerSize = 22;
     p->kmersPerSequence = 60;
     p->kmersPerSequenceScale = 0.1;
+    p->maskMode = 0;
     p->numIterations = 12;
-    p->includeOnlyExtendable = true;
-    p->alphabetSize = 5;
-    p->kmerSize = 22;
-    p->ignoreMultiKmer = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
-    p->cycleCheck = true;
-    p->chopCycle = true;
+    p->seqIdThr = 0.97;
+    p->spacedKmer = false;
 }
 
 int nuclassembledb(int argc, const char **argv, const Command &command) {

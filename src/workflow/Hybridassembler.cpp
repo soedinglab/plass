@@ -1,10 +1,12 @@
 #include <cassert>
+#include <typeinfo>
 
 #include "CommandCaller.h"
 #include "DBReader.h"
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
+#include "MultiParam.h"
 #include "Util.h"
 
 namespace hybridassembler {
@@ -12,36 +14,60 @@ namespace hybridassembler {
 }
 
 void setEasyHybridAssemblerWorkflowDefaults(LocalParameters *p) {
-    p->spacedKmer = false;
-    p->maskMode = 0;
+    //p->createdbMode = Parameters::SEQUENCE_SPLIT_MODE_SOFT;
+
+    p->multiNumIterations = MultiParam<int>(12,20);
+    p->multiKmerSize = MultiParam<int>(14,22);
+    p->multiSeqIdThr = MultiParam<float>(0.97,0.97);
+    p->alphabetSize = MultiParam<int>(13,5);
+
+    p->orfMinLength = 45;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.97;
-//    p->alphabetSize = 21;
+    p->maskMode = 0;
     p->kmersPerSequence = 60;
-    p->numProtIterations = 12;
-    p->numNuclIterations = 12;
-    p->includeOnlyExtendable = true;
-    p->orfMinLength = 45;
+    p->kmersPerSequenceScale = 0.1;
+    p->spacedKmer = false;
     p->ignoreMultiKmer = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->includeOnlyExtendable = true;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->maxSeqLen = 200000; //TODO
+    p->cycleCheck = true;
+    p->chopCycle = true;
+
+    //cluster defaults
+    p->clusteringMode = 2;
+    p->gapOpen = 5;
+    p->gapExtend = 2;
+    p->zdrop = 200;
 }
 
 void setEasyHybridAssemblerMustPassAlong(LocalParameters *p) {
-    p->PARAM_SPACED_KMER_MODE.wasSet = true;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
+    p->PARAM_MULTI_NUM_ITERATIONS.wasSet = true;
+    p->PARAM_MULTI_K.wasSet = true;
+    p->PARAM_MULTI_MIN_SEQ_ID.wasSet = true;
+    p->PARAM_ALPH_SIZE.wasSet = true;
+
+    p->PARAM_ORF_MIN_LENGTH.wasSet = true;
     p->PARAM_C.wasSet = true;
     p->PARAM_E.wasSet = true;
-    p->PARAM_MIN_SEQ_ID.wasSet = true;
+    p->PARAM_MASK_RESIDUES.wasSet = true;
     p->PARAM_KMER_PER_SEQ.wasSet = true;
-    p->PARAM_NUM_PROT_ITERATIONS.wasSet = true;
-    p->PARAM_NUM_NUCL_ITERATIONS.wasSet = true;
-    p->PARAM_ORF_MIN_LENGTH.wasSet = true;
+    p->PARAM_KMER_PER_SEQ_SCALE.wasSet = true;
+    p->PARAM_SPACED_KMER_MODE.wasSet = true;
     p->PARAM_IGNORE_MULTI_KMER.wasSet = true;
     p->PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet = true;
-    p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_RESCORE_MODE.wasSet = true;
+    p->PARAM_ALIGNMENT_MODE.wasSet = true;
+    p->PARAM_MAX_SEQ_LEN.wasSet = true;
+    p->PARAM_CYCLE_CHECK.wasSet = true;
+    p->PARAM_CHOP_CYCLE.wasSet = true;
+
+    p->PARAM_CLUSTER_MODE.wasSet = true;
+    p->PARAM_GAP_OPEN.wasSet = true;
+    p->PARAM_GAP_EXTEND.wasSet = true;
+    p->PARAM_ZDROP.wasSet = true;
 }
 
 int easyhybridassembler(int argc, const char **argv, const Command &command) {

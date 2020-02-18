@@ -40,7 +40,7 @@ std::vector<struct Command> commands = {
                 CITATION_PLASS, {{"sequenceDB",  DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                  {"proteinDB",  DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                  {"tmpDir",  DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"nuclassembledb",          nuclassembledb,     &localPar.nuclassembleDBworkflow,    COMMAND_MAIN,
+        {"nuclassembledb",          nuclassembledb,     &localPar.nuclassembleDBworkflow,    COMMAND_HIDDEN,
                 "Assemble nucleotide sequences by iterative greedy overlap assembly. (experimental)",
                 NULL,
                 "Annika Seidel <annika.seidel@mpibpc.mpg.de> & Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",

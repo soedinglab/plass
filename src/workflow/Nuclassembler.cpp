@@ -12,40 +12,40 @@ namespace nuclassembler {
 }
 
 void setEasyNuclAssemblerWorkflowDefaults(LocalParameters *p) {
-    p->spacedKmer = false;
-    p->maskMode = 0;
+    p->addBacktrace = false;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->alphabetSize = 5;
+    p->chopCycle = true;
     p->covThr = 0.0;
+    p->cycleCheck = true;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.97;
+    p->ignoreMultiKmer = true;
+    p->includeOnlyExtendable = true;
+    p->kmerSize = 22;
     p->kmersPerSequence = 60;
     p->kmersPerSequenceScale = 0.1;
+    p->maskMode = 0;
     p->numIterations = 12;
-    p->includeOnlyExtendable = true;
-    p->alphabetSize = 5;
-    p->kmerSize = 22;
-    p->ignoreMultiKmer = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
-    p->cycleCheck = true;
-    p->chopCycle = true;
+    p->seqIdThr = 0.97;
+    p->spacedKmer = false;
 }
 
 void setEasyNuclAssemblerMustPassAlong(LocalParameters *p) {
-    p->PARAM_SPACED_KMER_MODE.wasSet = true;
-    p->PARAM_MASK_RESIDUES.wasSet = true;
+    p->PARAM_NUM_ITERATIONS.wasSet = true;
+    p->PARAM_K.wasSet = true;
+    p->PARAM_MIN_SEQ_ID.wasSet = true;
+    p->PARAM_ALPH_SIZE.wasSet = true;
     p->PARAM_C.wasSet = true;
     p->PARAM_E.wasSet = true;
-    p->PARAM_MIN_SEQ_ID.wasSet = true;
+    p->PARAM_MASK_RESIDUES.wasSet = true;
     p->PARAM_KMER_PER_SEQ.wasSet = true;
     p->PARAM_KMER_PER_SEQ_SCALE.wasSet = true;
-    p->PARAM_NUM_ITERATIONS.wasSet = true;
-    p->PARAM_ALPH_SIZE.wasSet = true;
-    p->PARAM_K.wasSet = true;
-    p->PARAM_ORF_MIN_LENGTH.wasSet = true;
+    p->PARAM_SPACED_KMER_MODE.wasSet = true;
     p->PARAM_IGNORE_MULTI_KMER.wasSet = true;
     p->PARAM_INCLUDE_ONLY_EXTENDABLE.wasSet = true;
-    p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_RESCORE_MODE.wasSet = true;
+    p->PARAM_ALIGNMENT_MODE.wasSet = true;
     p->PARAM_CYCLE_CHECK.wasSet = true;
     p->PARAM_CHOP_CYCLE.wasSet = true;
 }
@@ -57,6 +57,7 @@ int easynuclassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL, 0);
     par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL, 0);
 
+    par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_SEQ_ID_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);

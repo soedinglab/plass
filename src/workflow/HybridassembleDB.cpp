@@ -8,21 +8,33 @@
 #include "hybridassembledb.sh.h"
 
 void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
-    p->spacedKmer = false;
-    p->maskMode = 0;
+
+    p->multiNumIterations = MultiParam<int>(12,20);
+    p->multiKmerSize = MultiParam<int>(14,22);
+    p->multiSeqIdThr = MultiParam<float>(0.97,0.97);
+    p->alphabetSize = MultiParam<int>(13,5);
+
+    p->orfMinLength = 45;
     p->covThr = 0.0;
     p->evalThr = 0.00001;
-    p->seqIdThr = 0.97;
-//    p->alphabetSize = 21;
+    p->maskMode = 0;
     p->kmersPerSequence = 60;
-    p->numProtIterations = 12;
-    p->numNuclIterations = 12;
-    p->includeOnlyExtendable = true;
-    p->orfMinLength = 45;
+    p->kmersPerSequenceScale = 0.1;
+    p->spacedKmer = false;
     p->ignoreMultiKmer = true;
-    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->includeOnlyExtendable = true;
+    p->addBacktrace = false;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
+    p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
+    p->maxSeqLen = 200000; //TODO
+    p->cycleCheck = true;
+    p->chopCycle = true;
 
+    //cluster defaults
+    p->clusteringMode = 2;
+    p->gapOpen = 5;
+    p->gapExtend = 2;
+    p->zdrop = 200;
 }
 
 int hybridassembledb(int argc, const char **argv, const Command &command) {
@@ -75,15 +87,16 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
-    //cmd.addVariable("NUM_IT", SSTR(par.numNuclIterations).c_str());
 
 
-    // # 1. Finding exact $k$-mer matches.
-    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+    // set values for protein level assembly
+    par.numIterations = par.multiNumIterations.aminoacids;
+    par.kmerSize = par.multiKmerSize.aminoacids;
+    par.seqIdThr = par.multiSeqIdThr.aminoacids;
+    par.alnLenThr = par.multiAlnLenThr.aminoacids;
+    cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
 
-
-    cmd.addVariable("NUM_IT", SSTR(par.numProtIterations).c_str());
-
+    // # 0. Extract ORFs
     // --orf-start-mode 0 --min-length 45 --max-gaps 0
     par.orfStartMode = 0;
     par.orfMaxGaps = 0;
@@ -98,37 +111,36 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     par.orfMaxGaps = 0;
     cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
 
+    // # 1. Finding exact $k$-mer matches.
+    cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
-    // # 2. Hamming distance pre-clustering
+    // # 2. Rescore diagonal
     par.filterHits = false;
+    bool addBacktrace = par.addBacktrace;
     par.addBacktrace = true;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
+
+    // # 3. Assembly: Extend by left and right extension
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
+
+    // set mandatory values for nucleotide level assembly step when calling nucleassemble from hybridassemble
+    par.numIterations = par.multiNumIterations.nucleotides;
+    par.kmerSize = par.multiKmerSize.nucleotides;
+    par.seqIdThr = par.multiSeqIdThr.nucleotides;
+    par.alnLenThr = par.multiAlnLenThr.nucleotides;
+    par.addBacktrace = addBacktrace;
+    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleDBworkflow).c_str());
+
+    // set mandatory values for redundancy reduction
+    par.seqIdThr = par.clustThr;
+    par.covMode = 1;
+    par.covThr = 0.99;
+    par.wrappedScoring = true;
+    par.ignoreMultiKmer = true;
+    cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-
-    // set default values for nucleotide level assembly step when calling nucleassemble from hybridassemble
-    par.numIterations = par.numNuclIterations;
-    par.kmerSize = 22;
-    par.alphabetSize = 5;
-    //par.kmersPerSequence = 60;
-    par.kmersPerSequenceScale = 0.1;
-    par.addBacktrace = false;
-    par.cycleCheck = true;
-    par.chopCycle = true;
-    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleDBworkflow).c_str());
-
-    par.seqIdThr = par.clustThr;
-    par.covThr = 0.99;
-    par.covMode = 1;
-    par.wrappedScoring = true;
-    par.ignoreMultiKmer = true;
-    par.zdrop = 200;
-    par.gapOpen = 5;
-    par.gapExtend = 2;
-    par.clusteringMode = 2;
-    cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
 
     FileUtil::writeFile(tmpDir + "/hybridassembledb.sh", hybridassembledb_sh, hybridassembledb_sh_len);
     std::string program(tmpDir + "/hybridassembledb.sh");
