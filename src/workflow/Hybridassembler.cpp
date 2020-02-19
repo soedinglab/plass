@@ -22,7 +22,7 @@ void setEasyHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->alphabetSize = MultiParam<int>(13,5);
 
     p->orfMinLength = 45;
-    p->covThr = 0.0;
+    p->covThr = 0.00;
     p->evalThr = 0.00001;
     p->maskMode = 0;
     p->kmersPerSequence = 60;
@@ -37,6 +37,8 @@ void setEasyHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->chopCycle = true;
 
     //cluster defaults
+    p->clustSeqIdThr = 0.97;
+    p->clustCovThr = 0.99;
     p->clusteringMode = 2;
     p->gapOpen = 5;
     p->gapExtend = 2;
@@ -64,6 +66,8 @@ void setEasyHybridAssemblerMustPassAlong(LocalParameters *p) {
     p->PARAM_CYCLE_CHECK.wasSet = true;
     p->PARAM_CHOP_CYCLE.wasSet = true;
 
+    p->PARAM_CLUST_MIN_SEQ_ID_THR.wasSet = true;
+    p->PARAM_CLUST_C.wasSet = true;
     p->PARAM_CLUSTER_MODE.wasSet = true;
     p->PARAM_GAP_OPEN.wasSet = true;
     p->PARAM_GAP_EXTEND.wasSet = true;
@@ -74,28 +78,53 @@ int easyhybridassembler(int argc, const char **argv, const Command &command) {
 
     LocalParameters &par = LocalParameters::getLocalInstance();
 
-    par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold [0.0, 1.0]", NULL, 0);
-//    par.overrideParameterDescription(par.PARAM_ORF_MIN_LENGTH, "Min codons in orf", "minimum codon number in open reading frames", 0);
-//    par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL, 0);
-    par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_MULTI_MIN_SEQ_ID, "Overlap sequence identity threshold (range 0.0-1.0)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below (range 0.0-inf)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_GAP_OPEN, "Gap open cost (only for clustering)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_GAP_EXTEND, "Gap extend cost (only for clustering)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_ZDROP, "Maximal allowed difference between score values before alignment is truncated (only for clustering)", NULL, 0);
 
-    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // reorganize parameters to clarify usage context
+    par.PARAM_ALPH_SIZE.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_INCLUDE_IDENTITY.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MASK_RESIDUES.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_MASK_LOWER_CASE.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR| MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_SPACED_KMER_MODE.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_SPLIT_MEMORY_LIMIT.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_SUB_MAT.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_RESCORE_MODE.replaceCategory(MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT);
+
+    par.PARAM_COV_MODE.replaceCategory(MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_GAP_EXTEND.replaceCategory(MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_GAP_OPEN.replaceCategory(MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ZDROP.replaceCategory(MMseqsParameter::COMMAND_CLUST | MMseqsParameter::COMMAND_EXPERT);
+
+    // hide this parameters (changing them would lead to unexpected behavior)
+    par.PARAM_C.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_CONTIG_END_MODE.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_CONTIG_START_MODE.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_ORF_MAX_GAP.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_ORF_START_MODE.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_WRAPPED_SCORING.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+
+    // expert
+    par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_CLUSTER_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_DB_TYPE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ID_OFFSET.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_CONTIG_END_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_CONTIG_START_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_ORF_MAX_GAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_ORF_START_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_KMER_PER_SEQ_SCALE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ORF_MAX_LENGTH.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ORF_MIN_LENGTH.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ORF_FORWARD_FRAMES.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ORF_REVERSE_FRAMES.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_SEQ_ID_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_SEQ_ID_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_SORT_RESULTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_TRANSLATION_TABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_TRANSLATE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_USE_ALL_TABLE_STARTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
-
 
     setEasyHybridAssemblerWorkflowDefaults(&par);
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);

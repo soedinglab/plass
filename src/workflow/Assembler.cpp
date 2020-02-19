@@ -51,7 +51,7 @@ int easyassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL,  0);
     par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL,  0);
 
-    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ID_OFFSET.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_CONTIG_END_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);

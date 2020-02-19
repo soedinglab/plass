@@ -39,7 +39,8 @@ public:
     int filterProteins;
     int deleteFilesInc;
     int minContigLen;
-    float clustThr;
+    float clustSeqIdThr;
+    float clustCovThr;
     float proteinFilterThreshold;
     bool cycleCheck;
     bool chopCycle;
@@ -53,7 +54,8 @@ public:
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
     PARAMETER(PARAM_DELETE_TMP_INC)
     PARAMETER(PARAM_MIN_CONTIG_LEN)
-    PARAMETER(PARAM_CLUST_THR)
+    PARAMETER(PARAM_CLUST_MIN_SEQ_ID_THR)
+    PARAMETER(PARAM_CLUST_C)
     PARAMETER(PARAM_CYCLE_CHECK)
     PARAMETER(PARAM_CHOP_CYCLE)
     PARAMETER(PARAM_MULTI_NUM_ITERATIONS)
@@ -71,13 +73,14 @@ private:
             multiSeqIdThr(FLT_MAX,FLT_MAX),
             PARAM_FILTER_PROTEINS(PARAM_FILTER_PROTEINS_ID,"--filter-proteins", "Filter Proteins", "filter proteins by a neural network [0,1]",typeid(int), (void *) &filterProteins, "^[0-1]{1}$"),
             PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
-            PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$"),
+            PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "Delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
             PARAM_MIN_CONTIG_LEN(PARAM_MIN_CONTIG_LEN_ID, "--min-contig-len", "Minimum contig length", "Minimum length of assembled contig to output", typeid(int), (void *) &minContigLen, "^[1-9]{1}[0-9]*$"),
-            PARAM_CLUST_THR(PARAM_CLUST_THR_ID,"--clust-thr", "Clustering threshold","Threshold to reduce redundancy in assembly by applying the linclust algorithm (clustering threshold) (range 0.0-1.0)",typeid(float), (void *) &clustThr, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
+            PARAM_CLUST_MIN_SEQ_ID_THR(PARAM_CLUST_MIN_SEQ_ID_THR_ID,"--clust-min-seq-id", "Clustering seq. id. threshold","Seq. id. threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)",typeid(float), (void *) &clustSeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
+            PARAM_CLUST_C(PARAM_CLUST_C_ID,"--clust-min-cov", "Clustering coverage threshold","Coverage threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)",typeid(float), (void *) &clustCovThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
             PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycle-check", "Check for circular sequences", "Check for circular sequences (avoid infinite extension of circular or long repeated regions) ",typeid(bool), (void *) &cycleCheck, "", MMseqsParameter::COMMAND_MISC | MMseqsParameter::COMMAND_EXPERT),
-            PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superfluous part of circular fragments",typeid(bool), (void *) &chopCycle, "", MMseqsParameter::COMMAND_MISC | MMseqsParameter::COMMAND_EXPERT),
-            PARAM_MULTI_NUM_ITERATIONS(PARAM_MULTI_NUM_ITERATIONS_ID, "--num-iterations", "Number of assembly iteration","Number of assembly iterations performed on protein level,nucleotide level [1, inf]",typeid(MultiParam<int>),(void *) &multiNumIterations, ""),
-            PARAM_MULTI_K(PARAM_MULTI_K_ID, "-k", "k-mer length", "k-mer length (0: automatically set to optimum)", typeid(MultiParam<int>), (void *) &multiKmerSize, "", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
+            PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superfluous part of circular fragments (see --cycle-check)",typeid(bool), (void *) &chopCycle, "", MMseqsParameter::COMMAND_MISC | MMseqsParameter::COMMAND_EXPERT),
+            PARAM_MULTI_NUM_ITERATIONS(PARAM_MULTI_NUM_ITERATIONS_ID, "--num-iterations", "Number of assembly iterations","Number of assembly iterations performed on nucleotide level,protein level (range 1-inf)",typeid(MultiParam<int>),(void *) &multiNumIterations, ""),
+            PARAM_MULTI_K(PARAM_MULTI_K_ID, "-k", "k-mer length", "k-mer length (0: automatically set to optimum)", typeid(MultiParam<int>), (void *) &multiKmerSize, "", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
             PARAM_MULTI_MIN_SEQ_ID(PARAM_MULTI_MIN_SEQ_ID_ID, "--min-seq-id", "Seq. id. threshold", "Overlap sequence identity threshold [0.0, 1.0]", typeid(MultiParam<float>), (void *) &multiSeqIdThr, "", MMseqsParameter::COMMAND_ALIGN),
             PARAM_MULTI_MIN_ALN_LEN(PARAM_MULTI_MIN_ALN_LEN_ID, "--min-aln-len", "Min alignment length", "Minimum alignment length (range 0-INT_MAX)", typeid(MultiParam<int>), (void *) &multiAlnLenThr, "", MMseqsParameter::COMMAND_ALIGN)
 
@@ -111,6 +114,7 @@ private:
 
         //reduceredundancy (subset of clustering parameters which have to be adjusted)
         reduceredundancy.push_back(&PARAM_ALPH_SIZE);
+        reduceredundancy.push_back(&PARAM_CLUSTER_MODE);
         reduceredundancy.push_back(&PARAM_K);
         reduceredundancy.push_back(&PARAM_KMER_PER_SEQ);
         reduceredundancy.push_back(&PARAM_KMER_PER_SEQ_SCALE);
@@ -123,7 +127,7 @@ private:
         reduceredundancy.push_back(&PARAM_GAP_OPEN);
         reduceredundancy.push_back(&PARAM_GAP_EXTEND);
         reduceredundancy.push_back(&PARAM_ZDROP);
-        reduceredundancy.push_back(&PARAM_CLUSTER_MODE);
+
 
         // assembledb workflow
         assembleDBworkflow = combineList(rescorediagonal, kmermatcher);
@@ -141,6 +145,10 @@ private:
         assemblerworkflow = combineList(assembleDBworkflow, createdb);
         
         // nucl assembledb workflow
+        nuclassembleDBworkflow = combineList(rescorediagonal, kmermatcher);
+        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, assembleresults);
+        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, cyclecheck);
+
         nuclassembleDBworkflow.push_back(&PARAM_CYCLE_CHECK);
         nuclassembleDBworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
         nuclassembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
@@ -148,37 +156,24 @@ private:
         nuclassembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
         nuclassembleDBworkflow.push_back(&PARAM_RUNNER);
 
-        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, kmermatcher);
-        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, rescorediagonal);
-        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, assembleresults);
-        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, cyclecheck);
-
         // easynuclassembleworkflow
         nuclassemblerworkflow = combineList(nuclassembleDBworkflow, createdb);
 
         // hybridassembleresults
         hybridassembleresults.push_back(&PARAM_MIN_SEQ_ID);
         hybridassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
+        hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
         hybridassembleresults.push_back(&PARAM_THREADS);
         hybridassembleresults.push_back(&PARAM_V);
-        hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
-
 
         // hybridassembledbworkflow
-        hybridassembleDBworkflow.push_back(&PARAM_CLUST_THR);
-        hybridassembleDBworkflow.push_back(&PARAM_CYCLE_CHECK);
-        hybridassembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-        hybridassembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
-        hybridassembleDBworkflow.push_back(&PARAM_RUNNER);
-        hybridassembleDBworkflow.push_back(&PARAM_THREADS);
-        hybridassembleDBworkflow.push_back(&PARAM_V);
-
-        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, extractorfs);
-        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, hybridassembleresults);
+        hybridassembleDBworkflow = combineList(extractorfs, hybridassembleresults);
         hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, nuclassembleDBworkflow);
         hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, reduceredundancy);
+        hybridassembleDBworkflow.push_back(&PARAM_CLUST_MIN_SEQ_ID_THR);
+        hybridassembleDBworkflow.push_back(&PARAM_CLUST_C);
 
-        // hybridassembledbworkflow special: replace with MultiParam to make aa and nucl values independent
+        // hybridassembledbworkflow special parameter: replace with MultiParam to make aa and nucl values independent
         hybridassembleDBworkflow = removeParameter(hybridassembleDBworkflow, PARAM_K);
         hybridassembleDBworkflow.push_back(&PARAM_MULTI_K);
         hybridassembleDBworkflow = removeParameter(hybridassembleDBworkflow, PARAM_MIN_SEQ_ID);
@@ -194,7 +189,8 @@ private:
         filterProteins = 1;
         deleteFilesInc = 1;
         proteinFilterThreshold = 0.2;
-        clustThr = 0.97;
+        clustSeqIdThr = 0.97;
+        clustCovThr = 0.99;
         minContigLen = 1000;
         chopCycle = false;
         cycleCheck = true;

@@ -15,7 +15,7 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->alphabetSize = MultiParam<int>(13,5);
 
     p->orfMinLength = 45;
-    p->covThr = 0.0;
+    p->covThr = 0.00;
     p->evalThr = 0.00001;
     p->maskMode = 0;
     p->kmersPerSequence = 60;
@@ -31,6 +31,7 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->chopCycle = true;
 
     //cluster defaults
+    p->covThr = 0.99;
     p->clusteringMode = 2;
     p->gapOpen = 5;
     p->gapExtend = 2;
@@ -41,30 +42,42 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     setHybridAssemblerWorkflowDefaults(&par);
 
-    par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold [0.0, 1.0]", NULL, 0);
-//    par.overrideParameterDescription(par.PARAM_ORF_MIN_LENGTH, "Min codons in orf", "minimum codon number in open reading frames", 0);
-//    par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations [1, inf]", NULL, 0);
-    par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below [0.0, inf]", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_MULTI_MIN_SEQ_ID, "Overlap sequence identity threshold (range 0.0-1.0)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below (range 0.0-inf)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_GAP_OPEN, "Gap open cost (only for clustering", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_GAP_EXTEND, "Gap extend cost (only for clustering)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_ZDROP, "Maximal allowed difference between score values before alignment is truncated (only for clustering)", NULL, 0);
 
-    par.PARAM_COV_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_C.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    // hide this parameters (changing them would lead to unexpected behavior)
+    par.PARAM_C.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_CONTIG_END_MODE.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_CONTIG_START_MODE.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_ORF_MAX_GAP.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_ORF_START_MODE.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+    par.PARAM_WRAPPED_SCORING.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
+
+    // expert
+    par.PARAM_ADD_BACKTRACE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_CLUSTER_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_DB_TYPE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ID_OFFSET.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_CONTIG_END_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_CONTIG_START_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_ORF_MAX_GAP.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_ORF_START_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_KMER_PER_SEQ_SCALE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ORF_MAX_LENGTH.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_ORF_MIN_LENGTH.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ORF_FORWARD_FRAMES.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_ORF_REVERSE_FRAMES.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_SEQ_ID_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_RESCORE_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_INCLUDE_ONLY_EXTENDABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
-    par.PARAM_KMER_PER_SEQ.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_SEQ_ID_MODE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_SORT_RESULTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_TRANSLATION_TABLE.addCategory(MMseqsParameter::COMMAND_EXPERT);
+    par.PARAM_TRANSLATE.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_USE_ALL_TABLE_STARTS.addCategory(MMseqsParameter::COMMAND_EXPERT);
 
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     CommandCaller cmd;
+
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(par.filenames, *command.params));
@@ -88,7 +101,6 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
 
-
     // set values for protein level assembly
     par.numIterations = par.multiNumIterations.aminoacids;
     par.kmerSize = par.multiKmerSize.aminoacids;
@@ -111,6 +123,11 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     par.orfMaxGaps = 0;
     cmd.addVariable("EXTRACTORFS_START_PAR", par.createParameterString(par.extractorfs).c_str());
 
+    // force parameters for assembly steps
+    par.covThr = 0.0;
+    par.seqIdMode = 0;
+    par.includeOnlyExtendable = true;
+
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
@@ -132,9 +149,9 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleDBworkflow).c_str());
 
     // set mandatory values for redundancy reduction
-    par.seqIdThr = par.clustThr;
+    par.seqIdThr = par.clustSeqIdThr;
     par.covMode = 1;
-    par.covThr = 0.99;
+    par.covThr = par.clustCovThr;
     par.wrappedScoring = true;
     par.ignoreMultiKmer = true;
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.reduceredundancy).c_str());
