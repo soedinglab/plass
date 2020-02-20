@@ -83,6 +83,7 @@ int easyhybridassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription(par.PARAM_GAP_OPEN, "Gap open cost (only for clustering)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_GAP_EXTEND, "Gap extend cost (only for clustering)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_ZDROP, "Maximal allowed difference between score values before alignment is truncated (only for clustering)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_COMPRESSED, "Use compressed database format for temporary files", NULL, 0);
 
     // reorganize parameters to clarify usage context
     par.PARAM_ALPH_SIZE.replaceCategory(MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT);

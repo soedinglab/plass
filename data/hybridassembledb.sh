@@ -6,6 +6,12 @@ fail() {
     exit 1
 }
 
+deleteIncremental() {
+    if [ -n "$REMOVE_INCREMENTAL_TMP" ] &&  [ -n "$1" ]; then
+         "$MMSEQS" rmdb "$1"
+    fi
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
@@ -60,30 +66,44 @@ while [ $STEP -lt $NUM_IT ]; do
     echo "STEP: $STEP"
 
     # 1. Finding exact $k$-mer matches.
-    if notExists "${TMP_PATH}/pref_$STEP"; then
+    if notExists "${TMP_PATH}/pref_$STEP.done"; then
         # shellcheck disable=SC2086
         "$MMSEQS" kmermatcher "$INPUT_AA" "${TMP_PATH}/pref_$STEP" ${KMERMATCHER_PAR}   \
             || fail "Kmer matching step died"
+        deleteIncremental "$PREV_KMER_PREF"
+        touch "${TMP_PATH}/pref_${STEP}.done"
+        PREV_KMER_PREF="${TMP_PATH}/pref_${STEP}"
     fi
 
     # 2. Ungapped alignment
-    if notExists "${TMP_PATH}/aln_$STEP"; then
+    if notExists "${TMP_PATH}/aln_$STEP.done"; then
         # shellcheck disable=SC2086
         "$MMSEQS" rescorediagonal "$INPUT_AA" "$INPUT_AA" "${TMP_PATH}/pref_$STEP" "${TMP_PATH}/aln_$STEP" ${UNGAPPED_ALN_PAR} \
             || fail "Ungapped alignment step died"
+        touch "${TMP_PATH}/aln_$STEP.done"
+        deleteIncremental "$PREV_ALN"
+        PREV_ALN="${TMP_PATH}/aln_$STEP"
     fi
 
     # 3. Ungapped alignment protein 2 nucl
-    if notExists "${TMP_PATH}/aln_nucl_$STEP"; then
+    if notExists "${TMP_PATH}/aln_nucl_$STEP.done"; then
         "$MMSEQS" proteinaln2nucl "$INPUT_NUCL" "$INPUT_NUCL" "$INPUT_AA"  "$INPUT_AA"  "${TMP_PATH}/aln_$STEP" "${TMP_PATH}/aln_nucl_$STEP"  \
             || fail "Ungapped alignment 2 nucl step died"
+        deleteIncremental "$PREV_ALN_NUCL"
+        touch "${TMP_PATH}/aln_nucl_${STEP}.done"
+        PREV_ALN_NUCL="${TMP_PATH}/aln_nucl_$STEP"
     fi
 
     # 4. Assemble
-    if notExists "${TMP_PATH}/assembly_aa_$STEP" || notExists "${TMP_PATH}/assembly_aa_$STEP"; then
+    if notExists "${TMP_PATH}/assembly_aa_nucl_$STEP.done"; then
         # shellcheck disable=SC2086
         "$MMSEQS" hybridassembleresults "$INPUT_NUCL" "$INPUT_AA" "${TMP_PATH}/aln_nucl_$STEP" "${TMP_PATH}/assembly_nucl_$STEP" "${TMP_PATH}/assembly_aa_$STEP" ${ASSEMBLE_RESULT_PAR} \
             || fail "Assembly step died"
+        touch "${TMP_PATH}/assembly_aa_nucl_$STEP.done"
+        deleteIncremental "$PREV_ASSEMBLY_AA"
+        deleteIncremental "$PREV_ASSEMBLY_NUCL"
+        PREV_ASSEMBLY_AA="${TMP_PATH}/assembly_aa_$STEP"
+        PREV_ASSEMBLY_NUCL="${TMP_PATH}/assembly_nucl_$STEP"
     fi
 
     INPUT_AA="${TMP_PATH}/assembly_aa_$STEP"
@@ -143,9 +163,11 @@ if notExists "${TMP_PATH}/nuclassembly_rep.dbtype"; then
             || fail "Redundancy reduction step died"
     fi
 
-    # shellcheck disable=SC2086
-    "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/nuclassembly_rep" ${THREADS_PAR} \
-         || fail "Result2repseq  died"
+    if notExists "${TMP_PATH}/${CLUST_INPUT}_rep"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/${CLUST_INPUT}_rep" ${THREADS_PAR} \
+            || fail "Result2repseq  died"
+    fi
 fi
 
 "$MMSEQS" mvdb "${TMP_PATH}/nuclassembly_rep" "$OUT_FILE" \

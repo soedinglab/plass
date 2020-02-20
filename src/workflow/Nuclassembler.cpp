@@ -56,6 +56,7 @@ int easynuclassembler(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription(par.PARAM_MIN_SEQ_ID, "Overlap sequence identity threshold (range 0.0-1.0)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_NUM_ITERATIONS, "Number of assembly iterations (range 1-inf)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below (range 0.0-inf)", NULL, 0);
+    par.overrideParameterDescription(par.PARAM_COMPRESSED, "Use compressed database format for temporary files", NULL, 0);
 
 
 
