@@ -65,6 +65,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
         }
     };
 
+    Debug::Progress progress(seqDbr->getSize());
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -81,6 +82,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
 
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < seqDbr->getSize(); id++) {
+            progress.updateProgress();
 
             char *nuclSeq = seqDbr->getData(id, thread_idx);
             unsigned int seqLen = seqDbr->getSeqLen(id);
