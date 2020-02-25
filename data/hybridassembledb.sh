@@ -165,13 +165,19 @@ if notExists "${TMP_PATH}/nuclassembly_rep.dbtype"; then
 
     if notExists "${TMP_PATH}/${CLUST_INPUT}_rep"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${TMP_PATH}/${CLUST_INPUT}_rep" ${THREADS_PAR} \
+        "$MMSEQS" result2repseq "${CLUST_INPUT}" "${TMP_PATH}/clu" "${CLUST_INPUT}_rep" ${THREADS_PAR} \
             || fail "Result2repseq  died"
     fi
 fi
 
-"$MMSEQS" mvdb "${TMP_PATH}/nuclassembly_rep" "$OUT_FILE" \
-    || fail "Could not move result to $OUT_FILE"
+if notExists "${CLUST_INPUT}_rep_cycle.index" && [ -f "${TMP_PATH}/nuclassembly_cycle.index" ]; then
+    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print $0 }' "${TMP_PATH}/nuclassembly_cycle.index" "${CLUST_INPUT}_rep.index" > "${CLUST_INPUT}_rep_cycle.index"
+    cp "${CLUST_INPUT}_rep_cycle.index" "${OUT_FILE}_cycle.index"
+fi
+
+"$MMSEQS" mvdb "${TMP_PATH}/nuclassembly_rep" "${OUT_FILE}" \
+    || fail "Could not move result to ${OUT_FILE}"
+
 
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}" "${2}_aa" || fail "Could not move result to $2"
 #mv -f "${TMP_PATH}/assembly_aa_${STEP}.index" "${2}_aa.index" || fail "Could not move result to $2.index"

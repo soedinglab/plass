@@ -39,8 +39,8 @@ fi
 
 if notExists "${TMP_PATH}/assembly_h.dbtype"; then
     # shellcheck disable=SC2086
-    if [ -f "${OUT_FILE}_cycle." ]; then
-    "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${OUT_FILE}_cycle" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
+    if [ -f "${TMP_PATH}/assembly_cycle.index" ]; then
+    "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${TMP_PATH}/assembly_cycle" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
             || fail "createhdb failed"
     else
         "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
