@@ -56,15 +56,16 @@ Matcher::result_t selectFragmentToExtend(QueueByScore &alignments,
     return Matcher::result_t(UINT_MAX,0,0,0,0,0,0,0,0,0,0,0,0,"");
 }
 
-inline char* getRevFragment(const char* fragment, size_t fragLen, NucleotideMatrix *nuclMatrix)
+inline std::string getRevFragment(std::string fragment, NucleotideMatrix *nuclMatrix)
 {
+    size_t fragLen = fragment.length();
     char *fragmentRev = new char[fragLen];
     for (int pos = fragLen - 1; pos > -1; pos--) {
         int res = nuclMatrix->aa2num[static_cast<int>(fragment[pos])];
         char revRes = nuclMatrix->num2aa[nuclMatrix->reverseResidue(res)];
         fragmentRev[(fragLen - 1) - pos] = (revRes == 'X')? 'N' : revRes;
     }
-    return fragmentRev;
+    return std::string(fragmentRev, fragLen);
 }
 
 
@@ -78,12 +79,10 @@ int doassembly(LocalParameters &par) {
     DBWriter resultWriter(par.db3.c_str(), par.db3Index.c_str(), par.threads, par.compressed, sequenceDbr->getDbtype());
     resultWriter.open();
 
-    bool onlyForward = true;
     int seqType = sequenceDbr->getDbtype();
     BaseMatrix *subMat;
     if (Parameters::isEqualDbtype(seqType, Parameters::DBTYPE_NUCLEOTIDES)) {
         subMat = new NucleotideMatrix(par.scoringMatrixFile.nucleotides, 1.0, 0.0);
-        onlyForward = false;
     } else {
         subMat = new SubstitutionMatrix(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
     }
@@ -103,77 +102,63 @@ int doassembly(LocalParameters &par) {
 
         std::vector<Matcher::result_t> alignments;
         alignments.reserve(300);
-        bool * useQueryReverse = NULL;
-        char *queryRevSeq = NULL;
-        int queryRevSeqLen = par.maxSeqLen;
-        if (!onlyForward) {
-            queryRevSeq = new char[queryRevSeqLen];
-            useQueryReverse = new bool[sequenceDbr->getSize()];
-            std::fill(useQueryReverse, useQueryReverse+sequenceDbr->getSize(), false);
-        }
+        bool *useReverse = new bool[sequenceDbr->getSize()];
+        std::fill(useReverse, useReverse+sequenceDbr->getSize(), false);
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
             progress.updateProgress();
 
-            unsigned int queryId = sequenceDbr->getDbKey(id);
+            unsigned int queryKey = sequenceDbr->getDbKey(id);
             char *querySeq = sequenceDbr->getData(id, thread_idx);
             unsigned int querySeqLen = sequenceDbr->getSeqLen(id);
             std::string query(querySeq, querySeqLen); // no /n/0
 
-            char *alnData = alnReader->getDataByDBKey(queryId, thread_idx);
+            char *alnData = alnReader->getDataByDBKey(queryKey, thread_idx);
             alignments.clear();
             Matcher::readAlignmentResults(alignments, alnData);
 
-            std::string queryRev;
-            /* only relevant for nucleotide sequences */
-            if (!onlyForward) {
-                NucleotideMatrix *nuclMatrix = (NucleotideMatrix *) subMat;
-                for (int pos = querySeqLen - 1; pos > -1; pos--) {
-                    int res = subMat->aa2num[static_cast<int>(querySeq[pos])];
-                    char revRes = subMat->num2aa[nuclMatrix->reverseResidue(res)];
-                    queryRevSeq[(querySeqLen - 1) - pos] = (revRes == 'X')? 'N' : revRes;
-                }
-                queryRev = std::string(queryRevSeq,querySeqLen);
+            bool queryCouldBeExtended = false;
+            QueueByScore alnQueue;
 
-                for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-                    if(alignments[alnIdx].qStartPos > alignments[alnIdx].qEndPos){
-                        // alignment is on reverse of query sequence
-                        alignments[alnIdx].qStartPos = alignments[alnIdx].qLen-alignments[alnIdx].qStartPos-1;
-                        alignments[alnIdx].qEndPos = alignments[alnIdx].qLen-alignments[alnIdx].qEndPos-1;
-                        useQueryReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = true;
-                    }
-                    else {
-                        useQueryReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = false;
+            for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+
+                int rawScore = static_cast<int>(evaluer.computeRawScoreFromBitScore(alignments[alnIdx].score) + 0.5);
+                float scorePerCol = static_cast<float>(rawScore) / static_cast<float>(alignments[alnIdx].alnLength + 0.5);
+
+                float alnLen = static_cast<float>(alignments[alnIdx].alnLength);
+                float ids = static_cast<float>(alignments[alnIdx].seqId) * alnLen;
+                alignments[alnIdx].seqId = ids / (alnLen + 0.5);
+                alignments[alnIdx].score = static_cast<int>(scorePerCol*100);
+
+                if (seqType == Parameters::DBTYPE_NUCLEOTIDES) {
+                    if (alignments[alnIdx].qStartPos > alignments[alnIdx].qEndPos) {
+                        useReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = true;
+
+                        std::swap(alignments[alnIdx].qStartPos, alignments[alnIdx].qEndPos);
+                        unsigned int dbStartPos = alignments[alnIdx].dbStartPos;
+                        alignments[alnIdx].dbStartPos = alignments[alnIdx].dbLen - alignments[alnIdx].dbEndPos - 1;
+                        alignments[alnIdx].dbEndPos= alignments[alnIdx].dbLen - dbStartPos - 1;
+
+                    } else {
+                        useReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = false;
                     }
                 }
+
+                alnQueue.push(alignments[alnIdx]);
+                if (alignments.size() > 1)
+                    __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(alignments[alnIdx].dbKey)],
+                                        static_cast<unsigned char>(0x40));
             }
 
-            QueueByScore alnQueue;
-            bool queryCouldBeExtended = false;
-            unsigned int leftQueryOffset = 0;
-            unsigned int rightQueryOffset = 0;
-            while(alignments.size() > 1){
+            std::vector<Matcher::result_t> tmpAlignments;
+            tmpAlignments.reserve(alignments.size());
+            while (!alnQueue.empty()) {
 
-                bool queryCouldBeExtendedLeft = false;
-                bool queryCouldBeExtendedRight = false;
-                for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-
-                    int rawScore = static_cast<int>(evaluer.computeRawScoreFromBitScore(alignments[alnIdx].score) + 0.5);
-                    float scorePerCol = static_cast<float>(rawScore) / static_cast<float>(alignments[alnIdx].alnLength + 0.5);
-
-                    float alnLen = static_cast<float>(alignments[alnIdx].alnLength);
-                    float ids = static_cast<float>(alignments[alnIdx].seqId) * alnLen;
-                    alignments[alnIdx].seqId = ids / (alnLen + 0.5);
-                    alignments[alnIdx].score = static_cast<int>(scorePerCol*100);
-                    alnQueue.push(alignments[alnIdx]);
-                    if (alignments.size() > 1)
-                        __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(alignments[alnIdx].dbKey)],
-                                            static_cast<unsigned char>(0x40));
-                }
-
-                std::vector<Matcher::result_t> tmpAlignments;
+                unsigned int leftQueryOffset = 0;
+                unsigned int rightQueryOffset = 0;
+                tmpAlignments.clear();
                 Matcher::result_t besttHitToExtend;
-                while ((besttHitToExtend = selectFragmentToExtend(alnQueue, queryId)).dbKey != UINT_MAX) {
+                while ((besttHitToExtend = selectFragmentToExtend(alnQueue, queryKey)).dbKey != UINT_MAX) {
 
                     unsigned int targetId = sequenceDbr->getId(besttHitToExtend.dbKey);
                     if (targetId == UINT_MAX) {
@@ -184,182 +169,93 @@ int doassembly(LocalParameters &par) {
                     char *targetSeq = sequenceDbr->getData(targetId, thread_idx);
                     unsigned int targetSeqLen = sequenceDbr->getSeqLen(targetId) ;
 
-                    char *querySeqToUse = (char *) query.c_str();
-                    querySeqLen = query.size();
-                    unsigned int leftQueryOffsetToUse = leftQueryOffset;
-                    unsigned int rightQueryOffsetToUse = rightQueryOffset;
-
-                    bool isReverse = false;
-                    if (!onlyForward){
-                        if (useQueryReverse[targetId]) {
-                            isReverse = true;
-                            querySeqToUse = (char *) queryRev.c_str();
-                            rightQueryOffsetToUse = leftQueryOffset;
-                            leftQueryOffsetToUse = rightQueryOffset;
-                        }
-                    }
-
                     // check if alignment still make sense (can extend the query)
                     if (besttHitToExtend.dbStartPos == 0) {
-                        if ((targetSeqLen - (besttHitToExtend.dbEndPos + 1)) <= rightQueryOffsetToUse) {
+                        if ((targetSeqLen - (besttHitToExtend.dbEndPos + 1)) <= rightQueryOffset) {
                             continue;
                         }
                     } else if (besttHitToExtend.qStartPos == 0) {
-                        if (besttHitToExtend.dbStartPos <= static_cast<int>(leftQueryOffsetToUse)) {
+                        if (besttHitToExtend.dbStartPos <= static_cast<int>(leftQueryOffset)) {
                             continue;
                         }
                     }
                     __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x10));
 
-                    int qStartPos, qEndPos, dbStartPos, dbEndPos, score;
-                    int diagonal = (leftQueryOffsetToUse + besttHitToExtend.qStartPos) - besttHitToExtend.dbStartPos;
-                    int dist = std::max(abs(diagonal), 0);
-                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
-                                                                    querySeqToUse, querySeqLen,
-                                                                    targetSeq, targetSeqLen,
-                                                                    diagonal, fastMatrix.matrix, par.rescoreMode);
-                    if (diagonal >= 0) {
-//                    targetSeq.mapSequence(targetId, besttHitToExtend.dbKey, dbSeq);
+                    unsigned int dbStartPos = besttHitToExtend.dbStartPos;
+                    unsigned int dbEndPos = besttHitToExtend.dbEndPos;
+                    unsigned int qStartPos = besttHitToExtend.qStartPos;
+                    unsigned int qEndPos = besttHitToExtend.qEndPos;
+                    if (dbStartPos == 0 && qEndPos == (static_cast<int>(querySeqLen) - 1)) {
+                        //right extension
 
-                        qStartPos = alignment.startPos + dist;
-                        qEndPos = alignment.endPos + dist;
-                        dbStartPos = alignment.startPos;
-                        dbEndPos = alignment.endPos;
-                        score = alignment.score;
-                    } else {
-
-                        qStartPos = alignment.startPos;
-                        qEndPos = alignment.endPos;
-                        dbStartPos = alignment.startPos + dist;
-                        dbEndPos = alignment.endPos + dist;
-                        score = alignment.score;
-                    }
-
-                    // check right extension or reverse left
-                    if (dbStartPos == 0 && qEndPos == (static_cast<int>(querySeqLen) - 1) ) {
-                        if((!isReverse && queryCouldBeExtendedRight == true) || (isReverse && queryCouldBeExtendedLeft == true)) {
-                            float alnLen = qEndPos - qStartPos;
-                            float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
-                            besttHitToExtend.score = static_cast<int>(scorePerCol*100);
+                        if(rightQueryOffset > 0) {
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
                         }
 
-                        size_t dbFragLen = (targetSeqLen - dbEndPos) - 1; // -1 get not aligned element
-                        std::string fragment = std::string(targetSeq + dbEndPos + 1, dbFragLen);
-                        if (fragment.size() + query.size() >= par.maxSeqLen) {
-                            Debug(Debug::WARNING) << "Sequence too long in query id: " << queryId << ". "
-                                    "Max length allowed would is " << par.maxSeqLen << "\n";
-                            break;
+                        unsigned int fragLen = targetSeqLen - (dbEndPos + 1);
+                        std::string fragment;
+                        if (useReverse[targetId]) {
+                            fragment = getRevFragment(std::string(targetSeq, fragLen), (NucleotideMatrix *) subMat);
                         }
+                        else
+                           fragment = std::string(targetSeq + dbEndPos + 1, fragLen);
+
+                        query += fragment;
+                        rightQueryOffset += fragLen;
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
 
-                        if(onlyForward) {
-                            query += fragment;
-                            queryCouldBeExtendedRight = true;
-                            rightQueryOffset += dbFragLen;
-                        }
-                        else {
-                            char *c_fragmentRev = getRevFragment(fragment.c_str(), dbFragLen, (NucleotideMatrix *) subMat);
-                            std::string fragmentRev = std::string(c_fragmentRev,dbFragLen);
-                            if (useQueryReverse[targetId] == false) {
-                                query = query + fragment;
-                                queryRev = fragmentRev + queryRev;
-                                queryCouldBeExtendedRight = true;
-                                rightQueryOffset += dbFragLen;
-                            }
-                            else{
-                                queryRev = queryRev + fragment;
-                                query = fragmentRev + query;
-                                queryCouldBeExtendedLeft = true;
-                                leftQueryOffset += dbFragLen;
-                            }
-                        }
+                    }
+                    else if (qStartPos == 0 && dbEndPos == (static_cast<int>(targetSeqLen) - 1)) {
+                        //left extension
 
-                        //check left extension
-                    } else if (qStartPos == 0 && dbEndPos == (static_cast<int>(targetSeqLen) - 1)) {
-                        if ((!isReverse && queryCouldBeExtendedLeft == true)|| (isReverse && queryCouldBeExtendedRight == true)) {
-                            float alnLen = qEndPos - qStartPos;
-                            float scorePerCol = static_cast<float>(score) / (alnLen+0.5);
-                            besttHitToExtend.score = static_cast<int>(scorePerCol*100);
+                        if(leftQueryOffset > 0) {
                             tmpAlignments.push_back(besttHitToExtend);
                             continue;
                         }
 
-                        size_t dbFragLen = dbStartPos;
-                        std::string fragment = std::string(targetSeq, dbFragLen); // +1 get not aligned element
-                        if (fragment.size() + query.size() >= par.maxSeqLen) {
-                            Debug(Debug::WARNING) << "Sequence too long in query id: " << queryId << ". "
-                                    "Max length allowed would is " << par.maxSeqLen << "\n";
+                        unsigned int fragLen = dbStartPos;
+                        if (query.size() + fragLen >= par.maxSeqLen) {
+                            Debug(Debug::WARNING) << "Ignore extension because of length limitation for sequence: " \
+                                                  << queryKey << ". Max length allowed would be " << par.maxSeqLen << "\n";
                             break;
                         }
-                        // update that dbKey was used in assembly
+
+                        std::string fragment;
+                        if (useReverse[targetId]) {
+                            fragment = getRevFragment(std::string(targetSeq + (targetSeqLen - dbStartPos), fragLen), (NucleotideMatrix *) subMat);
+                        }
+                        else
+                            fragment = std::string(targetSeq, fragLen);
+
+                        query = fragment + query;
+                        leftQueryOffset += fragLen;
+                        //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
-
-                        if (onlyForward){
-                            query = fragment + query;
-                            queryCouldBeExtendedLeft = true;
-                            leftQueryOffset += dbFragLen;
-                        }
-                        else {
-                            char *c_fragmentRev = getRevFragment(fragment.c_str(), dbFragLen, (NucleotideMatrix *) subMat);
-                            std::string fragmentRev = std::string(c_fragmentRev,dbFragLen);
-                            if (useQueryReverse[targetId] == false) {
-                                query = fragment + query;
-                                queryRev = queryRev + fragmentRev;
-                                queryCouldBeExtendedLeft = true;
-                                leftQueryOffset += dbFragLen;
-                            }
-                            else {
-                                queryRev = fragment + queryRev;
-                                query = query + fragmentRev;
-                                queryCouldBeExtendedRight = true;
-                                rightQueryOffset += dbFragLen;
-                            }
-                        }
                     }
-                }
-                if (queryCouldBeExtendedRight || queryCouldBeExtendedLeft){
-                    queryCouldBeExtended = true;
+
                 }
 
-                alignments.clear();
-                break;
-                querySeqLen = query.size();
+                if (leftQueryOffset > 0 || rightQueryOffset > 0)
+                  queryCouldBeExtended = true;
+
+                if (!alnQueue.empty())
+                    break;
+
+                querySeqLen = query.length();
                 querySeq = (char *) query.c_str();
-                for(size_t alnIdx = 0; alnIdx < tmpAlignments.size(); alnIdx++){
-                    int idCnt = 0;
-                    int qStartPos = tmpAlignments[alnIdx].qStartPos;
-                    int qEndPos = tmpAlignments[alnIdx].qEndPos;
-                    int dbStartPos = tmpAlignments[alnIdx].dbStartPos;
-                    int diagonal = (leftQueryOffset + besttHitToExtend.qStartPos) - besttHitToExtend.dbStartPos;
-                    int dist = std::max(abs(diagonal), 0);
-                    if (diagonal >= 0) {
-                        qStartPos+=dist;
-                        qEndPos+=dist;
-                    }else{
-                        dbStartPos+=dist;
-                    }
-                    unsigned int targetId = sequenceDbr->getId(tmpAlignments[alnIdx].dbKey);
-                    char *targetSeq = sequenceDbr->getData(targetId, thread_idx);
-                    for(int i = qStartPos; i <= qEndPos; i++){
-                        int targetRes = static_cast<int>(targetSeq[dbStartPos+(i-qStartPos)]);
-                        int queryRes = static_cast<int>(querySeq[i]);
-                        idCnt += (queryRes == targetRes) ? 1 : 0;
-                    }
-                    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos) + 1);
-                    tmpAlignments[alnIdx].seqId = seqId;
-                    if(seqId >= par.seqIdThr){
-                        alignments.push_back(tmpAlignments[alnIdx]);
-                    }
-                }
+                break;
+                // TODO: update remaining alignments
+
             }
-            if (queryCouldBeExtended == true) {
+
+            if (queryCouldBeExtended)  {
                 query.push_back('\n');
                 __sync_or_and_fetch(&wasExtended[id], static_cast<unsigned char>(0x20));
-                resultWriter.writeData(query.c_str(), query.size(), queryId, thread_idx);
+                resultWriter.writeData(query.c_str(), query.size(), queryKey, thread_idx);
             }
+
         }
     } // end parallel
 
@@ -370,11 +266,11 @@ int doassembly(LocalParameters &par) {
 #ifdef OPENMP
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
-        //   bool couldExtend =  (wasExtended[id] & 0x10);
+        //bool couldExtend =  (wasExtended[id] & 0x10);
         bool isNotContig =  !(wasExtended[id] & 0x20);
-//        bool wasNotUsed =  !(wasExtended[id] & 0x40);
-//        bool wasNotExtended =  !(wasExtended[id] & 0x80);
-        //    bool wasUsed    =  (wasExtended[id] & 0x40);
+        //bool wasNotUsed =  !(wasExtended[id] & 0x40);
+        //bool wasNotExtended =  !(wasExtended[id] & 0x80);
+        //bool wasUsed    =  (wasExtended[id] & 0x40);
         //if(isNotContig && wasNotExtended ){
         if (isNotContig){
             char *querySeqData = sequenceDbr->getData(id, thread_idx);
@@ -383,7 +279,6 @@ int doassembly(LocalParameters &par) {
     }
 
     // cleanup
-
     resultWriter.close(true);
     alnReader->close();
     delete [] wasExtended;
