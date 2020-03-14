@@ -223,7 +223,7 @@ int doassembly(LocalParameters &par) {
                     unsigned int dbEndPos = besttHitToExtend.dbEndPos;
                     unsigned int qStartPos = besttHitToExtend.qStartPos;
                     unsigned int qEndPos = besttHitToExtend.qEndPos;
-                    if (dbStartPos == 0 && qEndPos == (static_cast<int>(querySeqLen) - 1)) {
+                    if (dbStartPos == 0 && qEndPos == (querySeqLen - 1)) {
                         //right extension
 
                         if(rightQueryOffset > 0) {
@@ -247,7 +247,7 @@ int doassembly(LocalParameters &par) {
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
 
                     }
-                    else if (qStartPos == 0 && dbEndPos == (static_cast<int>(targetSeqLen) - 1)) {
+                    else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
                         //left extension
 
                         if(leftQueryOffset > 0) {
