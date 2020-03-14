@@ -56,18 +56,56 @@ Matcher::result_t selectFragmentToExtend(QueueByScore &alignments,
     return Matcher::result_t(UINT_MAX,0,0,0,0,0,0,0,0,0,0,0,0,"");
 }
 
-inline std::string getRevFragment(std::string fragment, NucleotideMatrix *nuclMatrix)
+inline char* getRevFragment(const char* fragment, size_t fragLen, NucleotideMatrix *nuclMatrix)
 {
-    size_t fragLen = fragment.length();
     char *fragmentRev = new char[fragLen];
     for (int pos = fragLen - 1; pos > -1; pos--) {
         int res = nuclMatrix->aa2num[static_cast<int>(fragment[pos])];
         char revRes = nuclMatrix->num2aa[nuclMatrix->reverseResidue(res)];
         fragmentRev[(fragLen - 1) - pos] = (revRes == 'X')? 'N' : revRes;
     }
-    return std::string(fragmentRev, fragLen);
+    return fragmentRev;
 }
 
+inline void updateAlignment(Matcher::result_t &tmpAlignment, DistanceCalculator::LocalAlignment &alignment,
+                            const char *querySeq, size_t querySeqLen, const char *tSeq, size_t tSeqLen) {
+
+    int qStartPos, qEndPos, dbStartPos, dbEndPos;
+    int diag = alignment.diagonal;
+    int dist = std::max(abs(diag), 0);
+
+    if (diag >= 0) {
+        qStartPos = alignment.startPos + dist;
+        qEndPos = alignment.endPos + dist;
+        dbStartPos = alignment.startPos;
+        dbEndPos = alignment.endPos;
+    } else {
+        qStartPos = alignment.startPos;
+        qEndPos = alignment.endPos;
+        dbStartPos = alignment.startPos + dist;
+        dbEndPos = alignment.endPos + dist;
+    }
+
+    int idCnt = 0;
+    for(int i = qStartPos; i < qEndPos; i++){
+        idCnt += (querySeq[i] == tSeq[dbStartPos+(i-qStartPos)]) ? 1 : 0;
+    }
+    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos));
+
+    tmpAlignment.seqId = seqId;
+    tmpAlignment.qLen = querySeqLen;
+    tmpAlignment.dbLen = tSeqLen;
+
+    tmpAlignment.alnLength = alignment.diagonalLen;
+    float scorePerCol = static_cast<float>(alignment.score ) / static_cast<float>(tmpAlignment.alnLength + 0.5);
+    tmpAlignment.score = static_cast<int>(scorePerCol*100);
+
+    tmpAlignment.qStartPos = qStartPos;
+    tmpAlignment.qEndPos = qEndPos;
+    tmpAlignment.dbStartPos = dbStartPos;
+    tmpAlignment.dbEndPos = dbEndPos;
+
+}
 
 int doassembly(LocalParameters &par) {
     DBReader<unsigned int> *sequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
@@ -196,7 +234,9 @@ int doassembly(LocalParameters &par) {
                         unsigned int fragLen = targetSeqLen - (dbEndPos + 1);
                         std::string fragment;
                         if (useReverse[targetId]) {
-                            fragment = getRevFragment(std::string(targetSeq, fragLen), (NucleotideMatrix *) subMat);
+                            char *cfragment = getRevFragment(targetSeq, fragLen, (NucleotideMatrix *) subMat);
+                            fragment = std::string(cfragment, fragLen);
+                            delete[] cfragment;
                         }
                         else
                            fragment = std::string(targetSeq + dbEndPos + 1, fragLen);
@@ -224,7 +264,9 @@ int doassembly(LocalParameters &par) {
 
                         std::string fragment;
                         if (useReverse[targetId]) {
-                            fragment = getRevFragment(std::string(targetSeq + (targetSeqLen - dbStartPos), fragLen), (NucleotideMatrix *) subMat);
+                            char *cfragment = getRevFragment(targetSeq + (targetSeqLen - dbStartPos), fragLen, (NucleotideMatrix *) subMat);
+                            fragment = std::string(cfragment, fragLen);
+                            delete[] cfragment;
                         }
                         else
                             fragment = std::string(targetSeq, fragLen);
@@ -245,9 +287,30 @@ int doassembly(LocalParameters &par) {
 
                 querySeqLen = query.length();
                 querySeq = (char *) query.c_str();
-                break;
-                // TODO: update remaining alignments
 
+                // update alignments
+                for(size_t alnIdx = 0; alnIdx < tmpAlignments.size(); alnIdx++) {
+
+                    unsigned int tId = sequenceDbr->getId(tmpAlignments[alnIdx].dbKey);
+                    unsigned int tSeqLen = sequenceDbr->getSeqLen(tId);
+                    char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                    if (useReverse[tId])
+                        tSeq = getRevFragment(tSeq, tSeqLen, (NucleotideMatrix *) subMat);
+
+                    int qStartPos = tmpAlignments[alnIdx].qStartPos;
+                    int dbStartPos = tmpAlignments[alnIdx].dbStartPos;
+                    int diag = (qStartPos + leftQueryOffset) - dbStartPos;
+
+                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
+                                                                   querySeq, querySeqLen, tSeq, tSeqLen,
+                                                                   diag, fastMatrix.matrix, par.rescoreMode);
+
+                    updateAlignment(tmpAlignments[alnIdx], alignment, querySeq, querySeqLen, tSeq, tSeqLen);
+
+                    // refill queue
+                    if(tmpAlignments[alnIdx].seqId >= par.seqIdThr)
+                        alnQueue.push(tmpAlignments[alnIdx]);
+                }
             }
 
             if (queryCouldBeExtended)  {
