@@ -87,6 +87,7 @@ matrix:
           - zlib
           - bzip2
           - libomp
+        update: true
 
 before_install:
   - export CC

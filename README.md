@@ -18,11 +18,12 @@ Each catalog is a single FASTA file containing the sequences, the header identif
 The catalogues can be downloaded [here](http://wwwuser.gwdg.de/~compbiol/plass/current_release/).
 We provide a [HH-suite3](https://github.com/soedinglab/hh-suite) database called "BFD" containing sequences from the Metaclust, SRC, MERC and Uniport at [here](https://bfd.mmseqs.com/).
  
-### Install static Linux version
+### Install Plass
 Plass can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version. Plass requires a 64-bit Linux/MacOS system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set.
 
-     conda install -c biocore plass 
-     # latest static linux build s
+     # install from bioconda
+     conda install -c conda-forge -c bioconda plass 
+     # latest static linux build
      wget https://mmseqs.com/plass/plass-static_sse41.tar.gz; tar xvfz plass-static_sse41.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
  
 
