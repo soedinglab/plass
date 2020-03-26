@@ -18,7 +18,7 @@
 
 class CompareNuclResultByScore {
 public:
-    bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
+    /*bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
         if(r1.score < r2.score )
             return true;
         if(r2.score < r1.score )
@@ -32,6 +32,34 @@ public:
         if(r2.dbKey > r1.dbKey )
             return false;
         return false;
+    }*/
+    bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
+        unsigned int mm_count1 = (1-r1.seqId)*r1.alnLength + 0.5;
+        unsigned int mm_count2 = (1-r2.seqId)*r2.alnLength + 0.5;
+
+        unsigned int alpha1 = mm_count1 + 1;
+        unsigned int alpha2 = mm_count2 + 1;
+        unsigned int beta1 = r1.alnLength - mm_count1;
+        unsigned int beta2 = r2.alnLength - mm_count2;
+
+        double c=(std::tgamma(beta1+beta2)+std::tgamma(alpha1+beta2))/(std::tgamma(alpha1+beta1+beta2)+std::tgamma(beta1));
+        double r = 1.0; // r_0 =1
+
+        for (size_t idx = 0; idx < alpha2; idx++) {
+            r *= ((alpha1+idx)*(beta2+idx))/((idx+1)*(idx+alpha1+beta1+beta2));
+        }
+        double p=r*c;
+
+        if (p < 0.45)
+            return true;
+        if (p  > 0.55)
+            return false;
+        if (r1.dbLen-r1.alnLength < r2.dbLen-r2.alnLength)
+            return true;
+        if (r1.dbLen-r1.alnLength > r2.dbLen-r2.alnLength)
+            return false;
+
+        return true;
     }
 };
 
