@@ -104,7 +104,7 @@ while [ $STEP -lt $NUM_IT ]; do
     # 3. Assemble
     if notExists "${TMP_PATH}/assembly_${STEP}.done"; then
         # shellcheck disable=SC2086
-        "$MMSEQS" assembleresults "$INPUT" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/assembly_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+        "$MMSEQS" nuclassembleresults "$INPUT" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/assembly_${STEP}" ${ASSEMBLE_RESULT_PAR} \
             || fail "Assembly step died"
         touch "${TMP_PATH}/assembly_${STEP}.done"
         deleteIncremental "$PREV_ASSEMBLY"

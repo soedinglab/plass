@@ -12,6 +12,7 @@ extern int nuclassembledb(int argc, const char** argv, const Command &command);
 extern int hybridassembledb(int argc, const char** argv, const Command &command);
 extern int assembleresult(int argc, const char** argv, const Command &command);
 extern int hybridassembleresults(int argc, const char** argv, const Command &command);
+extern int nuclassembleresult(int argc, const char** argv, const Command &command);
 extern int filternoncoding(int argc, const char** argv, const Command &command);
 extern int mergereads(int argc, const char** argv, const Command &command);
 extern int findassemblystart(int argc, const char** argv, const Command &command);
