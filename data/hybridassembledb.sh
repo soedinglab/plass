@@ -141,10 +141,9 @@ if notExists "${RESULT_NUCL}_only_assembled_h.dbtype"; then
     ln -s "${TMP_PATH}/nucl_6f_start_long_h.dbtype" "${RESULT_NUCL}_only_assembled_h.dbtype"
 fi
 
-
 if notExists "${RESULT_NUCL}.merged.dbtype"; then
     # shellcheck disable=SC2086
-    "$MMSEQS" concatdbs "${INPUT}" "${RESULT_NUCL}_only_assembled" "${RESULT_NUCL}.merged" \
+    "$MMSEQS" concatdbs "${RESULT_NUCL}_only_assembled" "${INPUT}" "${RESULT_NUCL}.merged" \
     || fail "Concat hybridassemblies and reads died"
 fi
 
