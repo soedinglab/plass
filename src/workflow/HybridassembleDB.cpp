@@ -99,6 +99,7 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
 
     // set values for protein level assembly
