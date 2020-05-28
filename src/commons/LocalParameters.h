@@ -127,6 +127,7 @@ private:
         reduceredundancy.push_back(&PARAM_GAP_OPEN);
         reduceredundancy.push_back(&PARAM_GAP_EXTEND);
         reduceredundancy.push_back(&PARAM_ZDROP);
+        reduceredundancy.push_back(&PARAM_THREADS);
 
 
         // assembledb workflow
