@@ -39,16 +39,19 @@ public:
 
         unsigned int alpha1 = mm_count1 + 1;
         unsigned int alpha2 = mm_count2 + 1;
-        unsigned int beta1 = r1.alnLength - mm_count1;
-        unsigned int beta2 = r2.alnLength - mm_count2;
+        unsigned int beta1 = r1.alnLength - mm_count1+1;
+        unsigned int beta2 = r2.alnLength - mm_count2+1;
 
-        double c=(std::tgamma(beta1+beta2)+std::tgamma(alpha1+beta2))/(std::tgamma(alpha1+beta1+beta2)+std::tgamma(beta1));
+        double c=(std::tgamma(beta1+beta2)*std::tgamma(alpha1+beta2))/(std::tgamma(alpha1+beta1+beta2)*std::tgamma(beta1));
         double r = 1.0; // r_0 =1
 
+        double p = 0.0;
         for (size_t idx = 0; idx < alpha2; idx++) {
+
+            p += r;
             r *= ((alpha1+idx)*(beta2+idx))/((idx+1)*(idx+alpha1+beta1+beta2));
         }
-        double p=r*c;
+        p *= c;
 
         if (p < 0.45)
             return true;
@@ -60,6 +63,7 @@ public:
             return false;
 
         return true;
+
     }
 };
 
