@@ -156,7 +156,7 @@ int dohybridassembleresult(LocalParameters &par) {
                 bool queryCouldBeExtendedLeft = false;
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < nuclAlignments.size(); alnIdx++) {
-                    if(nuclAlignments[alnIdx].seqId <= 0.99)
+                    if(nuclAlignments[alnIdx].seqId < par.seqIdThr)
                         continue;
                     alnQueue.push(nuclAlignments[alnIdx]);
                     if (nuclAlignments.size() > 1) {
