@@ -139,6 +139,7 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
 
     // # 3. Assembly: Extend by left and right extension
+    par.seqIdThr = par.multiSeqIdThr.nucleotides;
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
     // set mandatory values for nucleotide level assembly step when calling nucleassemble from hybridassemble
