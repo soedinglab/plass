@@ -16,9 +16,9 @@ namespace hybridassembler {
 void setEasyHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     //p->createdbMode = Parameters::SEQUENCE_SPLIT_MODE_SOFT;
 
-    p->multiNumIterations = MultiParam<int>(12,20);
+    p->multiNumIterations = MultiParam<int>(5,5);
     p->multiKmerSize = MultiParam<int>(14,22);
-    p->multiSeqIdThr = MultiParam<float>(0.97,0.97);
+    p->multiSeqIdThr = MultiParam<float>(0.97,0.99);
     p->alphabetSize = MultiParam<int>(13,5);
 
     p->orfMinLength = 45;

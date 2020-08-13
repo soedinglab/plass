@@ -27,7 +27,7 @@ void setEasyNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->maskMode = 0;
     p->numIterations = 12;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
-    p->seqIdThr = 0.97;
+    p->seqIdThr = 0.99;
     p->spacedKmer = false;
 }
 
