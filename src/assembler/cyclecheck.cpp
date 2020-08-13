@@ -1,6 +1,8 @@
 /*
  * Written by Annika Seidel <annika.seidel@mpibpc.mpg.de>
  * detect circular fragments
+ *
+ * constraint: fragments contain redundant parts at most 3 times
  */
 
 #include "DBReader.h"
@@ -72,13 +74,21 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
 #ifdef OPENMP
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
+        /* 1. split sequence in 3 parts and extract kmers from each part (frontKmers, middleKmers and backKmers)
+         * 2. find kmermatches between 1 third and 2 third, 1 third and 3 third, 2 third and 3 third
+         * 3. sum up kmermatches for diagonalbands
+         * 4. find longest diagonal (= smallest diag index) which fullfill threeshold
+         */
+
         Indexer indexer(subMat->alphabetSize - 1, kmerSize);
         Sequence seq(par.maxSeqLen, seqType, subMat, kmerSize, false, false);
-        kmerSeqPos *frontKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen / 2 + 1];
+        kmerSeqPos *frontKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen / 3 + 1];
         Util::checkAllocation(frontKmers, "Can not allocate memory");
-        kmerSeqPos *backKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen / 2 + 1];
+        kmerSeqPos *middleKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen / 3 + 1];
+        Util::checkAllocation(middleKmers, "Can not allocate memory");
+        kmerSeqPos *backKmers = new(std::nothrow) kmerSeqPos[par.maxSeqLen / 3 + 1];
         Util::checkAllocation(backKmers, "Can not allocate memory");
-        unsigned int *diagHits = new unsigned int[par.maxSeqLen / 2 + 1];
+        unsigned int *diagHits = new unsigned int[(par.maxSeqLen / 3) * 2 + 1];
 
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < seqDbr->getSize(); id++) {
@@ -98,78 +108,120 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
             //TODO: try spaced kmers?
             //TODO: limit the number of kmers in the first half of the sequence? only first 15%?
 
-            /* extract front and back kmers */
-            unsigned int frontKmersCount = 0;
-            while (seq.hasNextKmer() && frontKmersCount < seqLen / 2 + 1) {
-
-                const unsigned char *kmer = seq.nextKmer();
-
-                uint64_t kmerIdx = indexer.int2index(kmer, 0, kmerSize);
-                (frontKmers + frontKmersCount)->kmer = kmerIdx;
-                (frontKmers + frontKmersCount)->pos = seq.getCurrentPosition();
-
-                frontKmersCount++;
-            }
-
-            unsigned int backKmersCount = 0;
+            /* extract kmers */
+            unsigned int frontKmersCount = 0, middleKmersCount = 0, backKmersCount = 0;
+            unsigned int thirdSeqLen = seqLen / 3;
             while (seq.hasNextKmer()) {
 
+                unsigned int pos =  seq.getCurrentPosition();
                 const unsigned char *kmer = seq.nextKmer();
-
                 uint64_t kmerIdx = indexer.int2index(kmer, 0, kmerSize);
-                (backKmers + backKmersCount)->kmer = kmerIdx;
-                (backKmers + backKmersCount)->pos = seq.getCurrentPosition();
 
-                backKmersCount++;
+                if (pos  < thirdSeqLen + 1) {
+                    (frontKmers + frontKmersCount)->kmer = kmerIdx;
+                    (frontKmers + frontKmersCount)->pos = seq.getCurrentPosition();
+                    frontKmersCount++;
+                }
+                else if (pos < 2 * thirdSeqLen + 1) {
+                    (middleKmers + middleKmersCount)->kmer = kmerIdx;
+                    (middleKmers + middleKmersCount)->pos = seq.getCurrentPosition();
+                    middleKmersCount++;
+                }
+                else // pos > 2* thirdSeqLen
+                {
+                    (backKmers + backKmersCount)->kmer = kmerIdx;
+                    (backKmers + backKmersCount)->pos = seq.getCurrentPosition();
+                    backKmersCount++;
+                }
             }
 
             std::sort(frontKmers, frontKmers + frontKmersCount, kmerSeqPos::compareByKmer);
+            std::sort(middleKmers, middleKmers + middleKmersCount, kmerSeqPos::compareByKmer);
             std::sort(backKmers, backKmers + backKmersCount, kmerSeqPos::compareByKmer);
 
-            /* calculate front-back-kmermatches */
+            /* calculate front-back-kmermatches and front-middle-kmermatches */
             unsigned int kmermatches = 0;
-            std::fill(diagHits, diagHits + seqLen / 2 + 1, 0);
+            std::fill(diagHits, diagHits + 2*thirdSeqLen + 1, 0);
 
             unsigned int idx = 0;
             unsigned int jdx = 0;
-            while (idx < frontKmersCount && jdx < backKmersCount) {
+            unsigned int kdx = 0;
 
-                if (frontKmers[idx].kmer < backKmers[jdx].kmer)
+            while(idx < frontKmersCount && (jdx < backKmersCount || kdx < middleKmersCount) ) {
+
+                size_t kmerIdx = frontKmers[idx].kmer;
+                unsigned int pos = frontKmers[idx].pos;
+
+                while (jdx < backKmersCount && backKmers[jdx].kmer < kmerIdx) {
+                    jdx++;
+                }
+                while (kdx < middleKmersCount && middleKmers[kdx].kmer < kmerIdx) {
+                    kdx++;
+                }
+
+                while (jdx < backKmersCount && kmerIdx == backKmers[jdx].kmer) {
+                    int diag = backKmers[jdx].pos - pos;
+                    if (diag >= static_cast<int>(seqLen / 3)) {
+                        diagHits[diag - seqLen / 3]++;
+                        kmermatches++;
+                    }
+                    jdx++;
+                }
+
+                while (kdx < middleKmersCount && kmerIdx == middleKmers[kdx].kmer) {
+                    int diag = middleKmers[kdx].pos - pos;
+                    if (diag >= static_cast<int>(seqLen / 3)) {
+                        diagHits[diag - seqLen / 3]++;
+                        kmermatches++;
+                    }
+                    kdx++;
+                }
+
+                idx++;
+                while (idx < frontKmersCount && kmerIdx == frontKmers[idx].kmer) {
                     idx++;
-                else if (frontKmers[idx].kmer > backKmers[jdx].kmer)
+                }
+            }
+
+            /* calculate middle-back-kmermatches */
+            jdx = 0, kdx = 0;
+            while (kdx < middleKmersCount && jdx < backKmersCount) {
+
+                if (middleKmers[kdx].kmer < backKmers[jdx].kmer)
+                    kdx++;
+                else if (middleKmers[kdx].kmer > backKmers[jdx].kmer)
                     jdx++;
                 else {
-                    size_t kmerIdx = frontKmers[idx].kmer;
-                    unsigned int pos = frontKmers[idx].pos;
+                    size_t kmerIdx = middleKmers[kdx].kmer;
+                    unsigned int pos = middleKmers[kdx].pos;
                     while (jdx < backKmersCount && kmerIdx == backKmers[jdx].kmer) {
 
                         int diag = backKmers[jdx].pos - pos;
-                        if (diag >= static_cast<int>(seqLen / 2)) {
+                        if (diag >= static_cast<int>(seqLen / 3)) {
                             //diag = abs(diag);
-                            diagHits[diag - seqLen / 2]++;
+                            diagHits[diag - seqLen / 3]++;
                             kmermatches++;
                         }
                         jdx++;
                     }
-                    while (idx < frontKmersCount && kmerIdx == frontKmers[idx].kmer) {
-                        idx++;
+                    while (kdx < middleKmersCount && kmerIdx == middleKmers[kdx].kmer) {
+                        kdx++;
                     }
                 }
 
             }
 
-            /* calculate maximal hit rate on diagonal bands */
-            int splitDiagonal = -1;
-            float maxDiagbandHitRate = 0.0;
+            /* calculate hit rate on diagonal bands */
+            unsigned int splitDiagonal = 0;
 
             if (kmermatches > 0) {
-                for (unsigned int d = 0; d < seqLen / 2; d++) {
+                for (unsigned int d = 0; d < 2 * thirdSeqLen; d++) {
                     if (diagHits[d] != 0) {
-                        unsigned int diag = d + seqLen / 2;
+                        unsigned int diag = d + thirdSeqLen;
                         unsigned int diaglen = seqLen - diag;
                         unsigned int gapwindow = diaglen * 0.01;
                         unsigned int lower = std::max(0, static_cast<int>(d - gapwindow));
-                        unsigned int upper = std::min(d + gapwindow, seqLen / 2);
+                        unsigned int upper = std::min(d + gapwindow, 2 * thirdSeqLen);
                         unsigned int diagbandHits = 0;
 
                         for (size_t i = lower; i <= upper; i++) {
@@ -178,16 +230,16 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
                         }
 
                         float diagbandHitRate = static_cast<float>(diagbandHits) / (diaglen - kmerSize + 1);
-                        if (diagbandHitRate > maxDiagbandHitRate) {
-                            maxDiagbandHitRate = diagbandHitRate;
+                        if (diagbandHitRate > HIT_RATE_THRESHOLD) {
                             splitDiagonal = diag;
+                            break;
                         }
                     }
 
                 }
             }
 
-            if (maxDiagbandHitRate >= HIT_RATE_THRESHOLD) {
+            if (splitDiagonal != 0) {
 
                 unsigned int len = seqDbr->getEntryLen(id)-1;
                 std::string seq;
@@ -203,6 +255,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
         }
         delete[] diagHits;
         delete[] frontKmers;
+        delete[] middleKmers;
         delete[] backKmers;
     }
 

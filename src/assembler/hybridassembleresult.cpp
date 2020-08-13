@@ -22,7 +22,7 @@
 
 class CompareResultBySeqId {
 public:
-    bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
+    /*bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
         if(r1.seqId < r2.seqId )
             return true;
         if(r2.seqId < r1.seqId )
@@ -37,6 +37,40 @@ public:
             return false;
 
         return false;
+    }*/
+    bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
+        unsigned int mm_count1 = (1 - r1.seqId) * r1.alnLength + 0.5;
+        unsigned int mm_count2 = (1 - r2.seqId) * r2.alnLength + 0.5;
+
+        unsigned int alpha1 = mm_count1 + 1;
+        unsigned int alpha2 = mm_count2 + 1;
+        unsigned int beta1 = r1.alnLength - mm_count1 + 1;
+        unsigned int beta2 = r2.alnLength - mm_count2 + 1;
+
+        //double c=(std::tgamma(beta1+beta2)*std::tgamma(alpha1+beta2))/(std::tgamma(alpha1+beta1+beta2)*std::tgamma(beta1));
+        double log_c = (std::lgamma(beta1+beta2)+std::lgamma(alpha1+beta1))-(std::lgamma(alpha1+beta1+beta2)+std::lgamma(beta1));
+
+        //double r = 1.0; // r_0 =1
+        double log_r = 0.0;
+        double p = 0.0;
+        for (size_t idx = 0; idx < alpha2; idx++) {
+
+            p += exp(log_r + log_c);
+            //r *= ((alpha1+idx)*(beta2+idx))/((idx+1)*(idx+alpha1+beta1+beta2));
+            log_r = log(alpha1+idx)+log(beta2+idx)-(log(idx+1) + log(idx+alpha1+beta1+beta2)) + log_r;
+        }
+        //p *= c;
+
+        if (p < 0.45)
+            return true;
+        if (p  > 0.55)
+            return false;
+        if (r1.dbLen - r1.alnLength < r2.dbLen - r2.alnLength)
+            return true;
+        if (r1.dbLen - r1.alnLength > r2.dbLen - r2.alnLength)
+            return false;
+
+        return true;
     }
 };
 
@@ -122,6 +156,8 @@ int dohybridassembleresult(LocalParameters &par) {
                 bool queryCouldBeExtendedLeft = false;
                 bool queryCouldBeExtendedRight = false;
                 for (size_t alnIdx = 0; alnIdx < nuclAlignments.size(); alnIdx++) {
+                    if(nuclAlignments[alnIdx].seqId < par.seqIdThr)
+                        continue;
                     alnQueue.push(nuclAlignments[alnIdx]);
                     if (nuclAlignments.size() > 1) {
                         size_t id = nuclSequenceDbr->getId(nuclAlignments[alnIdx].dbKey);

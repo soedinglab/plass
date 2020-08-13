@@ -9,9 +9,9 @@
 
 void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
 
-    p->multiNumIterations = MultiParam<int>(12,20);
+    p->multiNumIterations = MultiParam<int>(5,5);
     p->multiKmerSize = MultiParam<int>(14,22);
-    p->multiSeqIdThr = MultiParam<float>(0.97,0.97);
+    p->multiSeqIdThr = MultiParam<float>(0.97,0.99);
     p->alphabetSize = MultiParam<int>(13,5);
 
     p->orfMinLength = 45;
@@ -99,6 +99,7 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     par.filenames.pop_back();
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
+    cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
 
     // set values for protein level assembly
@@ -138,6 +139,7 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
 
     // # 3. Assembly: Extend by left and right extension
+    par.seqIdThr = par.multiSeqIdThr.nucleotides;
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
     // set mandatory values for nucleotide level assembly step when calling nucleassemble from hybridassemble

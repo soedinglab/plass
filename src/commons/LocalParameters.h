@@ -193,7 +193,7 @@ private:
         clustSeqIdThr = 0.97;
         clustCovThr = 0.99;
         minContigLen = 1000;
-        chopCycle = false;
+        chopCycle = true;
         cycleCheck = true;
 
         multiNumIterations = MultiParam<int>(12,20);
