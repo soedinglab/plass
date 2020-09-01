@@ -1,5 +1,6 @@
 # PLASS - Protein-Level ASSembler
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/plass.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/plass)
+[![BioContainer Pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fmmseqs.com%2Fbiocontainer.php%3Fcontainer%3Dplass)](https://biocontainers.pro/#/tools/plass)
 [ ![Codeship Status for soedinglab/plass](https://app.codeship.com/projects/fc7c4e70-e188-0135-0db2-569fac09cf96/status?branch=master)](https://app.codeship.com/projects/266646)
 [![Build Status](https://travis-ci.org/soedinglab/plass.svg?branch=master)](https://travis-ci.org/soedinglab/plass)
 [![DOI](https://zenodo.org/badge/118119513.svg)](https://zenodo.org/badge/latestdoi/118119513)
@@ -9,7 +10,7 @@ Plass (Protein-Level ASSembler) is a software to assemble short read sequencing 
 
 [Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, doi: doi.org/10.1038/s41592-019-0437-4 (2019)](https://www.nature.com/articles/s41592-019-0437-4).
 
-<p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/Plass.jpeg" height="256" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/.github/Plass.jpeg" height="256" /></p>
 
 
 ## Soil Reference Catalog (SRC) and Marine Eukaryotic Reference Catalog (MERC)
