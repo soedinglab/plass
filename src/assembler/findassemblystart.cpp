@@ -86,7 +86,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
             const char *entry[255];
             const size_t columns = Util::getWordsOfLine(results, entry, 255);
             Matcher::result_t res;
-            if (columns >= Matcher::ALN_RES_WITH_OUT_BT_COL_CNT) {
+            if (columns >= Matcher::ALN_RES_WITHOUT_BT_COL_CNT) {
                 res = Matcher::parseAlignmentRecord(results);
             } else {
                 Debug(Debug::ERROR) << "ERROR: Backtrace is missing for at result: " << id  << "\n";
