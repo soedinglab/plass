@@ -25,7 +25,7 @@ std::vector<struct Command> commands = {
                 "Annika Seidel <annika.seidel@mpibpc.mpg.de>",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
-        {"hybridassemble",         easyhybridassembler,            &localPar.hybridassemblerworkflow,    COMMAND_HIDDEN,
+        {"hybridassemble2",         easyhybridassembler,            &localPar.hybridassemblerworkflow,    COMMAND_HIDDEN,
                 "Assemble nucleotide sequences by iterative greedy overlap assembly using protein and nucleotide information. (experimental)",
                 NULL,
                 "Annika Seidel <annika.seidel@mpibpc.mpg.de>",
