@@ -45,6 +45,9 @@ jobs:
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update
           sudo apt-get install -y g++-10
+          mkdir build-opt && cd build-opt
+          CC=gcc-10 CXX=g++-10 cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j $(nproc --all)
         condition: eq(variables['BUILD_TYPE'], 'ASanOpt')
         displayName: Install newer GCC
       - script: |
@@ -72,11 +75,13 @@ jobs:
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           export TTY=0
-          if [ "${BUILD_TYPE}" = "ASan" ]; then
+          if [ "${BUILD_TYPE}" = "ASanOpt" ]; then
               echo "leak:libgomp1" > ${BUILD_SOURCESDIRECTORY}/ASan.supp
               export ASAN_OPTIONS=suppressions=${BUILD_SOURCESDIRECTORY}/ASan.supp
+              ./util/run_regression.sh ./build/src/plass ./build-opt/src/plass REGRESSION
+          else
+              ./util/run_regression.sh ./build/src/plass ./build/src/plass REGRESSION
           fi
-          ./util/run_regression.sh ./build/src/plass REGRESSION
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0

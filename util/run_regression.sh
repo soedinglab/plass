@@ -1,16 +1,17 @@
 #!/bin/sh -e
 
 PLASS="$1"
-BASEDIR="$2"
+MMSEQS="$2"
+BASEDIR="$3"
 
 mkdir -p "${BASEDIR}"
 wget -qO- http://wwwuser.gwdg.de/~compbiol/plass/plass_regression_data.tar.gz | tar -xzC "${BASEDIR}"
 
 "${PLASS}" assemble "${BASEDIR}/allgenomes_reads_sample_1.fastq" "${BASEDIR}/allgenomes_reads_sample_2.fastq" "${BASEDIR}/final.contigs.aa.fa" "${BASEDIR}/tmp"
 
-"${PLASS}" createdb "${BASEDIR}/final.contigs.aa.fa" "${BASEDIR}/final.contigs.aa"
-"${PLASS}" createdb "${BASEDIR}/prochloroccus_allproteins.fasta" "${BASEDIR}/prochloroccus_allproteins"
-"${PLASS}" createdb "${BASEDIR}/prochloroccus_allproteins_nr.fasta" "${BASEDIR}/prochloroccus_allproteins_nr"
+"${MMSEQS}" createdb "${BASEDIR}/final.contigs.aa.fa" "${BASEDIR}/final.contigs.aa"
+"${MMSEQS}" createdb "${BASEDIR}/prochloroccus_allproteins.fasta" "${BASEDIR}/prochloroccus_allproteins"
+"${MMSEQS}" createdb "${BASEDIR}/prochloroccus_allproteins_nr.fasta" "${BASEDIR}/prochloroccus_allproteins_nr"
 
 len_distribution() {
     awk '{ n[$3]++ } END { for (i in n) print i,n[i] }' "$1" | sort -n
@@ -37,21 +38,21 @@ evaluate() {
     LEN="$5"
 
     awk -v len="$LEN" '$3 > len { print }' "${ASSEMBLY}.index" > "${ASSEMBLY}.ids"
-    "${PLASS}" createsubdb "${ASSEMBLY}.ids" "${ASSEMBLY}" "${ASSEMBLY}.${LEN}"
-    "${PLASS}" createsubdb "${ASSEMBLY}.ids" "${ASSEMBLY}_h" "${ASSEMBLY}.${LEN}_h"
+    "${MMSEQS}" createsubdb "${ASSEMBLY}.ids" "${ASSEMBLY}" "${ASSEMBLY}.${LEN}"
+    "${MMSEQS}" createsubdb "${ASSEMBLY}.ids" "${ASSEMBLY}_h" "${ASSEMBLY}.${LEN}_h"
 
-    "${PLASS}" search "${ASSEMBLY}.${LEN}" "${REFERENCE}" "${RESULT}/assembly_against_reference" "${RESULT}/tmp" -s 5 --max-seqs 5000 --min-ungapped-score 100 -a --min-seq-id 0.89
+    "${MMSEQS}" search "${ASSEMBLY}.${LEN}" "${REFERENCE}" "${RESULT}/assembly_against_reference" "${RESULT}/tmp" -s 5 --max-seqs 5000 --min-ungapped-score 100 -a --min-seq-id 0.89
     for i in $(seq 90 99 | awk '{ print $1/100 }'); do
-        "${PLASS}" filterdb "${RESULT}/assembly_against_reference" "${RESULT}/assembly_against_reference_${i}" --filter-column 3 --comparison-value ${i} --comparison-operator ge
-        "${PLASS}" createtsv "${ASSEMBLY}.${LEN}" "${REFERENCE}" "${RESULT}/assembly_against_reference_${i}" "${RESULT}/assembly_against_reference_${i}.tsv"
+        "${MMSEQS}" filterdb "${RESULT}/assembly_against_reference" "${RESULT}/assembly_against_reference_${i}" --filter-column 3 --comparison-value ${i} --comparison-operator ge
+        "${MMSEQS}" createtsv "${ASSEMBLY}.${LEN}" "${REFERENCE}" "${RESULT}/assembly_against_reference_${i}" "${RESULT}/assembly_against_reference_${i}.tsv"
         mapped_fraction "${ASSEMBLY}.${LEN}.index" "${RESULT}/assembly_against_reference_${i}.tsv" "$LEN" >> "${RESULT}/precision"
     done
 
     # sens
-    "${PLASS}" search "$REFERENCENR" "${ASSEMBLY}.${LEN}" "${RESULT}/reference_against_assembly" "${RESULT}/tmp" --max-seqs 500000 -a --min-seq-id 0.89
+    "${MMSEQS}" search "$REFERENCENR" "${ASSEMBLY}.${LEN}" "${RESULT}/reference_against_assembly" "${RESULT}/tmp" --max-seqs 500000 -a --min-seq-id 0.89
     for i in $(seq 90 99 | awk '{ print $1/100 }'); do
-        "${PLASS}" filterdb "${RESULT}/reference_against_assembly" "${RESULT}/reference_against_assembly_${i}" --filter-column 3 --comparison-value $i --comparison-operator ge
-        "${PLASS}" createtsv "$REFERENCENR" "${ASSEMBLY}.${LEN}" "${RESULT}/reference_against_assembly_${i}" "${RESULT}/reference_against_assembly_${i}.tsv"
+        "${MMSEQS}" filterdb "${RESULT}/reference_against_assembly" "${RESULT}/reference_against_assembly_${i}" --filter-column 3 --comparison-value $i --comparison-operator ge
+        "${MMSEQS}" createtsv "$REFERENCENR" "${ASSEMBLY}.${LEN}" "${RESULT}/reference_against_assembly_${i}" "${RESULT}/reference_against_assembly_${i}.tsv"
         mapped_fraction "${REFERENCENR}.index" "${RESULT}/reference_against_assembly_${i}.tsv" "$LEN" >> "${RESULT}/sens"
     done
 }
