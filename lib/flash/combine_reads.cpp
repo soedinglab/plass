@@ -38,15 +38,16 @@
 #ifdef WITH_SSE2
 
 #ifdef __GNUC__
+# ifndef __cold
 #	if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
 #		define __cold __attribute__((cold))
 #	else
 #		define __cold
 #	endif
+# endif
 #	define __noreturn __attribute__((noreturn))
 #	define __format(type, format_str, args_start) \
 			__attribute__((format(type, format_str, args_start)))
-
 #else
 #	define __noreturn
 #	define __cold
