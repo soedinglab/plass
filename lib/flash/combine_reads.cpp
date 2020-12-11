@@ -33,6 +33,7 @@
 #include <limits.h>
 
 #define WITH_SSE2
+#define SIMDE_ENABLE_NATIVE_ALIASES
 #include <simde/x86/sse2.h>
 
 #ifdef WITH_SSE2
