@@ -154,7 +154,7 @@ jobs:
         displayName: Build Plass
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./util/run_regression.sh ./build/plass REGRESSION
+          ./util/run_regression.sh ./build/plass ./build/plass REGRESSION
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
