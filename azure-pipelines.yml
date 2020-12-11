@@ -76,7 +76,7 @@ jobs:
               echo "leak:libgomp1" > ${BUILD_SOURCESDIRECTORY}/ASan.supp
               export ASAN_OPTIONS=suppressions=${BUILD_SOURCESDIRECTORY}/ASan.supp
           fi
-          ./util/run_regression.sh ./build/src/spacepharer REGRESSION
+          ./util/run_regression.sh ./build/src/plass REGRESSION
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
@@ -149,7 +149,7 @@ jobs:
         displayName: Build Plass
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./util/run_regression.sh ./build/spacepharer REGRESSION
+          ./util/run_regression.sh ./build/plass REGRESSION
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
