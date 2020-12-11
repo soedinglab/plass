@@ -1,7 +1,6 @@
 # PLASS - Protein-Level ASSembler
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/plass.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/plass)
 [![BioContainer Pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fmmseqs.com%2Fbiocontainer.php%3Fcontainer%3Dplass)](https://biocontainers.pro/#/tools/plass)
-[ ![Codeship Status for soedinglab/plass](https://app.codeship.com/projects/fc7c4e70-e188-0135-0db2-569fac09cf96/status?branch=master)](https://app.codeship.com/projects/266646)
 [![Build Status](https://travis-ci.org/soedinglab/plass.svg?branch=master)](https://travis-ci.org/soedinglab/plass)
 [![DOI](https://zenodo.org/badge/118119513.svg)](https://zenodo.org/badge/latestdoi/118119513)
 
