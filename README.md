@@ -10,7 +10,7 @@ Plass (Protein-Level ASSembler) is a software to assemble short read sequencing 
 
 [Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, doi: doi.org/10.1038/s41592-019-0437-4 (2019)](https://www.nature.com/articles/s41592-019-0437-4).
 
-<p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/.github/Plass.jpeg" height="256" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/.github/plass.png" height="256" /></p>
 
 
 ## Soil Reference Catalog (SRC) and Marine Eukaryotic Reference Catalog (MERC)
