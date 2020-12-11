@@ -32,18 +32,10 @@
 #include <string.h>
 #include <limits.h>
 
-#if defined(__GNUC__) && defined(__SSE2__)
-#  define WITH_SSE2
-#endif
+#define WITH_SSE2
+#include <simde/x86/sse2.h>
 
 #ifdef WITH_SSE2
-#  include <xmmintrin.h>
-#  include <emmintrin.h>
-#endif
-
-#ifdef WITH_SSE2
-
-
 
 #ifdef __GNUC__
 #	if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
