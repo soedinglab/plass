@@ -72,7 +72,7 @@ static inline uint32_t
 hsum32_v16(__m128i v)
 {
     __m128i mask = _mm_set1_epi32(0x0000ffff);
-    v = _mm_add_epi32(v & mask, _mm_srli_si128(v, 2) & mask);
+    v = _mm_add_epi32(_mm_and_si128(v, mask), _mm_and_si128(_mm_srli_si128(v, 2), mask));
     v = _mm_add_epi32(v, _mm_srli_si128(v, 4));
     v = _mm_add_epi32(v, _mm_srli_si128(v, 8));
     return _mm_cvtsi128_si32(v);
@@ -174,7 +174,7 @@ compute_mismatch_stats(const char * seq_1,
                  * result.  This will produce 0xff in bytes
                  * where the bases differ and 0x00 in bytes
                  * where the bases were the same.  */
-                __m128i cmpresult = ~_mm_cmpeq_epi8(s1_v8, s2_v8);
+                __m128i cmpresult = simde_x_mm_not_si128(_mm_cmpeq_epi8(s1_v8, s2_v8));
 
                 /* Tally mismatched bases.  Subtracting 0x00 and
                  * 0xff is equivalent to adding 0 and 1,
@@ -190,7 +190,7 @@ compute_mismatch_stats(const char * seq_1,
 
                 /* Select only quality scores at mismatch sites
                  */
-                __m128i qadd_v8 = qmin_v8 & cmpresult;
+                __m128i qadd_v8 = _mm_and_si128(qmin_v8, cmpresult);
 
                 /* Double the precision (8 => 16 bits) and tally  */
                 __m128i qadd_v16_1 = _mm_unpacklo_epi8(qadd_v8,
