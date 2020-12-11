@@ -91,18 +91,3 @@ script:
     else \
       exit 1; \
     fi
-
-after_success:
-  - |
-    if [[ "$TRAVIS_PULL_REQUEST" == "false" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then \
-        mkdir -p plass/bin; \
-        cp README.md LICENSE.md plass; \
-        cp build/build_sse41/src/plass plass/bin; \
-        tar czvf plass-osx-sse41.tar.gz plass; \
-        cp build/build_avx2/src/plass plass/bin; \
-        tar czvf plass-osx-avx2.tar.gz plass; \
-        openssl aes-256-cbc -K $encrypted_70a1e64028ee_key -iv $encrypted_70a1e64028ee_iv -in ./util/.travis.enc -out $HOME/.ssh/id_rsa -d; \
-        chmod 400 $HOME/.ssh/id_rsa; \
-        ssh -o StrictHostKeyChecking=no codeship@uniclust.mmseqs.com "mkdir -p /home/mirdita/repositories/mmseqs-webserver/archive/${TRAVIS_COMMIT}"; \
-        scp -o StrictHostKeyChecking=no plass-osx-sse41.tar.gz plass-osx-avx2.tar.gz codeship@uniclust.mmseqs.com:/home/mirdita/repositories/mmseqs-webserver/archive/${TRAVIS_COMMIT}; \
-    fi
