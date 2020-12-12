@@ -106,7 +106,7 @@ int findassemblystart(int argn, const char **argv, const Command& command) {
                 int queryMoffset = queryPosOfM - res.qStartPos;
                 int dbMPos = res.dbStartPos + queryMoffset;
                 posOfM = dbMPos;
-                hasM = (dbSeqData[dbMPos] == 'M');
+                hasM = dbMPos >= 0 && (dbSeqData[dbMPos] == 'M');
                 if (hasM == false){
                     goto endOfLoop;
                 }
