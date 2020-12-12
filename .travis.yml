@@ -1,5 +1,4 @@
-language: minimal
-
+language: shell
 os: linux
 dist: xenial
 addons:
@@ -12,68 +11,45 @@ addons:
       - vim-common
       - shellcheck
 
-matrix:
+jobs:
   include:
-  - addons:
-      apt:
-        packages:
-          - *default_packages
-          - clang-5.0
-          - libc++-dev
-          - libomp-dev
-    env: CC=clang-5.0 CXX=clang++-5.0
-  - addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-          - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main'
-            key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
-        packages:
-          - *default_packages
-          - clang-10
-          - libc++-10-dev
-          - libc++abi-10-dev
-          - libomp-10-dev
-    env: CC=clang-10 CXX=clang++-10
-  - addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - *default_packages
-          - gcc-4.9
-          - g++-4.9
-    env: CC=gcc-4.9 CXX=g++-4.9
-  - addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - *default_packages
-          - gcc-9
-          - g++-9
-    env: CC=gcc-9 CXX=g++-9
-  - addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - *default_packages
-          - gcc-9
-          - g++-9
-          - mpi-default-dev
-          - mpi-default-bin
-    env: MPI=1 CC=gcc-9 CXX=g++-9
-  - os: osx
-    osx_image: xcode10.1
-    addons:
-      homebrew:
-        packages:
-          - cmake
-          - zlib
-          - bzip2
-          - libomp
-        update: true
+    - addons:
+        apt:
+          packages:
+            - *default_packages
+            - build-essential
+            - g++-8
+            - gcc-8
+      arch: arm64
+      env: CC=gcc-8 CXX=g++-8 MMSEQS_NUM_THREADS=8
+      dist: bionic
+    - addons:
+        apt:
+          packages:
+            - *default_packages
+            - build-essential
+            - g++-8
+            - gcc-8
+      arch: ppc64le
+      dist: bionic
+      env: CC=gcc-8 CXX=g++-8 MMSEQS_NUM_THREADS=8
+    - addons:
+        apt:
+          packages:
+            - *default_packages
+            - clang-5.0
+            - libc++-dev
+            - libomp-dev
+      env: CC=clang-5.0 CXX=clang++-5.0
+    - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - *default_packages
+            - gcc-4.9
+            - g++-4.9
+      env: CC=gcc-4.9 CXX=g++-4.9
 
 before_install:
   - export CC
@@ -81,13 +57,9 @@ before_install:
 
 script:
   - |
-    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then \
-      if [[ -n "$MPI" ]]; then MPI=1; else MPI=0; fi; \
-      mkdir build; cd build; \
-      cmake -DHAVE_MPI="$MPI" -DHAVE_SSE4_1=1 -DREQUIRE_OPENMP=0 ..;
-      make -j $(nproc --all); \
-    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then \
-      ./lib/mmseqs/util/build_osx.sh . build plass || exit 1; \
-    else \
-      exit 1; \
-    fi
+    if [[ -n "$MPI" ]]; then MPI=1; else MPI=0; fi; \
+    mkdir build; cd build; \
+    cmake -DHAVE_MPI="$MPI" ..;
+    make -j $(nproc --all); \
+    cd ..; \
+    ./util/run_regression.sh ./build/src/plass ./build/src/plass REGRESSION;
