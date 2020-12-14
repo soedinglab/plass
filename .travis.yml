@@ -32,7 +32,7 @@ jobs:
             - gcc-8
       arch: ppc64le
       dist: bionic
-      env: CC=gcc-8 CXX=g++-8 MMSEQS_NUM_THREADS=8
+      env: CC=gcc-8 CXX=g++-8 MMSEQS_NUM_THREADS=4
     - addons:
         apt:
           packages:
@@ -60,6 +60,6 @@ script:
     if [[ -n "$MPI" ]]; then MPI=1; else MPI=0; fi; \
     mkdir build; cd build; \
     cmake -DHAVE_MPI="$MPI" ..;
-    make -j $(nproc --all); \
+    make -j ${MMSEQS_NUM_THREADS:-$(nproc --all)}; \
     cd ..; \
     ./util/run_regression.sh ./build/src/plass ./build/src/plass REGRESSION;
