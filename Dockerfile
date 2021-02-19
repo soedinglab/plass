@@ -33,7 +33,7 @@ case "${FLAGS}" in\n\
   *avx2*) exec /usr/local/bin/plass_avx2 "$@" ;;\n\
   *sse4_1*) exec /usr/local/bin/plass_sse41 "$@" ;;\n\
   *) exec /usr/local/bin/plass_sse2 "$@" ;;\n\
-fi' >> /usr/local/bin/plass
+esac' >> /usr/local/bin/plass
 RUN chmod +x /usr/local/bin/plass
 
 VOLUME ["/app"]
