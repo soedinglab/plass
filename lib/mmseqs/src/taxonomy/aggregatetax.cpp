@@ -135,19 +135,18 @@ int aggregate(const bool useAln, int argc, const char **argv, const Command& com
                 setTaxStr.append(SSTR(result.seqsAgreeWithSelectedTaxon));
                 setTaxStr.append(1, '\t');
                 setTaxStr.append(SSTR(roundf(result.selectedPercent * 100) / 100));
-
                 if (!ranks.empty()) {
-                    setTaxStr += '\t';
+                    setTaxStr.append(1, '\t');
                 }
                 if (par.showTaxLineage > 0) {
-                    setTaxStr += '\t';
+                    setTaxStr.append(1, '\t');
                 }
             } else {
                 setTaxStr.append(SSTR(node->taxId));
                 setTaxStr.append(1, '\t');
-                setTaxStr.append(node->rank);
+                setTaxStr.append(t->getString(node->rankIdx));
                 setTaxStr.append(1, '\t');
-                setTaxStr.append(node->name);
+                setTaxStr.append(t->getString(node->nameIdx));
                 setTaxStr.append(1, '\t');
                 setTaxStr.append(SSTR(totalNumSeqs));
                 setTaxStr.append(1, '\t');
@@ -156,19 +155,20 @@ int aggregate(const bool useAln, int argc, const char **argv, const Command& com
                 setTaxStr.append(SSTR(result.seqsAgreeWithSelectedTaxon));
                 setTaxStr.append(1, '\t');
                 setTaxStr.append(SSTR(roundf(result.selectedPercent * 100) / 100));
-
                 if (!ranks.empty()) {
-                    std::string lcaRanks = Util::implode(t->AtRanks(node, ranks), ';');
-                    setTaxStr += '\t' + lcaRanks;
+                    setTaxStr.append(1, '\t');
+                    setTaxStr.append(Util::implode(t->AtRanks(node, ranks), ';'));
                 }
                 if (par.showTaxLineage == 1) {
-                    setTaxStr += '\t' + t->taxLineage(node, true);
+                    setTaxStr.append(1, '\t');
+                    setTaxStr.append(t->taxLineage(node, true));
                 }
                 if (par.showTaxLineage == 2) {
-                    setTaxStr += '\t' + t->taxLineage(node, false);
+                    setTaxStr.append(1, '\t');
+                    setTaxStr.append(t->taxLineage(node, false));
                 }
             }
-            setTaxStr += '\n';
+            setTaxStr.append(1, '\n');
 
             writer.writeData(setTaxStr.c_str(), setTaxStr.size(), setKey, thread_idx);
             setTaxStr.clear();
