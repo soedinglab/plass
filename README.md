@@ -74,6 +74,10 @@ Compiling PLASS from source has the advantage that it will be optimized to the s
 
       CXX="$(brew --prefix)/bin/g++-8" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
 
+#### Dependencies
+
+When compiling from source, PLASS requires `zlib` and `bzip`.
+
 ### Use the docker image
 We also provide a Docker image of Plass. You can mount the current directory containing the reads to be assembled and run plass with the following command:
 
@@ -83,3 +87,6 @@ We also provide a Docker image of Plass. You can mount the current directory con
 ## Hardware requirements
 Plass needs roughly 1 byte of memory per residue to work efficiently. Plass will scale its memory consumption based on the available main memory of the machine. Plass needs a CPU with at least the SSE4.1 instruction set to run. 
 
+## Known problems 
+* The assembly of Plass includes all ORFs having a start and end codon that includes even very short ORFs < 60 amino acids. Many of these short ORFs are spurious since our neural network cannot distingue them well. We would recommend to use other method to verify the coding potential of these. Assemblies above 100 amino acids are mostly genuine protein sequences. 
+* Plass in default searches for ORFs of 40 amino acids or longer. This limits the read length to > 120. To assemble this protein, you need to lower the `--min-length` threshold. Be aware using short reads (< 100 length) might result in lower sensitivity.
