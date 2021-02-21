@@ -157,7 +157,7 @@ int findassemblystart(int argn, const char **argv, const Command &command) {
             char *querySeqData = tDbr->getData(id, thread_idx);
             int mPos = addStopAtPosition[id];
             if (mPos == -1) {
-                size_t queryLen = tDbr->getSeqLen(id);
+                size_t queryLen = tDbr->getEntryLen(id) - 1;
                 resultWriter.writeData(querySeqData, queryLen, queryKey, thread_idx);
             } else {
                 str.append("*");
