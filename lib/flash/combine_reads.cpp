@@ -62,9 +62,12 @@
 static inline uint32_t
 hsum32_v8(__m128i v)
 {
-    v = _mm_sad_epu8(v, _mm_set1_epi8(0));
-    return (uint32_t)_mm_extract_epi16(v, 0) +
-           (uint32_t)_mm_extract_epi16(v, 4);
+    v = _mm_sad_epu8(v, _mm_setzero_si128());
+#if SIMDE_ENDIAN_ORDER == SIMDE_ENDIAN_LITTLE
+    return (uint32_t)_mm_extract_epi16(v, 0) + (uint32_t)_mm_extract_epi16(v, 4);
+#else
+    return (uint32_t)_mm_extract_epi16(v, 3) + (uint32_t)_mm_extract_epi16(v, 7);
+#endif
 }
 
 /* Sum the values an 8 x 16 bit vector and return a 32-bit result.  */
@@ -193,12 +196,13 @@ compute_mismatch_stats(const char * seq_1,
                 __m128i qadd_v8 = _mm_and_si128(qmin_v8, cmpresult);
 
                 /* Double the precision (8 => 16 bits) and tally  */
-                __m128i qadd_v16_1 = _mm_unpacklo_epi8(qadd_v8,
-                                                       _mm_set1_epi8(0));
-
-                __m128i qadd_v16_2 = _mm_unpackhi_epi8(qadd_v8,
-                                                       _mm_set1_epi8(0));
-
+#if SIMDE_ENDIAN_ORDER == SIMDE_ENDIAN_LITTLE
+                __m128i qadd_v16_1 = _mm_unpacklo_epi8(qadd_v8, _mm_set1_epi8(0));
+                __m128i qadd_v16_2 = _mm_unpackhi_epi8(qadd_v8, _mm_set1_epi8(0));
+#else
+                __m128i qadd_v16_1 = _mm_unpacklo_epi8(_mm_set1_epi8(0), qadd_v8);
+                __m128i qadd_v16_2 = _mm_unpackhi_epi8(_mm_set1_epi8(0), qadd_v8);
+#endif
                 mismatch_qual_total_v16 = _mm_add_epi16(mismatch_qual_total_v16,
                                                         qadd_v16_1);
 
