@@ -13,11 +13,16 @@
 #include <utility>
 #include <sstream>
 
+#include <simde/simde-common.h>
+
 bool ReadUnsignedInt(std::istream* file, unsigned int* i) {
     KASSERT(file, "Invalid file stream");
     KASSERT(i, "Invalid pointer");
 
     file->read((char*)i, sizeof(unsigned int));
+#if SIMDE_ENDIAN_ORDER == SIMDE_ENDIAN_BIG
+    *i = __builtin_bswap32(*i);
+#endif
     KASSERT(file->gcount() == sizeof(unsigned int), "Expected unsigned int");
 
     return true;
@@ -28,6 +33,12 @@ bool ReadFloat(std::istream* file, float* f) {
     KASSERT(f, "Invalid pointer");
 
     file->read((char*)f, sizeof(float));
+#if SIMDE_ENDIAN_ORDER == SIMDE_ENDIAN_BIG
+    unsigned int fi;
+    memcpy(&fi, &f, sizeof(unsigned int));
+    fi = __builtin_bswap32(fi);
+    memcpy(f, &fi, sizeof(float));
+#endif
     KASSERT(file->gcount() == sizeof(float), "Expected float");
 
     return true;
@@ -38,6 +49,14 @@ bool ReadFloats(std::istream* file, float* f, size_t n) {
     KASSERT(f, "Invalid pointer");
 
     file->read((char*)f, sizeof(float) * n);
+#if SIMDE_ENDIAN_ORDER == SIMDE_ENDIAN_BIG
+    for (size_t i = 0; i < n; ++i) {
+       unsigned int fi;
+       memcpy(&fi, &f[i], sizeof(unsigned int));
+       fi = __builtin_bswap32(fi);
+       memcpy(f + i, &fi, sizeof(float));
+    }
+#endif
     KASSERT(((unsigned int)file->gcount()) == sizeof(float) * n,
             "Expected floats");
 
