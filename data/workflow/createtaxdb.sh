@@ -1,5 +1,10 @@
 #!/bin/sh -e
 
+fail() {
+    echo "Error: $1"
+    exit 1
+}
+
 notExists() {
 	  [ ! -e "$1" ]
 }
@@ -49,7 +54,7 @@ downloadFile() {
     fail "Could not download $URL to $OUTPUT"
 }
 
-if notExists "${TAXDBNAME}_names.dmp" || notExists "${TAXDBNAME}_nodes.dmp" || notExists "${TAXDBNAME}_merged.dmp"; then
+if { [ "${DBMODE}" = "1" ] && notExists "${TAXDBNAME}_taxonomy"; } || { [ "${DBMODE}" = "0" ] && { notExists "${TAXDBNAME}_names.dmp" || notExists "${TAXDBNAME}_nodes.dmp" || notExists "${TAXDBNAME}_merged.dmp"; }; }; then
     if [ "$DOWNLOAD_NCBITAXDUMP" -eq "1" ]; then
         # Download NCBI taxon information
         if notExists "${TMP_PATH}/ncbi_download.complete"; then
@@ -61,10 +66,16 @@ if notExists "${TAXDBNAME}_names.dmp" || notExists "${TAXDBNAME}_nodes.dmp" || n
         fi
         NCBITAXINFO="${TMP_PATH}"
     fi
-    cp -f "${NCBITAXINFO}/names.dmp"    "${TAXDBNAME}_names.dmp"
-    cp -f "${NCBITAXINFO}/nodes.dmp"    "${TAXDBNAME}_nodes.dmp"
-    cp -f "${NCBITAXINFO}/merged.dmp"   "${TAXDBNAME}_merged.dmp"
-    cp -f "${NCBITAXINFO}/delnodes.dmp" "${TAXDBNAME}_delnodes.dmp"
+    if [ "${DBMODE}" = "1" ]; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createbintaxonomy "${NCBITAXINFO}/names.dmp" "${NCBITAXINFO}/nodes.dmp" "${NCBITAXINFO}/merged.dmp" "${TAXDBNAME}_taxonomy" ${VERBOSITY_PAR} \
+            || fail "createbintaxonomy failed"
+    else
+        cp -f "${NCBITAXINFO}/names.dmp"    "${TAXDBNAME}_names.dmp"
+        cp -f "${NCBITAXINFO}/nodes.dmp"    "${TAXDBNAME}_nodes.dmp"
+        cp -f "${NCBITAXINFO}/merged.dmp"   "${TAXDBNAME}_merged.dmp"
+        cp -f "${NCBITAXINFO}/delnodes.dmp" "${TAXDBNAME}_delnodes.dmp"
+    fi
 fi
 
 if notExists "${TAXDBNAME}_mapping"; then
