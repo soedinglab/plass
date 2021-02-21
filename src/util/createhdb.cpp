@@ -23,11 +23,10 @@ int createhdb(int argc, const char **argv, const Command& command) {
     seqDbr->open(DBReader<unsigned int>::NOSORT);
 
     const bool hasCycleLookup = par.filenames.size() > 2;
-    DBReader<unsigned int> *cycleDbr;
+    DBReader<unsigned int> *cycleDbr = NULL;
     DBWriter *headerDbw;
     const char *headerData, *headerIndex;
     if (hasCycleLookup) {
-
         cycleDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(),  par.threads, DBReader<unsigned int>::USE_INDEX);
         cycleDbr->open(DBReader<unsigned int>::NOSORT);
         headerData = par.hdr3.c_str();
@@ -52,7 +51,7 @@ int createhdb(int argc, const char **argv, const Command& command) {
                  std::to_string(id) + HEADER_INTERN_SEP + "len:" + std::to_string(seqDbr->getSeqLen(id));
          size_t seqKey = seqDbr->getDbKey(id);
 
-         if (hasCycleLookup) {
+         if (cycleDbr != NULL) {
              bool cycle = (cycleDbr->getId(seqKey) != UINT_MAX);
              headerLine = headerLine + HEADER_INTERN_SEP + "cycle:" + std::to_string(cycle);
          }
@@ -69,7 +68,7 @@ int createhdb(int argc, const char **argv, const Command& command) {
     delete headerDbw;
     delete seqDbr;
 
-    if (hasCycleLookup) {
+    if (cycleDbr != NULL) {
         cycleDbr->close();
         delete cycleDbr;
     }
