@@ -16,11 +16,7 @@ int mergereads(int argn, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argn, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
-    // + 1 for query
-    Debug(Debug::INFO) << "Start merging reads.\n";
-
     //TODO: check inputfiles exists
-    //TODO
     combine_params alg_params;
     alg_params.max_overlap = 65;
     alg_params.min_overlap = 15;
@@ -35,6 +31,8 @@ int mergereads(int argn, const char **argv, const Command& command) {
     resultWriter.open();
     DBWriter headerResultWriter((outFile+"_h").c_str(), (outFile+"_h.index").c_str(), 1, par.compressed, Parameters::DBTYPE_GENERIC_DB);
     headerResultWriter.open();
+
+    Debug::Progress progress;
     unsigned int id = 0;
     {
         struct read* r1 = (struct read*) calloc(1, sizeof(struct read));
@@ -51,9 +49,9 @@ int mergereads(int argn, const char **argv, const Command& command) {
             KSeqWrapper *kseq1 = KSeqFactory(filenames[i * 2].c_str());
             KSeqWrapper *kseq2 = KSeqFactory(filenames[i * 2 + 1].c_str());
             while (kseq1->ReadEntry() && kseq2->ReadEntry()) {
+                progress.updateProgress();
                 const KSeqWrapper::KSeqEntry &read1 = kseq1->entry;
                 const KSeqWrapper::KSeqEntry &read2 = kseq2->entry;
-
 
                 r1->seq =  read1.sequence.s;
                 r1->seq_len = read1.sequence.l;
