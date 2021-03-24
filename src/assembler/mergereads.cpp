@@ -62,7 +62,19 @@ int mergereads(int argn, const char **argv, const Command& command) {
                 r2->seq_len = read2.sequence.l;
                 r2->qual = read2.qual.s;
                 r2->qual_len = read2.qual.l;
+
+                if (r1->seq_len == 0 || r2->seq_len == 0) {
+                    Debug(Debug::ERROR) << "Invalid sequence record found\n";
+                    EXIT(EXIT_FAILURE);
+                }
+
+                if (r1->qual_len == 0 || r2->qual_len == 0) {
+                    Debug(Debug::ERROR) << "Invalid quality record found\n";
+                    EXIT(EXIT_FAILURE);
+                }
+
                 reverse_complement(r2);
+
                 enum combine_status status = combine_reads(r1, r2, r_combined, &alg_params);
                 char newLine = '\n';
                 switch (status) {
