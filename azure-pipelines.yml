@@ -108,6 +108,10 @@ jobs:
           SIMD: ARM8
           ARCH: arm64
           CPREF: aarch64
+        s390x:
+          SIMD: S390X
+          ARCH: s390x
+          CPREF: s390x
     steps:
       - script: |
           sudo dpkg --add-architecture $ARCH
