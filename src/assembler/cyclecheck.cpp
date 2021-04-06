@@ -1,5 +1,5 @@
 /*
- * Written by Annika Seidel <annika.seidel@mpibpc.mpg.de>
+ * Written by Annika Jochheim <annika.jochheim@mpibpc.mpg.de>
  * detect circular fragments
  *
  * constraint: fragments contain redundant parts at most 3 times
