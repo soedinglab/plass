@@ -40,7 +40,7 @@ int createhdb(int argc, const char **argv, const Command& command) {
     if (FileUtil::fileExists(headerData) == true) {
         Debug(Debug::WARNING) << headerData << " exists and will be overwritten.\n";
     }
-    headerDbw = new DBWriter (headerData, headerIndex, par.threads, par.compressed, Parameters::DBTYPE_GENERIC_DB);
+    headerDbw = new DBWriter (headerData, headerIndex, 1, par.compressed, Parameters::DBTYPE_GENERIC_DB);
     headerDbw->open();
 
      // header format: 'ID len:<len> cycle:<0|1>', later 'ID len:<len> cycle:<0|1> cov:<cov>'
