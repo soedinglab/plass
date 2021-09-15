@@ -23,7 +23,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->ignoreMultiKmer = true;
     p->includeOnlyExtendable = true;
     p->addBacktrace = false;
-    p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
+    p->rescoreMode = Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
     p->maxSeqLen = 200000;
     p->cycleCheck = true;
