@@ -5,9 +5,9 @@
 #include "FileUtil.h"
 #include "LocalParameters.h"
 
-#include "hybridassembledb.sh.h"
+#include "guidedNuclAssemble.sh.h"
 
-void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
+void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
 
     p->multiNumIterations = MultiParam<int>(5,5);
     p->multiKmerSize = MultiParam<int>(14,22);
@@ -26,27 +26,32 @@ void setHybridAssemblerWorkflowDefaults(LocalParameters *p) {
     p->addBacktrace = false;
     p->rescoreMode = Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
-    p->maxSeqLen = 200000; //TODO
+    p->maxSeqLen = 200000;
     p->cycleCheck = true;
     p->chopCycle = true;
 
-    //cluster defaults
-    p->covThr = 0.99;
+    //cluster defaults for redundancy reduction
+    p->covMode = 1;
+    p->clustSeqIdThr = 0.97;
+    p->clustCovThr = 0.99;
     p->clusteringMode = 2;
     p->gapOpen = 5;
     p->gapExtend = 2;
     p->zdrop = 200;
 }
 
-int hybridassembledb(int argc, const char **argv, const Command &command) {
+int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
-    setHybridAssemblerWorkflowDefaults(&par);
+    setGuidedNuclAssemblerWorkflowDefaults(&par);
 
     par.overrideParameterDescription(par.PARAM_MULTI_MIN_SEQ_ID, "Overlap sequence identity threshold (range 0.0-1.0)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_E, "Extend sequences if the E-value is below (range 0.0-inf)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_GAP_OPEN, "Gap open cost (only for clustering", NULL, 0);
     par.overrideParameterDescription(par.PARAM_GAP_EXTEND, "Gap extend cost (only for clustering)", NULL, 0);
     par.overrideParameterDescription(par.PARAM_ZDROP, "Maximal allowed difference between score values before alignment is truncated (only for clustering)", NULL, 0);
+
+    // make parameter visible in short help
+    par.overrideParameterDescription( par.PARAM_MAX_SEQ_LEN, NULL, NULL, MMseqsParameter::COMMAND_COMMON);
 
     // hide this parameters (changing them would lead to unexpected behavior)
     par.PARAM_C.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
@@ -77,6 +82,21 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
 
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     CommandCaller cmd;
+    if(par.filenames.size() < 3) {
+        Debug(Debug::ERROR) << "Too few input files provided.\n";
+        return EXIT_FAILURE;
+    }
+    else if ((par.filenames.size() - 2) % 2 == 0) {
+        cmd.addVariable("PAIRED_END", "1"); // paired end reads
+    } else {
+        if (par.filenames.size() != 3) {
+            Debug(Debug::ERROR) << "Too many input files provided.\n";
+            Debug(Debug::ERROR) << "For paired-end input provide READSETA_1.fastq READSETA_2.fastq ... OUTPUT.fasta tmpDir\n";
+            Debug(Debug::ERROR) << "For single input use READSET.fast(q|a) OUTPUT.fasta tmpDir\n";
+            return EXIT_FAILURE;
+        }
+        cmd.addVariable("PAIRED_END", NULL); // single end reads
+    }
 
 
     std::string tmpDir = par.filenames.back();
@@ -142,17 +162,17 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     par.seqIdThr = par.multiSeqIdThr.nucleotides;
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
-    // set mandatory values for nucleotide level assembly step when calling nucleassemble from hybridassemble
+    // set mandatory values for nucleotide level assembly step when calling nucleassemble step from guidedNuclAssembler
     par.numIterations = par.multiNumIterations.nucleotides;
     par.kmerSize = par.multiKmerSize.nucleotides;
     par.seqIdThr = par.multiSeqIdThr.nucleotides;
     par.alnLenThr = par.multiAlnLenThr.nucleotides;
     par.addBacktrace = addBacktrace;
-    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleDBworkflow).c_str());
+    par.dbMode = true;
+    cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleworkflow).c_str());
 
     // set mandatory values for redundancy reduction
     par.seqIdThr = par.clustSeqIdThr;
-    par.covMode = 1;
     par.covThr = par.clustCovThr;
     par.wrappedScoring = true;
     par.ignoreMultiKmer = true;
@@ -161,8 +181,8 @@ int hybridassembledb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
-    FileUtil::writeFile(tmpDir + "/hybridassembledb.sh", hybridassembledb_sh, hybridassembledb_sh_len);
-    std::string program(tmpDir + "/hybridassembledb.sh");
+    FileUtil::writeFile(tmpDir + "/guidedNuclAssemble.sh", guidedNuclAssemble_sh, guidedNuclAssemble_sh_len);
+    std::string program(tmpDir + "/guidedNuclAssemble.sh");
     cmd.execProgram(program.c_str(), par.filenames);
 
     return EXIT_SUCCESS;

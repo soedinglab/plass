@@ -16,7 +16,6 @@ int mergereads(int argn, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argn, argv, command, true, Parameters::PARSE_VARIADIC, 0);
 
-    //TODO: check inputfiles exists
     combine_params alg_params;
     alg_params.max_overlap = 65;
     alg_params.min_overlap = 15;

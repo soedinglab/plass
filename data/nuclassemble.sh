@@ -66,13 +66,29 @@ cyclecheck() {
 [ -z "${TMP_PATH}" ] && echo "Please provide TMP_PATH" && exit 1
 
 # check if files exist
-[ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
-[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE}.dbtype exists already!" && exit 1
+[   -f "${OUT_FILE}" ] &&  echo "${OUT_FILE} exists already!" && exit 1
 [ ! -d "${TMP_PATH}" ] &&  echo "tmp directory ${TMP_PATH} not found!" && mkdir -p "${TMP_PATH}"
 
+if [ -n "${DB_MODE}" ]; then
+    INPUT="$1"
+    [ ! -f "$1.dbtype" ] && echo "$1.dbtype not found!" && exit 1;
+else
+    INPUT="${TMP_PATH}/nucl_reads"
+    if notExists "${TMP_PATH}/nucl_reads"; then
+         if [ -n "${PAIRED_END}" ]; then
+            echo "PAIRED END MODE"
+            # shellcheck disable=SC2086
+            "$MMSEQS" mergereads "$@" "${TMP_PATH}/nucl_reads" ${VERBOSITY_PAR} \
+              || fail "mergereads failed"
+         else
+            # shellcheck disable=SC2086
+            "$MMSEQS" createdb "$@" "${TMP_PATH}/nucl_reads" ${CREATEDB_PAR} \
+                || fail "createdb failed"
+         fi
+    fi
+fi
 
-INPUT="$1"
-SOURCE="${INPUT}"
+SOURCE=${INPUT}
 STEP=0
 if [ -z "$NUM_IT" ]; then
     NUM_IT=1;
@@ -145,30 +161,48 @@ fi
 
 # create db outfile
 if notExists "${OUT_FILE}.dbtype"; then
-    "$MMSEQS" createsubdb "${RESULT}_only_assembled_filtered.index" "${RESULT}" "${OUT_FILE}" --subdb-mode 0 \
+    "$MMSEQS" createsubdb "${RESULT}_only_assembled_filtered.index" "${RESULT}" "${TMP_PATH}/assembly" --subdb-mode 0 \
         || fail "Create filtered contig db died"
     if [ -n "$PREV_CYCLE_ALL" ]; then
-        awk 'NR == FNR { f[$1] = $0; next } $1 in f { print $0 }' "${PREV_CYCLE_ALL}.index" "${OUT_FILE}.index" > "${OUT_FILE}_cycle.index"
+        awk 'NR == FNR { f[$1] = $0; next } $1 in f { print $0 }' "${PREV_CYCLE_ALL}.index" "${TMP_PATH}/assembly" > "${TMP_PATH}/assembly_cycle.index"
     fi
 fi
 
+if [ ! -n "${DB_MODE}" ]; then
 
-#if notExists "${TMP_PATH}/assembly_final_rep_h"; then
-#    # shellcheck disable=SC2086
-#    if notExists "${PREV_CYCLE_ALL}";then
-#        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
-#                || fail "createhdb failed"
-#    else
-#        "$MMSEQS" createhdb "${TMP_PATH}/assembly_final_rep" "${PREV_CYCLE_ALL}" "${TMP_PATH}/assembly_final_rep" ${VERBOSITY_PAR} \
-#                || fail "createhdb failed"
-#    fi
-#fi
+    if notExists "${TMP_PATH}/assembly_h.dbtype"; then
+        # shellcheck disable=SC2086
+        if [ -f "${TMP_PATH}/assembly_cycle.index" ]; then
+            "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${TMP_PATH}/assembly_cycle" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
+                || fail "createhdb failed"
+        else
+            "$MMSEQS" createhdb "${TMP_PATH}/assembly" "${TMP_PATH}/assembly" ${VERBOSITY_PAR} \
+                || fail "createhdb failed"
+        fi
+    fi
 
+    if notExists "${TMP_PATH}/assembly.fasta"; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" convert2fasta "${TMP_PATH}/assembly" "${TMP_PATH}/assembly.fasta" ${VERBOSITY_PAR} \
+            || fail "convert2fasta died"
+    fi
+
+    mv -f "${TMP_PATH}/assembly.fasta" "$OUT_FILE" \
+        || fail "Could not move result to $OUT_FILE"
+
+else
+    "$MMSEQS" mvdb "${TMP_PATH}/assembly" "$OUT_FILE"\
+       || fail "Could not move result to $OUT_FILE"
+
+    if [ -f "${TMP_PATH}/assembly_cycle.index" ]; then
+        mv "${TMP_PATH}/assembly_cycle.index" "${OUT_FILE}_cycle.index"
+    fi
+fi
 
 if [ -n "$REMOVE_TMP" ]; then
     echo "Removing temporary files"
     rm -f "${TMP_PATH}/pref_"*
     rm -f "${TMP_PATH}/aln_"*
-    rm -f "${TMP_PATH}/assembly_"*
-    rm -f "${TMP_PATH}/nuclassembledb.sh"
+    rm -f "${TMP_PATH}/assembly"*
+    rm -f "${TMP_PATH}/nuclassemble.sh"
 fi

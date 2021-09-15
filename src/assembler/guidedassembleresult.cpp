@@ -94,7 +94,7 @@ Matcher::result_t selectBestFragmentToExtend(QueueBySeqId &alignments,
 }
 
 
-int dohybridassembleresult(LocalParameters &par) {
+int doguidedassembleresult(LocalParameters &par) {
     DBReader<unsigned int> *nuclSequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(),  par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     nuclSequenceDbr->open(DBReader<unsigned int>::NOSORT);
 
@@ -355,7 +355,7 @@ int dohybridassembleresult(LocalParameters &par) {
     return EXIT_SUCCESS;
 }
 
-int hybridassembleresults(int argc, const char **argv, const Command& command) {
+int guidedassembleresults(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
@@ -364,6 +364,6 @@ int hybridassembleresults(int argc, const char **argv, const Command& command) {
     // never allow deletions
     par.allowDeletion = false;
     Debug(Debug::INFO) << "Compute assembly.\n";
-    return dohybridassembleresult(par);
+    return doguidedassembleresult(par);
 }
 

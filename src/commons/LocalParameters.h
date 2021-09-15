@@ -19,20 +19,16 @@ public:
         return static_cast<LocalParameters&>(LocalParameters::getInstance());
     }
 
-    std::vector<MMseqsParameter *> assemblerworkflow;
-    std::vector<MMseqsParameter *> nuclassemblerworkflow;
-    std::vector<MMseqsParameter *> hybridassemblerworkflow;
-
-    std::vector<MMseqsParameter *> assembleDBworkflow;
-    std::vector<MMseqsParameter *> nuclassembleDBworkflow;
-    std::vector<MMseqsParameter *> hybridassembleDBworkflow;
+    std::vector<MMseqsParameter *> assembleworkflow;
+    std::vector<MMseqsParameter *> nuclassembleworkflow;
+    std::vector<MMseqsParameter *> guidedNuclAssembleworkflow;
 
     std::vector<MMseqsParameter *> assembleresults;
     std::vector<MMseqsParameter *> cyclecheck;
     std::vector<MMseqsParameter *> createhdb;
     std::vector<MMseqsParameter *> extractorfssubset;
     std::vector<MMseqsParameter *> filternoncoding;
-    std::vector<MMseqsParameter *> hybridassembleresults;
+    std::vector<MMseqsParameter *> guidedassembleresults;
     std::vector<MMseqsParameter *> reduceredundancy;
 
 
@@ -44,6 +40,7 @@ public:
     float proteinFilterThreshold;
     bool cycleCheck;
     bool chopCycle;
+    bool dbMode;
 
     MultiParam<int> multiNumIterations;
     MultiParam<int> multiKmerSize;
@@ -62,8 +59,8 @@ public:
     PARAMETER(PARAM_MULTI_K)
     PARAMETER(PARAM_MULTI_MIN_SEQ_ID)
     PARAMETER(PARAM_MULTI_MIN_ALN_LEN)
-
-
+    PARAMETER(PARAM_DB_MODE)
+    
 private:
     LocalParameters() :
             Parameters(),
@@ -77,21 +74,21 @@ private:
             PARAM_MIN_CONTIG_LEN(PARAM_MIN_CONTIG_LEN_ID, "--min-contig-len", "Minimum contig length", "Minimum length of assembled contig to output", typeid(int), (void *) &minContigLen, "^[1-9]{1}[0-9]*$"),
             PARAM_CLUST_MIN_SEQ_ID_THR(PARAM_CLUST_MIN_SEQ_ID_THR_ID,"--clust-min-seq-id", "Clustering seq. id. threshold","Seq. id. threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)",typeid(float), (void *) &clustSeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
             PARAM_CLUST_C(PARAM_CLUST_C_ID,"--clust-min-cov", "Clustering coverage threshold","Coverage threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)",typeid(float), (void *) &clustCovThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
-            PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycle-check", "Check for circular sequences", "Check for circular sequences (avoid infinite extension of circular or long repeated regions) ",typeid(bool), (void *) &cycleCheck, "", MMseqsParameter::COMMAND_MISC | MMseqsParameter::COMMAND_EXPERT),
-            PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superfluous part of circular fragments (see --cycle-check)",typeid(bool), (void *) &chopCycle, "", MMseqsParameter::COMMAND_MISC | MMseqsParameter::COMMAND_EXPERT),
+            PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycle-check", "Check for circular sequences", "Check for circular sequences (avoid over extension of circular or long repeated regions) ",typeid(bool), (void *) &cycleCheck, "", MMseqsParameter::COMMAND_MISC),
+            PARAM_CHOP_CYCLE(PARAM_CHOP_CYCLE_ID,"--chop-cycle", "Chop Cycle", "Remove superfluous part of circular fragments (see --cycle-check)",typeid(bool), (void *) &chopCycle, "", MMseqsParameter::COMMAND_MISC),
             PARAM_MULTI_NUM_ITERATIONS(PARAM_MULTI_NUM_ITERATIONS_ID, "--num-iterations", "Number of assembly iterations","Number of assembly iterations performed on nucleotide level,protein level (range 1-inf)",typeid(MultiParam<int>),(void *) &multiNumIterations, ""),
             PARAM_MULTI_K(PARAM_MULTI_K_ID, "-k", "k-mer length", "k-mer length (0: automatically set to optimum)", typeid(MultiParam<int>), (void *) &multiKmerSize, "", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
             PARAM_MULTI_MIN_SEQ_ID(PARAM_MULTI_MIN_SEQ_ID_ID, "--min-seq-id", "Seq. id. threshold", "Overlap sequence identity threshold [0.0, 1.0]", typeid(MultiParam<float>), (void *) &multiSeqIdThr, "", MMseqsParameter::COMMAND_ALIGN),
-            PARAM_MULTI_MIN_ALN_LEN(PARAM_MULTI_MIN_ALN_LEN_ID, "--min-aln-len", "Min alignment length", "Minimum alignment length (range 0-INT_MAX)", typeid(MultiParam<int>), (void *) &multiAlnLenThr, "", MMseqsParameter::COMMAND_ALIGN)
+            PARAM_MULTI_MIN_ALN_LEN(PARAM_MULTI_MIN_ALN_LEN_ID, "--min-aln-len", "Min alignment length", "Minimum alignment length (range 0-INT_MAX)", typeid(MultiParam<int>), (void *) &multiAlnLenThr, "", MMseqsParameter::COMMAND_ALIGN),
+            PARAM_DB_MODE(PARAM_DB_MODE_ID, "--db-mode", "Input is database", "Input is database", typeid(bool), (void *) &dbMode, "", MMseqsParameter::COMMAND_EXPERT){
 
-
-    {
         // assembleresult
         assembleresults.push_back(&PARAM_MIN_SEQ_ID);
         assembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         assembleresults.push_back(&PARAM_THREADS);
         assembleresults.push_back(&PARAM_V);
-        assembleresults.push_back(&PARAM_RESCORE_MODE); //temporary added until assemble and nuclassemble use same rescoremode
+        assembleresults.push_back(
+                &PARAM_RESCORE_MODE); //temporary added until assemble and nuclassemble use same rescoremode
 
         extractorfssubset.push_back(&PARAM_TRANSLATION_TABLE);
         extractorfssubset.push_back(&PARAM_USE_ALL_TABLE_STARTS);
@@ -128,64 +125,59 @@ private:
         reduceredundancy.push_back(&PARAM_GAP_EXTEND);
         reduceredundancy.push_back(&PARAM_ZDROP);
         reduceredundancy.push_back(&PARAM_THREADS);
+        reduceredundancy.push_back(&PARAM_REMOVE_TMP_FILES);
 
 
-        // assembledb workflow
-        assembleDBworkflow = combineList(rescorediagonal, kmermatcher);
-        assembleDBworkflow = combineList(assembleDBworkflow, extractorfs);
-        assembleDBworkflow = combineList(assembleDBworkflow, assembleresults);
-        assembleDBworkflow = combineList(assembleDBworkflow, filternoncoding);
+        // assembler workflow
+        assembleworkflow = combineList(createdb, kmermatcher);
+        assembleworkflow = combineList(assembleworkflow, rescorediagonal);
+        assembleworkflow = combineList(assembleworkflow, extractorfs);
+        assembleworkflow = combineList(assembleworkflow, assembleresults);
+        assembleworkflow = combineList(assembleworkflow, filternoncoding);
 
-        assembleDBworkflow.push_back(&PARAM_FILTER_PROTEINS);
-        assembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
-        assembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
-        assembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-        assembleDBworkflow.push_back(&PARAM_RUNNER);
+        assembleworkflow.push_back(&PARAM_FILTER_PROTEINS);
+        assembleworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        assembleworkflow.push_back(&PARAM_DELETE_TMP_INC);
+        assembleworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        assembleworkflow.push_back(&PARAM_RUNNER);
 
-        // easyassembleworkflow
-        assemblerworkflow = combineList(assembleDBworkflow, createdb);
-        
-        // nucl assembledb workflow
-        nuclassembleDBworkflow = combineList(rescorediagonal, kmermatcher);
-        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, assembleresults);
-        nuclassembleDBworkflow = combineList(nuclassembleDBworkflow, cyclecheck);
+        // nuclassembler workflow
+        nuclassembleworkflow = combineList(createdb, kmermatcher);
+        nuclassembleworkflow = combineList(nuclassembleworkflow, rescorediagonal);
+        nuclassembleworkflow = combineList(nuclassembleworkflow, assembleresults);
+        nuclassembleworkflow = combineList(nuclassembleworkflow, cyclecheck);
 
-        nuclassembleDBworkflow.push_back(&PARAM_CYCLE_CHECK);
-        nuclassembleDBworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
-        nuclassembleDBworkflow.push_back(&PARAM_NUM_ITERATIONS);
-        nuclassembleDBworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
-        nuclassembleDBworkflow.push_back(&PARAM_DELETE_TMP_INC);
-        nuclassembleDBworkflow.push_back(&PARAM_RUNNER);
+        nuclassembleworkflow.push_back(&PARAM_CYCLE_CHECK);
+        nuclassembleworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
+        nuclassembleworkflow.push_back(&PARAM_NUM_ITERATIONS);
+        nuclassembleworkflow.push_back(&PARAM_DB_MODE);
+        nuclassembleworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
+        nuclassembleworkflow.push_back(&PARAM_DELETE_TMP_INC);
+        nuclassembleworkflow.push_back(&PARAM_RUNNER);
 
-        // easynuclassembleworkflow
-        nuclassemblerworkflow = combineList(nuclassembleDBworkflow, createdb);
+        // guidedassembleresults
+        guidedassembleresults.push_back(&PARAM_MIN_SEQ_ID);
+        guidedassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
+        guidedassembleresults.push_back(&PARAM_RESCORE_MODE);
+        guidedassembleresults.push_back(&PARAM_THREADS);
+        guidedassembleresults.push_back(&PARAM_V);
 
-        // hybridassembleresults
-        hybridassembleresults.push_back(&PARAM_MIN_SEQ_ID);
-        hybridassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
-        hybridassembleresults.push_back(&PARAM_RESCORE_MODE);
-        hybridassembleresults.push_back(&PARAM_THREADS);
-        hybridassembleresults.push_back(&PARAM_V);
+        // guidedNuclAssembleworkflow
+        guidedNuclAssembleworkflow = combineList(extractorfs, guidedassembleresults);
+        guidedNuclAssembleworkflow = combineList(guidedNuclAssembleworkflow, nuclassembleworkflow);
+        guidedNuclAssembleworkflow = combineList(guidedNuclAssembleworkflow, reduceredundancy);
+        guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_MIN_SEQ_ID_THR);
+        guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_C);
 
-        // hybridassembledbworkflow
-        hybridassembleDBworkflow = combineList(extractorfs, hybridassembleresults);
-        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, nuclassembleDBworkflow);
-        hybridassembleDBworkflow = combineList(hybridassembleDBworkflow, reduceredundancy);
-        hybridassembleDBworkflow.push_back(&PARAM_CLUST_MIN_SEQ_ID_THR);
-        hybridassembleDBworkflow.push_back(&PARAM_CLUST_C);
-
-        // hybridassembledbworkflow special parameter: replace with MultiParam to make aa and nucl values independent
-        hybridassembleDBworkflow = removeParameter(hybridassembleDBworkflow, PARAM_K);
-        hybridassembleDBworkflow.push_back(&PARAM_MULTI_K);
-        hybridassembleDBworkflow = removeParameter(hybridassembleDBworkflow, PARAM_MIN_SEQ_ID);
-        hybridassembleDBworkflow.push_back(&PARAM_MULTI_MIN_SEQ_ID);
-        hybridassembleDBworkflow = removeParameter(hybridassembleDBworkflow, PARAM_MIN_ALN_LEN);
-        hybridassembleDBworkflow.push_back(&PARAM_MULTI_MIN_ALN_LEN);
-        hybridassembleDBworkflow = removeParameter(hybridassembleDBworkflow, PARAM_NUM_ITERATIONS);
-        hybridassembleDBworkflow.push_back(&PARAM_MULTI_NUM_ITERATIONS);
-
-        // easynuclassembleworkflow
-        hybridassemblerworkflow = combineList(hybridassembleDBworkflow, createdb);
+        // guidedNuclAssembleworkflow special parameter: replace with MultiParam to make aa and nucl values independent
+        guidedNuclAssembleworkflow = removeParameter(guidedNuclAssembleworkflow, PARAM_K);
+        guidedNuclAssembleworkflow.push_back(&PARAM_MULTI_K);
+        guidedNuclAssembleworkflow = removeParameter(guidedNuclAssembleworkflow, PARAM_MIN_SEQ_ID);
+        guidedNuclAssembleworkflow.push_back(&PARAM_MULTI_MIN_SEQ_ID);
+        guidedNuclAssembleworkflow = removeParameter(guidedNuclAssembleworkflow, PARAM_MIN_ALN_LEN);
+        guidedNuclAssembleworkflow.push_back(&PARAM_MULTI_MIN_ALN_LEN);
+        guidedNuclAssembleworkflow = removeParameter(guidedNuclAssembleworkflow, PARAM_NUM_ITERATIONS);
+        guidedNuclAssembleworkflow.push_back(&PARAM_MULTI_NUM_ITERATIONS);
 
         filterProteins = 1;
         deleteFilesInc = 1;
@@ -195,11 +187,12 @@ private:
         minContigLen = 1000;
         chopCycle = true;
         cycleCheck = true;
+        dbMode = false;
 
-        multiNumIterations = MultiParam<int>(12,20);
-        multiKmerSize = MultiParam<int>(14,22);
-        multiAlnLenThr = MultiParam<int>(0,0);
-        multiSeqIdThr = MultiParam<float>(0.97,0.97);
+        multiNumIterations = MultiParam<int>(12, 20);
+        multiKmerSize = MultiParam<int>(14, 22);
+        multiAlnLenThr = MultiParam<int>(0, 0);
+        multiSeqIdThr = MultiParam<float>(0.97, 0.97);
 
     }
     LocalParameters(LocalParameters const&);
