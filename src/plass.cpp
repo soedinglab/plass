@@ -9,6 +9,7 @@ const char* main_author = "Martin Steinegger (martin.steinegger@mpibpc.mpg.de)";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;
 bool hide_base_commands = true;
+void (*validatorUpdate)(void) = 0;
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 
 std::vector<struct Command> commands = {
