@@ -406,7 +406,7 @@ void Prefiltering::mergeTargetSplits(const std::string &outDB, const std::string
         files[i] = FileUtil::openFileOrDie(fileNames[i].first.c_str(), "r", true);
         dataFile[i] = static_cast<char*>(FileUtil::mmapFile(files[i], &dataFileSize[i]));
 #ifdef HAVE_POSIX_MADVISE
-        if (posix_madvise (dataFile[i], dataFileSize[i], POSIX_MADV_SEQUENTIAL) != 0){
+        if (dataFileSize[i] > 0 && posix_madvise (dataFile[i], dataFileSize[i], POSIX_MADV_SEQUENTIAL) != 0){
             Debug(Debug::ERROR) << "posix_madvise returned an error " << fileNames[i].first << "\n";
         }
 #endif
@@ -633,13 +633,13 @@ void Prefiltering::runMpiSplits(const std::string &resultDB, const std::string &
             // merge output databases
             mergePrefilterSplits(resultDB, resultDBIndex, splitFiles);
         } else {
-            Debug(Debug::ERROR) << "Aborting. No results were computed!\n";
-            EXIT(EXIT_FAILURE);
+            DBWriter writer(resultDB.c_str(), resultDBIndex.c_str(), 1, compressed, Parameters::DBTYPE_PREFILTER_RES);
+            writer.open();
+            writer.close();
         }
 
         delete [] results;
     }
-
 }
 #endif
 
@@ -696,6 +696,11 @@ int Prefiltering::runSplits(const std::string &resultDB, const std::string &resu
         if (runSplit(resultDB.c_str(), resultDBIndex.c_str(), fromSplit, merge)) {
             hasResult = true;
         }
+    } else if (splitProcessCount == 0) {
+        DBWriter writer(resultDB.c_str(), resultDBIndex.c_str(), 1, compressed, Parameters::DBTYPE_PREFILTER_RES);
+        writer.open();
+        writer.close();
+        hasResult = false;
     }
 
     return hasResult;
@@ -746,9 +751,9 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
     size_t trancatedCounter = 0;
     size_t totalQueryDBSize = querySize;
 
-    unsigned int localThreads = 1;
+    size_t localThreads = 1;
 #ifdef OPENMP
-    localThreads = std::min((unsigned int)threads, (unsigned int)querySize);
+    localThreads = std::max(std::min((size_t)threads, querySize), (size_t)1);
 #endif
 
     DBWriter tmpDbw(resultDB.c_str(), resultDBIndex.c_str(), localThreads, compressed, Parameters::DBTYPE_PREFILTER_RES);
@@ -759,7 +764,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
     memset(notEmpty, 0, querySize * sizeof(char)); // init notEmpty
 
     std::list<int> **reslens = new std::list<int> *[localThreads];
-    for (unsigned int i = 0; i < localThreads; ++i) {
+    for (size_t i = 0; i < localThreads; ++i) {
         reslens[i] = new std::list<int>();
     }
 
@@ -777,7 +782,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
         Sequence seq(qdbr->getMaxSeqLen(), querySeqType, kmerSubMat, kmerSize, spacedKmer, aaBiasCorrection, true, spacedKmerPattern);
         QueryMatcher matcher(indexTable, sequenceLookup, kmerSubMat,  ungappedSubMat,
                              kmerThr, kmerSize, dbSize, std::max(tdbr->getMaxSeqLen(),qdbr->getMaxSeqLen()), maxResListLen, aaBiasCorrection,
-                             diagonalScoring, minDiagScoreThr, takeOnlyBestKmer);
+                             diagonalScoring, minDiagScoreThr, takeOnlyBestKmer, targetSeqType==Parameters::DBTYPE_NUCLEOTIDES);
 
         if (seq.profile_matrix != NULL) {
             matcher.setProfileMatrix(seq.profile_matrix);
@@ -813,7 +818,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
                 }
             }
             // calculate prefiltering results
-            std::pair<hit_t *, size_t> prefResults = matcher.matchQuery(&seq, targetSeqId);
+            std::pair<hit_t *, size_t> prefResults = matcher.matchQuery(&seq, targetSeqId, targetSeqType==Parameters::DBTYPE_NUCLEOTIDES);
             size_t resultSize = prefResults.second;
             const float queryLength = static_cast<float>(qdbr->getSeqLen(id));
             for (size_t i = 0; i < resultSize; i++) {
@@ -916,7 +921,7 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
         DBReader<unsigned int>::moveDb(tempDb.first, resultDB);
     }
 
-    for (unsigned int i = 0; i < localThreads; i++) {
+    for (size_t i = 0; i < localThreads; i++) {
         reslens[i]->clear();
         delete reslens[i];
     }

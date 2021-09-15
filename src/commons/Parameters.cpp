@@ -102,7 +102,7 @@ Parameters::Parameters():
         PARAM_FILTER_HITS(PARAM_FILTER_HITS_ID, "--filter-hits", "Remove hits by seq. id. and coverage", "Filter hits by seq.id. and coverage", typeid(bool), (void *) &filterHits, "", MMseqsParameter::COMMAND_EXPERT),
         PARAM_SORT_RESULTS(PARAM_SORT_RESULTS_ID, "--sort-results", "Sort results", "Sort results: 0: no sorting, 1: sort by E-value (Alignment) or seq.id. (Hamming)", typeid(int), (void *) &sortResults, "^[0-1]{1}$", MMseqsParameter::COMMAND_EXPERT),
         // result2msa
-        PARAM_MSA_FORMAT_MODE(PARAM_MSA_FORMAT_MODE_ID, "--msa-format-mode", "MSA format mode", "Format MSA as: 0: binary cA3M DB\n1: binary ca3m w. consensus DB\n2: aligned FASTA DB\n3: aligned FASTA w. header summary\n4: STOCKHOLM flat file", typeid(int), (void *) &msaFormatMode, "^[0-4]{1}$"),
+        PARAM_MSA_FORMAT_MODE(PARAM_MSA_FORMAT_MODE_ID, "--msa-format-mode", "MSA format mode", "Format MSA as: 0: binary cA3M DB\n1: binary ca3m w. consensus DB\n2: aligned FASTA DB\n3: aligned FASTA w. header summary\n4: STOCKHOLM flat file\n5: A3M format", typeid(int), (void *) &msaFormatMode, "^[0-5]{1}$"),
         PARAM_ALLOW_DELETION(PARAM_ALLOW_DELETION_ID, "--allow-deletion", "Allow deletions", "Allow deletions in a MSA", typeid(bool), (void *) &allowDeletion, ""),
         PARAM_SUMMARY_PREFIX(PARAM_SUMMARY_PREFIX_ID, "--summary-prefix", "Summary prefix", "Set the cluster summary prefix", typeid(std::string), (void *) &summaryPrefix, "", MMseqsParameter::COMMAND_EXPERT),
         PARAM_SKIP_QUERY(PARAM_SKIP_QUERY_ID, "--skip-query", "Skip query", "Skip the query sequence", typeid(bool), (void *) &skipQuery, "", MMseqsParameter::COMMAND_EXPERT),
@@ -117,9 +117,11 @@ Parameters::Parameters():
         PARAM_FILTER_MSA(PARAM_FILTER_MSA_ID, "--filter-msa", "Filter MSA", "Filter msa: 0: do not filter, 1: filter", typeid(int), (void *) &filterMsa, "^[0-1]{1}$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_MAX_SEQ_ID(PARAM_FILTER_MAX_SEQ_ID_ID, "--max-seq-id", "Maximum seq. id. threshold", "Reduce redundancy of output MSA using max. pairwise sequence identity [0.0,1.0]", typeid(float), (void *) &filterMaxSeqId, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_QSC(PARAM_FILTER_QSC_ID, "--qsc", "Minimum score per column", "Reduce diversity of output MSAs using min. score per aligned residue with query sequences [-50.0,100.0]", typeid(float), (void *) &qsc, "^\\-*[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
-        PARAM_FILTER_QID(PARAM_FILTER_QID_ID, "--qid", "Minimum seq. id.", "Reduce diversity of output MSAs using min.seq. identity with query sequences [0.0,1.0]", typeid(float), (void *) &qid, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FILTER_QID(PARAM_FILTER_QID_ID, "--qid", "Minimum seq. id.", "Reduce diversity of output MSAs using min.seq. identity with query sequences [0.0,1.0]\nAlternatively, can be a list of multiple thresholds:\nE.g.: 0.15,0.30,0.50 to defines filter buckets of ]0.15-0.30] and ]0.30-0.50]", typeid(std::string), (void *) &qid, "", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_COV(PARAM_FILTER_COV_ID, "--cov", "Minimum coverage", "Filter output MSAs using min. fraction of query residues covered by matched sequences [0.0,1.0]", typeid(float), (void *) &covMSAThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_FILTER_NDIFF(PARAM_FILTER_NDIFF_ID, "--diff", "Select N most diverse seqs", "Filter MSAs by selecting most diverse set of sequences, keeping at least this many seqs in each MSA block of length 50", typeid(int), (void *) &Ndiff, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+        PARAM_FILTER_MIN_ENABLE(PARAM_FILTER_MIN_ENABLE_ID, "--filter-min-enable", "Use filter only at N seqs", "Only filter MSAs with more than N sequences, 0 always filters", typeid(int), (void *) &filterMinEnable, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
+
         PARAM_WG(PARAM_WG_ID, "--wg", "Global sequence weighting", "Use global sequence weighting for profile calculation", typeid(bool), (void *) &wg, "", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_PCA(PARAM_PCA_ID, "--pca", "Pseudo count a", "Pseudo count admixture strength", typeid(float), (void *) &pca, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
         PARAM_PCB(PARAM_PCB_ID, "--pcb", "Pseudo count b", "Pseudo counts: Neff at half of maximum admixture (range 0.0-inf)", typeid(float), (void *) &pcb, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PROFILE | MMseqsParameter::COMMAND_EXPERT),
@@ -189,7 +191,7 @@ Parameters::Parameters():
         PARAM_SEQUENCE_SPLIT_MODE(PARAM_SEQUENCE_SPLIT_MODE_ID, "--sequence-split-mode", "Sequence split mode", "Sequence split mode 0: copy data, 1: soft link data and write new index,", typeid(int), (void *) &sequenceSplitMode, "^[0-1]{1}$"),
         PARAM_HEADER_SPLIT_MODE(PARAM_HEADER_SPLIT_MODE_ID, "--headers-split-mode", "Header split mode", "Header split mode: 0: split position, 1: original header", typeid(int), (void *) &headerSplitMode, "^[0-1]{1}$"),
         // gff2db
-        PARAM_GFF_TYPE(PARAM_GFF_TYPE_ID, "--gff-type", "GFF type", "Type in the GFF file to filter by", typeid(std::string), (void *) &gffType, ""),
+        PARAM_GFF_TYPE(PARAM_GFF_TYPE_ID, "--gff-type", "GFF type", "Comma separated list of feature types in the GFF file to select", typeid(std::string), (void *) &gffType, ""),
         // translatenucs
         PARAM_TRANSLATION_TABLE(PARAM_TRANSLATION_TABLE_ID, "--translation-table", "Translation table", "1) CANONICAL, 2) VERT_MITOCHONDRIAL, 3) YEAST_MITOCHONDRIAL, 4) MOLD_MITOCHONDRIAL, 5) INVERT_MITOCHONDRIAL, 6) CILIATE\n9) FLATWORM_MITOCHONDRIAL, 10) EUPLOTID, 11) PROKARYOTE, 12) ALT_YEAST, 13) ASCIDIAN_MITOCHONDRIAL, 14) ALT_FLATWORM_MITOCHONDRIAL\n15) BLEPHARISMA, 16) CHLOROPHYCEAN_MITOCHONDRIAL, 21) TREMATODE_MITOCHONDRIAL, 22) SCENEDESMUS_MITOCHONDRIAL\n23) THRAUSTOCHYTRIUM_MITOCHONDRIAL, 24) PTEROBRANCHIA_MITOCHONDRIAL, 25) GRACILIBACTERIA, 26) PACHYSOLEN, 27) KARYORELICT, 28) CONDYLOSTOMA\n 29) MESODINIUM, 30) PERTRICH, 31) BLASTOCRITHIDIA", typeid(int), (void *) &translationTable, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_MISC | MMseqsParameter::COMMAND_EXPERT),
         // createseqfiledb
@@ -272,6 +274,7 @@ Parameters::Parameters():
         PARAM_TAX_OUTPUT_MODE(PARAM_TAX_OUTPUT_MODE_ID, "--tax-output-mode", "Taxonomy output mode", "0: output LCA, 1: output alignment 2: output both", typeid(int), (void *) &taxonomyOutputMode, "^[0-2]{1}$"),
         // createsubdb, filtertaxseqdb
         PARAM_SUBDB_MODE(PARAM_SUBDB_MODE_ID, "--subdb-mode", "Subdb mode", "Subdb mode 0: copy data 1: soft link data and write index", typeid(int), (void *) &subDbMode, "^[0-1]{1}$"),
+        PARAM_ID_MODE(PARAM_ID_MODE_ID, "--id-mode", "Database ID mode", "Select DB entries based on 0: database keys, 1: FASTA identifiers (.lookup)", typeid(int), (void *) &dbIdMode, "^[0-1]{1}$"),
         PARAM_TAR_INCLUDE(PARAM_TAR_INCLUDE_ID, "--tar-include", "Tar Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &tarInclude, "^.*$"),
         PARAM_TAR_EXCLUDE(PARAM_TAR_EXCLUDE_ID, "--tar-exclude", "Tar Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &tarExclude, "^.*$"),
         // unpackdb
@@ -483,6 +486,7 @@ Parameters::Parameters():
     result2profile.push_back(&PARAM_WG);
     result2profile.push_back(&PARAM_ALLOW_DELETION);
     result2profile.push_back(&PARAM_FILTER_MSA);
+    result2profile.push_back(&PARAM_FILTER_MIN_ENABLE);
     result2profile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     result2profile.push_back(&PARAM_FILTER_QID);
     result2profile.push_back(&PARAM_FILTER_QSC);
@@ -546,6 +550,7 @@ Parameters::Parameters():
     result2msa.push_back(&PARAM_SUMMARY_PREFIX);
     result2msa.push_back(&PARAM_SKIP_QUERY);
     result2msa.push_back(&PARAM_FILTER_MSA);
+    result2msa.push_back(&PARAM_FILTER_MIN_ENABLE);
     result2msa.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     result2msa.push_back(&PARAM_FILTER_QID);
     result2msa.push_back(&PARAM_FILTER_QSC);
@@ -568,6 +573,7 @@ Parameters::Parameters():
     filterresult.push_back(&PARAM_GAP_EXTEND);
     filterresult.push_back(&PARAM_NO_COMP_BIAS_CORR);
     filterresult.push_back(&PARAM_ALLOW_DELETION);
+    filterresult.push_back(&PARAM_FILTER_MIN_ENABLE);
     filterresult.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     filterresult.push_back(&PARAM_FILTER_QID);
     filterresult.push_back(&PARAM_FILTER_QSC);
@@ -592,6 +598,7 @@ Parameters::Parameters():
     msa2profile.push_back(&PARAM_NO_COMP_BIAS_CORR);
     msa2profile.push_back(&PARAM_WG);
     msa2profile.push_back(&PARAM_FILTER_MSA);
+    msa2profile.push_back(&PARAM_FILTER_MIN_ENABLE);
     msa2profile.push_back(&PARAM_FILTER_COV);
     msa2profile.push_back(&PARAM_FILTER_QID);
     msa2profile.push_back(&PARAM_FILTER_QSC);
@@ -748,6 +755,7 @@ Parameters::Parameters():
     // gff2db
     gff2db.push_back(&PARAM_GFF_TYPE);
     gff2db.push_back(&PARAM_ID_OFFSET);
+    gff2db.push_back(&PARAM_THREADS);
     gff2db.push_back(&PARAM_V);
 
 
@@ -1030,6 +1038,7 @@ Parameters::Parameters():
 
     // createsubdb
     createsubdb.push_back(&PARAM_SUBDB_MODE);
+    createsubdb.push_back(&PARAM_ID_MODE);
     createsubdb.push_back(&PARAM_V);
 
     // renamedbkeys
@@ -1060,6 +1069,7 @@ Parameters::Parameters():
 
     // view
     view.push_back(&PARAM_ID_LIST);
+    view.push_back(&PARAM_ID_MODE);
     view.push_back(&PARAM_IDX_ENTRY_TYPE);
     view.push_back(&PARAM_V);
 
@@ -1079,6 +1089,7 @@ Parameters::Parameters():
     expandaln.push_back(&PARAM_COV_MODE);
     expandaln.push_back(&PARAM_PCA);
     expandaln.push_back(&PARAM_PCB);
+    expandaln.push_back(&PARAM_PRELOAD_MODE);
     expandaln.push_back(&PARAM_COMPRESSED);
     expandaln.push_back(&PARAM_THREADS);
     expandaln.push_back(&PARAM_V);
@@ -1101,6 +1112,7 @@ Parameters::Parameters():
     expand2profile.push_back(&PARAM_WG);
     expand2profile.push_back(&PARAM_ALLOW_DELETION);
     expand2profile.push_back(&PARAM_FILTER_MSA);
+    expand2profile.push_back(&PARAM_FILTER_MIN_ENABLE);
     expand2profile.push_back(&PARAM_FILTER_MAX_SEQ_ID);
     expand2profile.push_back(&PARAM_FILTER_QID);
     expand2profile.push_back(&PARAM_FILTER_QSC);
@@ -1108,6 +1120,7 @@ Parameters::Parameters():
     expand2profile.push_back(&PARAM_FILTER_NDIFF);
     expand2profile.push_back(&PARAM_PCA);
     expand2profile.push_back(&PARAM_PCB);
+    expand2profile.push_back(&PARAM_PRELOAD_MODE);
     expand2profile.push_back(&PARAM_COMPRESSED);
     expand2profile.push_back(&PARAM_THREADS);
     expand2profile.push_back(&PARAM_V);
@@ -1204,6 +1217,9 @@ Parameters::Parameters():
     taxonomy = combineList(taxonomy, aggregatetaxweights);
     taxonomy = combineList(taxonomy, lca);
     taxonomy = combineList(taxonomy, searchworkflow);
+    taxonomy = removeParameter(taxonomy, PARAM_NUM_ITERATIONS);
+    taxonomy = removeParameter(taxonomy, PARAM_START_SENS);
+    taxonomy = removeParameter(taxonomy, PARAM_SENS_STEPS);
 
     // easy taxonomy
     easytaxonomy = combineList(taxonomy, addtaxonomy);
@@ -1355,7 +1371,7 @@ void Parameters::printUsageMessage(const Command& command, const unsigned int ou
                         valueString = SSTR(*(int *) par->value);
                     } else if (par->type == typeid(size_t)) {
                         paramString.append(" INT");
-                        valueString = SSTR(*(float *) par->value);
+                        valueString = SSTR(*(size_t *) par->value);
                     } else if (par->type == typeid(float)) {
                         paramString.append(" FLOAT");
                         valueString = SSTR(*(float *) par->value);
@@ -1447,6 +1463,36 @@ bool parseBool(const std::string &p) {
     } else {
         Debug(Debug::ERROR) << "Invalid boolean string " << p << "\n";
         EXIT(EXIT_FAILURE);
+    }
+}
+
+void Parameters::initMatrices() {
+    // set up substituionMatrix
+    for(size_t i = 0 ; i < substitutionMatrices.size(); i++) {
+        bool isAminoAcid = (strcmp(scoringMatrixFile.aminoacids, substitutionMatrices[i].name.c_str()) == 0);
+        bool isNucleotide = (strcmp(scoringMatrixFile.nucleotides, substitutionMatrices[i].name.c_str()) == 0);
+        bool isSeedAminoAcid = (strcmp(seedScoringMatrixFile.aminoacids, substitutionMatrices[i].name.c_str()) == 0);
+        bool isSeedNucleotide = (strcmp(seedScoringMatrixFile.nucleotides, substitutionMatrices[i].name.c_str()) == 0);
+        if (isAminoAcid || isNucleotide || isSeedAminoAcid || isSeedNucleotide) {
+            std::string matrixData((const char *) substitutionMatrices[i].subMatData, substitutionMatrices[i].subMatDataLen);
+            std::string matrixName = substitutionMatrices[i].name;
+            if (isAminoAcid) {
+                free(scoringMatrixFile.aminoacids);
+                scoringMatrixFile.aminoacids = BaseMatrix::serialize(matrixName, matrixData);
+            }
+            if (isNucleotide) {
+                free(scoringMatrixFile.nucleotides);
+                scoringMatrixFile.nucleotides = BaseMatrix::serialize(matrixName, matrixData);
+            }
+            if (isSeedAminoAcid) {
+                free(seedScoringMatrixFile.aminoacids);
+                seedScoringMatrixFile.aminoacids = BaseMatrix::serialize(matrixName, matrixData);
+            }
+            if (isSeedNucleotide) {
+                free(seedScoringMatrixFile.nucleotides);
+                seedScoringMatrixFile.nucleotides = BaseMatrix::serialize(matrixName, matrixData);
+            }
+        }
     }
 }
 
@@ -1836,33 +1882,7 @@ void Parameters::parseParameters(int argc, const char *pargv[], const Command &c
             EXIT(EXIT_FAILURE);
     }
 
-    // set up substituionMatrix
-    for(size_t i = 0 ; i < substitutionMatrices.size(); i++) {
-        bool isAminoAcid   = (strcmp(scoringMatrixFile.aminoacids, substitutionMatrices[i].name.c_str()) == 0);
-        bool isNucleotide  = (strcmp(scoringMatrixFile.nucleotides, substitutionMatrices[i].name.c_str()) == 0);
-        bool isSeedAminoAcid   = (strcmp(seedScoringMatrixFile.aminoacids, substitutionMatrices[i].name.c_str()) == 0);
-        bool isSeedNucleotide  = (strcmp(seedScoringMatrixFile.nucleotides, substitutionMatrices[i].name.c_str()) == 0);
-        if (isAminoAcid || isNucleotide|| isSeedAminoAcid|| isSeedNucleotide) {
-            std::string matrixData((const char *)substitutionMatrices[i].subMatData, substitutionMatrices[i].subMatDataLen);
-            std::string matrixName = substitutionMatrices[i].name;
-            if(isAminoAcid) {
-                free(scoringMatrixFile.aminoacids);
-                scoringMatrixFile.aminoacids = BaseMatrix::serialize(matrixName, matrixData);
-            }
-            if(isNucleotide) {
-                free(scoringMatrixFile.nucleotides);
-                scoringMatrixFile.nucleotides = BaseMatrix::serialize(matrixName, matrixData);
-            }
-            if(isSeedAminoAcid) {
-                free(seedScoringMatrixFile.aminoacids);
-                seedScoringMatrixFile.aminoacids = BaseMatrix::serialize(matrixName, matrixData);
-            }
-            if(isSeedNucleotide) {
-                free(seedScoringMatrixFile.nucleotides);
-                seedScoringMatrixFile.nucleotides = BaseMatrix::serialize(matrixName, matrixData);
-            }
-        }
-    }
+    initMatrices();
 
     if (ignorePathCountChecks == false) {
         checkIfDatabaseIsValid(command, argc, pargv, isStartVar, isMiddleVar, isEndVar);
@@ -1871,7 +1891,6 @@ void Parameters::parseParameters(int argc, const char *pargv[], const Command &c
     if (printPar == true) {
         printParameters(command.cmd, argc, pargv, par);
     }
-
 }
 
 std::vector<std::string> Parameters::findMissingTaxDbFiles(const std::string &filename) {
@@ -1972,10 +1991,10 @@ void Parameters::checkIfDatabaseIsValid(const Command& command, int argc, const 
                 if (FileUtil::directoryExists(filenames[fileIdx].c_str()) == false) {
                     if (FileUtil::makeDir(filenames[fileIdx].c_str()) == false) {
                         printParameters(command.cmd, argc, argv, *command.params);
-                        Debug(Debug::ERROR) << "Cannot create temporary directory " << filenames[dbIdx] << "\n";
+                        Debug(Debug::ERROR) << "Cannot create temporary directory " << filenames[fileIdx] << "\n";
                         EXIT(EXIT_FAILURE);
                     } else {
-                        Debug(Debug::INFO) << "Create directory " << filenames[dbIdx] << "\n";
+                        Debug(Debug::INFO) << "Create directory " << filenames[fileIdx] << "\n";
                     }
                 }
                 fileIdx++;
@@ -2181,7 +2200,7 @@ void Parameters::setDefaults() {
     allowDeletion = false;
     summaryPrefix = "cl";
     skipQuery = false;
-
+    msaFormatMode = FORMAT_MSA_FASTADB;
     // convertmsa
     identifierField = 1;
 
@@ -2194,10 +2213,11 @@ void Parameters::setDefaults() {
     maskProfile = 1;
     filterMsa = 1;
     filterMaxSeqId = 0.9;
-    qid = 0.0;           // default for minimum sequence identity with query
+    qid = "0.0";           // default for minimum sequence identity with query
     qsc = -20.0f;        // default for minimum score per column with query
     covMSAThr = 0.0;           // default for minimum coverage threshold
     Ndiff = 1000;        // pick Ndiff most different sequences from alignment
+    filterMinEnable = 0;
     wg = false;
     pca = 1.0;
     pcb = 1.5;
@@ -2344,6 +2364,7 @@ void Parameters::setDefaults() {
 
     // createsubdb
     subDbMode = Parameters::SUBDB_MODE_HARD;
+    dbIdMode = Parameters::ID_MODE_KEYS;
 
     // tar2db
     tarInclude = ".*";
@@ -2391,7 +2412,7 @@ void Parameters::setDefaults() {
             { CITATION_LINCLUST, "Steinegger M, Soding J: Clustering huge protein sequence sets in linear time. Nature Communications, 9(1), 2542 (2018)" },
             { CITATION_PLASS,    "Steinegger M, Mirdita M, Soding J: Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, 16(7), 603-606 (2019)" },
             { CITATION_SERVER,   "Mirdita M, Steinegger M, Soding J: MMseqs2 desktop and local web server app for fast, interactive sequence searches. Bioinformatics, 35(16), 2856–2858 (2019)" },
-            { CITATION_TAXONOMY, "Mirdita M, Steinegger M, Breitwieser F, Soding J, Levy Karin E: Fast and sensitive taxonomic assignment to metagenomic contigs. bioRxiv, 2020.11.27.401018 (2020)" },
+            { CITATION_TAXONOMY, "Mirdita M, Steinegger M, Breitwieser F, Soding J, Levy Karin E: Fast and sensitive taxonomic assignment to metagenomic contigs. Bioinformatics, btab184 (2021)" },
     };
 }
 

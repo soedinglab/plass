@@ -129,7 +129,7 @@ public:
     static const int FORMAT_MSA_FASTADB = 2;
     static const int FORMAT_MSA_FASTADB_SUMMARY = 3;
     static const int FORMAT_MSA_STOCKHOLM_FLAT = 4;
-
+    static const int FORMAT_MSA_A3M = 5;
     // outfmt
     static const int OUTFMT_QUERY = 0;
     static const int OUTFMT_TARGET = 1;
@@ -263,7 +263,7 @@ public:
     static const int RESCORE_MODE_HAMMING = 0;
     static const int RESCORE_MODE_SUBSTITUTION = 1;
     static const int RESCORE_MODE_ALIGNMENT = 2;
-    static const int RESCORE_MODE_GLOBAL_ALIGNMENT = 3;
+    static const int RESCORE_MODE_END_TO_END_ALIGNMENT = 3;
     static const int RESCORE_MODE_WINDOW_QUALITY_ALIGNMENT = 4;
 
     // combinepvalperset
@@ -279,6 +279,9 @@ public:
     // createsubdb, filtertaxseqdb type
     static const int SUBDB_MODE_HARD = 0;
     static const int SUBDB_MODE_SOFT = 1;
+
+    static const int ID_MODE_KEYS = 0;
+    static const int ID_MODE_LOOKUP = 1;
 
     // unpackdb
     static const int UNPACK_NAME_KEY = 0;
@@ -476,9 +479,10 @@ public:
     double evalProfile;
     int filterMsa;
     float qsc;
-    float qid;
+    std::string qid;
     float covMSAThr;
     int Ndiff;
+    int filterMinEnable;
     bool wg;
     float pca;
     float pcb;
@@ -635,6 +639,7 @@ public:
 
     // createsubdb
     int subDbMode;
+    int dbIdMode;
 
     // tar2db
     std::string tarInclude;
@@ -662,6 +667,7 @@ public:
     }
 
     void setDefaults();
+    void initMatrices();
     void parseParameters(int argc, const char *pargv[], const Command &command, bool printPar, int parseFlags,
                          int outputFlags);
     void printUsageMessage(const Command& command, unsigned int outputFlag, const char* extraText = NULL);
@@ -771,6 +777,7 @@ public:
     PARAMETER(PARAM_FILTER_QID)
     PARAMETER(PARAM_FILTER_COV)
     PARAMETER(PARAM_FILTER_NDIFF)
+    PARAMETER(PARAM_FILTER_MIN_ENABLE)
     PARAMETER(PARAM_WG)
     PARAMETER(PARAM_PCA)
     PARAMETER(PARAM_PCB)
@@ -959,6 +966,7 @@ public:
 
     // createsubdb
     PARAMETER(PARAM_SUBDB_MODE)
+    PARAMETER(PARAM_ID_MODE)
 
     // tar2db
     PARAMETER(PARAM_TAR_INCLUDE)

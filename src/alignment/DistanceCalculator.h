@@ -134,7 +134,7 @@ public:
                 res.score = tmp.score;
                 res.startPos = tmp.startPos;
                 res.endPos = tmp.endPos;
-            } else if (alnMode == Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT) {
+            } else if (alnMode == Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT) {
                 LocalAlignment tmp = computeGlobalSubstitutionStartEndDistance(querySeq + minDistToDiagonal, dbSeq, minSeqLen, subMat);
                 res.score = tmp.score;
                 res.startPos = tmp.startPos;
@@ -159,7 +159,7 @@ public:
                 res.score = tmp.score;
                 res.startPos = tmp.startPos;
                 res.endPos = tmp.endPos;
-            } else if (alnMode == Parameters::RESCORE_MODE_GLOBAL_ALIGNMENT) {
+            } else if (alnMode == Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT) {
                 LocalAlignment tmp = computeGlobalSubstitutionStartEndDistance(querySeq, dbSeq + minDistToDiagonal, minSeqLen, subMat);
                 res.score = tmp.score;
                 res.startPos = tmp.startPos;
@@ -285,7 +285,7 @@ public:
             // the 16 signed or unsigned 8-bit integers in a and zero-extends the upper bits.
             simd_int seqComparision = simdi8_eq(seq1vec, seq2vec);
             int res = simdi8_movemask(seqComparision);
-            diff += MathUtil::popCount(res);  // subtract positions that should not contribute to coverage
+            diff += __builtin_popcount(res);  // subtract positions that should not contribute to coverage
         }
         // compute missing rest
         for (unsigned int pos = simdBlock*(VECSIZE_INT*4); pos < length; pos++ ) {
