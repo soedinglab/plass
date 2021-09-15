@@ -38,11 +38,12 @@ struct DBFiles {
         CA3M_SEQ_IDX      = (1ull << 15),
         CA3M_HDR          = (1ull << 16),
         CA3M_HDR_IDX      = (1ull << 17),
+        TAX_BINARY        = (1ull << 18),
 
 
         GENERIC           = DATA | DATA_INDEX | DATA_DBTYPE,
         HEADERS           = HEADER | HEADER_INDEX | HEADER_DBTYPE,
-        TAXONOMY          = TAX_MAPPING | TAX_NAMES | TAX_NODES | TAX_MERGED,
+        TAXONOMY          = TAX_MAPPING | TAX_NAMES | TAX_NODES | TAX_MERGED | TAX_BINARY,
         SEQUENCE_DB       = GENERIC | HEADERS | TAXONOMY | LOOKUP | SOURCE,
         SEQUENCE_ANCILLARY= SEQUENCE_DB & (~GENERIC),
         SEQUENCE_NO_DATA_INDEX = SEQUENCE_DB & (~DATA_INDEX),
@@ -125,8 +126,24 @@ public:
             return false;
         }
 
-        static bool compareByAccession(const LookupEntry& x, const LookupEntry& y){
-            return x.entryName.compare(y.entryName);
+        static bool compareByAccessionOnly(const LookupEntry& x, const LookupEntry& y){
+            return x.entryName.compare(y.entryName) <= 0;
+        }
+
+        static bool compareByAccession(const LookupEntry& x, const LookupEntry& y) {
+            if (x.entryName < y.entryName)
+                return true;
+            if (y.entryName < x.entryName)
+                return false;
+            if (x.id < y.id)
+                return true;
+            if (y.id < x.id)
+                return false;
+            if (x.fileNumber < y.fileNumber)
+                return true;
+            if (y.fileNumber < x.fileNumber)
+                return false;
+            return false;
         }
     };
 
