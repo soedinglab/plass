@@ -164,7 +164,7 @@ if notExists "${OUT_FILE}.dbtype"; then
     "$MMSEQS" createsubdb "${RESULT}_only_assembled_filtered.index" "${RESULT}" "${TMP_PATH}/assembly" --subdb-mode 0 \
         || fail "Create filtered contig db died"
     if [ -n "$PREV_CYCLE_ALL" ]; then
-        awk 'NR == FNR { f[$1] = $0; next } $1 in f { print $0 }' "${PREV_CYCLE_ALL}.index" "${TMP_PATH}/assembly" > "${TMP_PATH}/assembly_cycle.index"
+        awk 'NR == FNR { f[$1] = $0; next } $1 in f { print $0 }' "${PREV_CYCLE_ALL}.index" "${TMP_PATH}/assembly.index" > "${TMP_PATH}/assembly_cycle.index"
     fi
 fi
 
