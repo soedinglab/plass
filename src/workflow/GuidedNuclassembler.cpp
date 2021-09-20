@@ -160,7 +160,7 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
 
     // # 3. Assembly: Extend by left and right extension
     par.seqIdThr = par.multiSeqIdThr.nucleotides;
-    cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
+    cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.guidedassembleresults).c_str());
 
     // set mandatory values for nucleotide level assembly step when calling nucleassemble step from guidedNuclAssembler
     par.numIterations = par.multiNumIterations.nucleotides;
