@@ -19,7 +19,7 @@ int createhdb(int argc, const char **argv, const Command& command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    DBReader<unsigned int> *seqDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(),  par.threads, DBReader<unsigned int>::USE_INDEX);
+    DBReader<unsigned int> *seqDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(),  1, DBReader<unsigned int>::USE_INDEX);
     seqDbr->open(DBReader<unsigned int>::NOSORT);
 
     const bool hasCycleLookup = par.filenames.size() > 2;
@@ -27,7 +27,7 @@ int createhdb(int argc, const char **argv, const Command& command) {
     DBWriter *headerDbw;
     const char *headerData, *headerIndex;
     if (hasCycleLookup) {
-        cycleDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(),  par.threads, DBReader<unsigned int>::USE_INDEX);
+        cycleDbr = new DBReader<unsigned int>(par.db2.c_str(), par.db2Index.c_str(),  1, DBReader<unsigned int>::USE_INDEX);
         cycleDbr->open(DBReader<unsigned int>::NOSORT);
         headerData = par.hdr3.c_str();
         headerIndex = par.hdr3Index.c_str();
