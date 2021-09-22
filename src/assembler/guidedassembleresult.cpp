@@ -93,6 +93,45 @@ Matcher::result_t selectBestFragmentToExtend(QueueBySeqId &alignments,
     return Matcher::result_t(UINT_MAX,0,0,0,0,0,0,0,0,0,0,0,0,"");
 }
 
+inline void updateNuclAlignment(Matcher::result_t &tmpAlignment, DistanceCalculator::LocalAlignment &alignment,
+                                const char *querySeq, size_t querySeqLen, const char *tSeq, size_t tSeqLen) {
+
+    int qStartPos, qEndPos, dbStartPos, dbEndPos;
+    int diag = alignment.diagonal;
+    int dist = std::max(abs(diag), 0);
+
+    if (diag >= 0) {
+        qStartPos = alignment.startPos + dist;
+        qEndPos = alignment.endPos + dist;
+        dbStartPos = alignment.startPos;
+        dbEndPos = alignment.endPos;
+    } else {
+        qStartPos = alignment.startPos;
+        qEndPos = alignment.endPos;
+        dbStartPos = alignment.startPos + dist;
+        dbEndPos = alignment.endPos + dist;
+    }
+
+    int idCnt = 0;
+    for(int i = qStartPos; i < qEndPos; i++){
+        idCnt += (querySeq[i] == tSeq[dbStartPos+(i-qStartPos)]) ? 1 : 0;
+    }
+    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos));
+
+    tmpAlignment.seqId = seqId;
+    tmpAlignment.qLen = querySeqLen;
+    tmpAlignment.dbLen = tSeqLen;
+
+    tmpAlignment.alnLength = alignment.diagonalLen;
+    float scorePerCol = static_cast<float>(alignment.score ) / static_cast<float>(tmpAlignment.alnLength + 0.5);
+    tmpAlignment.score = static_cast<int>(scorePerCol*100);
+
+    tmpAlignment.qStartPos = qStartPos;
+    tmpAlignment.qEndPos = qEndPos;
+    tmpAlignment.dbStartPos = dbStartPos;
+    tmpAlignment.dbEndPos = dbEndPos;
+
+}
 
 int doguidedassembleresult(LocalParameters &par) {
     DBReader<unsigned int> *nuclSequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(),  par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
@@ -128,8 +167,8 @@ int doguidedassembleresult(LocalParameters &par) {
         #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < nuclSequenceDbr->getSize(); id++) {
             progress.updateProgress();
-            unsigned int queryKey = nuclSequenceDbr->getDbKey(id);
 
+            unsigned int queryKey = nuclSequenceDbr->getDbKey(id);
             char *nuclQuerySeq = nuclSequenceDbr->getData(id, thread_idx);
             unsigned int nuclQuerySeqLen = nuclSequenceDbr->getSeqLen(id);
 
@@ -137,8 +176,7 @@ int doguidedassembleresult(LocalParameters &par) {
             char *aaQuerySeq = aaSequenceDbr->getData(aaQueryId, thread_idx);
             unsigned int aaQuerySeqLen = aaSequenceDbr->getSeqLen(aaQueryId);
 
-            unsigned int nuclLeftQueryOffset = 0;
-            unsigned int nuclRightQueryOffset = 0;
+
             std::string nuclQuery(nuclQuerySeq, nuclQuerySeqLen); // no /n/0
             std::string aaQuery(aaQuerySeq, aaQuerySeqLen); // no /n/0
 
@@ -146,32 +184,35 @@ int doguidedassembleresult(LocalParameters &par) {
             bool excludeRightExtension = (aaQuery[aaQuerySeqLen-1] == '*');
 
             char *nuclAlnData = nuclAlnReader->getDataByDBKey(queryKey, thread_idx);
-
             nuclAlignments.clear();
             Matcher::readAlignmentResults(nuclAlignments, nuclAlnData, true);
 
-            QueueBySeqId alnQueue;
             bool queryCouldBeExtended = false;
-            while(nuclAlignments.size() > 1){
-                bool queryCouldBeExtendedLeft = false;
-                bool queryCouldBeExtendedRight = false;
-                for (size_t alnIdx = 0; alnIdx < nuclAlignments.size(); alnIdx++) {
-                    if(nuclAlignments[alnIdx].seqId < par.seqIdThr)
-                        continue;
-                    alnQueue.push(nuclAlignments[alnIdx]);
-                    if (nuclAlignments.size() > 1) {
-                        size_t id = nuclSequenceDbr->getId(nuclAlignments[alnIdx].dbKey);
-                        __sync_or_and_fetch(&wasExtended[id],
-                                            static_cast<unsigned char>(0x40));
-                    }
-                }
-                std::vector<Matcher::result_t> tmpNuclAlignments;
+            QueueBySeqId alnQueue;
 
+            // fill queue
+            for (size_t alnIdx = 0; alnIdx < nuclAlignments.size(); alnIdx++) {
+
+                // re-evaluate sequence identity threshold on nucleotide level
+                if(nuclAlignments[alnIdx].seqId < par.seqIdThr)
+                    continue;
+                alnQueue.push(nuclAlignments[alnIdx]);
+                if (nuclAlignments.size() > 1) {
+                    size_t id = nuclSequenceDbr->getId(nuclAlignments[alnIdx].dbKey);
+                    __sync_or_and_fetch(&wasExtended[id],
+                                        static_cast<unsigned char>(0x40));
+                }
+            }
+            std::vector<Matcher::result_t> tmpNuclAlignments;
+            tmpNuclAlignments.reserve(nuclAlignments.size());
+            while(!alnQueue.empty()){
+
+                unsigned int nuclLeftQueryOffset = 0;
+                unsigned int nuclRightQueryOffset = 0;
+                tmpNuclAlignments.clear();
                 Matcher::result_t nuclBesttHitToExtend;
 
                 while ((nuclBesttHitToExtend = selectBestFragmentToExtend(alnQueue, queryKey)).dbKey != UINT_MAX) {
-                    nuclQuerySeqLen = nuclQuery.size();
-                    nuclQuerySeq = (char *) nuclQuery.c_str();
 
 //                nuclQuerySeq.mapSequence(id, queryKey, nuclQuery.c_str());
                     unsigned int nuclTargetId = nuclSequenceDbr->getId(nuclBesttHitToExtend.dbKey);
@@ -202,109 +243,99 @@ int doguidedassembleresult(LocalParameters &par) {
                         }
                     }
                     __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x10));
-                    int qStartPos, qEndPos, nuclDbStartPos, nuclDbEndPos;
-                    int diagonal = (nuclLeftQueryOffset + nuclBesttHitToExtend.qStartPos) - nuclBesttHitToExtend.dbStartPos;
-                    int dist = std::max(abs(diagonal), 0);
-                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
-                            nuclQuerySeq, nuclQuerySeqLen,
-                            nuclTargetSeq, nuclTargetSeqLen,
-                            diagonal, fastMatrix.matrix, par.rescoreMode);
-                    if (diagonal >= 0) {
-
-//                    nuclTargetSeq.mapSequence(nuclTargetId, nuclBesttHitToExtend.dbKey, dbSeq);
-
-                        qStartPos = alignment.startPos + dist;
-                        qEndPos = alignment.endPos + dist;
-                        nuclDbStartPos = alignment.startPos;
-                        nuclDbEndPos = alignment.endPos;
-                    } else {
-
-                        qStartPos = alignment.startPos;
-                        qEndPos = alignment.endPos;
-                        nuclDbStartPos = alignment.startPos + dist;
-                        nuclDbEndPos = alignment.endPos + dist;
-                    }
+                    int nuclDbStartPos = nuclBesttHitToExtend.dbStartPos;
+                    int nuclDbEndPos = nuclBesttHitToExtend.dbEndPos;
+                    int qStartPos = nuclBesttHitToExtend.qStartPos;
+                    int qEndPos = nuclBesttHitToExtend.qEndPos;
 
                     if (nuclDbStartPos == 0 && qEndPos == (static_cast<int>(nuclQuerySeqLen) - 1) ) {
-                        if(queryCouldBeExtendedRight == true) {
+                        //right extension
+
+                        if(nuclRightQueryOffset > 0) {
                             tmpNuclAlignments.push_back(nuclBesttHitToExtend);
                             continue;
                         }
-                        size_t nuclDbFragLen = (nuclTargetSeqLen - nuclDbEndPos) - 1; // -1 get not aligned element
-                        size_t aaDbFragLen = (nuclTargetSeqLen/3 - nuclDbEndPos/3) - 1; // -1 get not aligned element
+                        unsigned int nuclDbFragLen = (nuclTargetSeqLen - nuclDbEndPos) - 1; // -1 get not aligned element
+                        unsigned int aaDbFragLen = (nuclTargetSeqLen/3 - nuclDbEndPos/3) - 1; // -1 get not aligned element
+
+                        if (nuclQuery.size() + nuclDbFragLen >= par.maxSeqLen) {
+                            Debug(Debug::WARNING) << "Ignore extension because of length limitation for sequence: " \
+                                                  << queryKey << ". Max length allowed would be " << par.maxSeqLen << "\n";
+                            break;
+                        }
 
                         std::string fragment = std::string(nuclTargetSeq + nuclDbEndPos + 1, nuclDbFragLen);
                         std::string aaFragment = std::string(aaTargetSeq + nuclDbEndPos/3 + 1, aaDbFragLen);
 
-                        if (fragment.size() + nuclQuery.size() >= par.maxSeqLen) {
-                            Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryKey << ". "
-                                    "Max length allowed would is " << par.maxSeqLen << "\n";
-                            break;
-                        }
-                        //update that dbKey was used in assembly
-                        __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x80));
-                        queryCouldBeExtendedRight = true;
                         nuclQuery += fragment;
                         aaQuery += aaFragment;
-
                         nuclRightQueryOffset += nuclDbFragLen;
+                        //update that dbKey was used in assembly
+                        __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x80));
 
                     } else if (qStartPos == 0 && nuclDbEndPos == (static_cast<int>(nuclTargetSeqLen) - 1)) {
-                        if (queryCouldBeExtendedLeft == true) {
+                        //left extension
+
+                        if (nuclLeftQueryOffset > 0) {
                             tmpNuclAlignments.push_back(nuclBesttHitToExtend);
                             continue;
                         }
-                        int hasStart = (aaTargetSeq[0] == '*')? 1:0;
-                        std::string fragment = std::string(nuclTargetSeq, nuclDbStartPos); // +1 get not aligned element
-                        std::string aaFragment = std::string(aaTargetSeq, nuclDbStartPos/3 + hasStart); // +1 get not aligned element
 
-                        if (fragment.size() + nuclQuery.size() >= par.maxSeqLen) {
-                            Debug(Debug::WARNING) << "Sequence too long in nuclQuery id: " << queryKey << ". "
-                                    "Max length allowed would is " << par.maxSeqLen << "\n";
+                        unsigned int nuclDbFragLen = nuclDbStartPos;
+                        if (nuclQuery.size() + nuclDbFragLen >= par.maxSeqLen) {
+                            Debug(Debug::WARNING) << "Ignore extension because of length limitation for sequence: " \
+                                                  << queryKey << ". Max length allowed would be " << par.maxSeqLen << "\n";
                             break;
                         }
-                        // update that dbKey was used in assembly
-                        __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x80));
-                        queryCouldBeExtendedLeft = true;
+
+                        int hasStart = (aaTargetSeq[0] == '*')? 1:0;
+                        std::string fragment = std::string(nuclTargetSeq, nuclDbFragLen); // get not aligned element
+                        std::string aaFragment = std::string(aaTargetSeq, nuclDbFragLen/3 + hasStart); // get not aligned element
+
                         nuclQuery = fragment + nuclQuery;
                         aaQuery = aaFragment + aaQuery;
-                        nuclLeftQueryOffset += nuclDbStartPos;
+                        nuclLeftQueryOffset += nuclDbFragLen;
+
+                        // update that dbKey was used in assembly
+                        __sync_or_and_fetch(&wasExtended[nuclTargetId], static_cast<unsigned char>(0x80));
                     }
 
                 }
-                if (queryCouldBeExtendedRight || queryCouldBeExtendedLeft){
+                if (nuclLeftQueryOffset > 0 || nuclRightQueryOffset > 0){
                     queryCouldBeExtended = true;
                 }
-                nuclAlignments.clear();
-                nuclQuerySeq = (char *) nuclQuery.c_str();
-                break;
-                for(size_t alnIdx = 0; alnIdx < tmpNuclAlignments.size(); alnIdx++){
-                    int idCnt = 0;
-                    int qStartPos = tmpNuclAlignments[alnIdx].qStartPos;
-                    int qEndPos = tmpNuclAlignments[alnIdx].qEndPos;
-                    int dbStartPos = tmpNuclAlignments[alnIdx].dbStartPos;
 
-                    int diagonal = (nuclLeftQueryOffset + nuclBesttHitToExtend.qStartPos) - nuclBesttHitToExtend.dbStartPos;
-                    int dist = std::max(abs(diagonal), 0);
-                    if (diagonal >= 0) {
-                        qStartPos+=dist;
-                        qEndPos+=dist;
-                    }else{
-                        dbStartPos+=dist;
-                    }
-                    unsigned int targetId = nuclSequenceDbr->getId(tmpNuclAlignments[alnIdx].dbKey);
-                    char *nuclTargetSeq = nuclSequenceDbr->getData(targetId, thread_idx);
-                    for(int i = qStartPos; i < qEndPos; i++){
-                        idCnt += (nuclQuerySeq[i] == nuclTargetSeq[dbStartPos+(i-qStartPos)]) ? 1 : 0;
-                    }
-                    float seqId =  static_cast<float>(idCnt) / (static_cast<float>(qEndPos) - static_cast<float>(qStartPos));
-                    tmpNuclAlignments[alnIdx].seqId = seqId;
-                    if(seqId >= par.seqIdThr){
-                        nuclAlignments.push_back(tmpNuclAlignments[alnIdx]);
-                    }
+                if (!alnQueue.empty())
+                    break;
+
+                nuclQuerySeqLen = nuclQuery.length();
+                nuclQuerySeq = (char *) nuclQuery.c_str();
+                
+                break;
+                // update alignments
+                for(size_t alnIdx = 0; alnIdx < tmpNuclAlignments.size(); alnIdx++){
+
+                    std::cout << "update tmp alignments" << std::endl;
+                    unsigned int tId = nuclSequenceDbr->getId(tmpNuclAlignments[alnIdx].dbKey);
+                    unsigned int tSeqLen = nuclSequenceDbr->getSeqLen(tId);
+                    char *tSeq = nuclSequenceDbr->getData(tId, thread_idx);
+
+                    int qStartPos = tmpNuclAlignments[alnIdx].qStartPos;
+                    int dbStartPos = tmpNuclAlignments[alnIdx].dbStartPos;
+                    int diag = (qStartPos + nuclLeftQueryOffset) - dbStartPos;
+
+                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
+                            nuclQuerySeq, nuclQuerySeqLen, tSeq, tSeqLen,
+                            diag, fastMatrix.matrix, par.rescoreMode);
+
+                    updateNuclAlignment(tmpNuclAlignments[alnIdx], alignment, nuclQuerySeq, nuclQuerySeqLen, tSeq, tSeqLen);
+
+                    // refill queue
+                    if(tmpNuclAlignments[alnIdx].seqId >= par.seqIdThr)
+                        alnQueue.push(tmpNuclAlignments[alnIdx]);
                 }
             }
-            if (queryCouldBeExtended == true) {
+            if (queryCouldBeExtended) {
                 nuclQuery.push_back('\n');
                 aaQuery.push_back('\n');
                 __sync_or_and_fetch(&wasExtended[id], static_cast<unsigned char>(0x20));

@@ -192,6 +192,7 @@ int doNuclAssembly(LocalParameters &par) {
             bool queryCouldBeExtended = false;
             QueueByScoreNucl alnQueue;
 
+            // fill queue
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
                 int rawScore = static_cast<int>(evaluer.computeRawScoreFromBitScore(alignments[alnIdx].score) + 0.5);
@@ -266,6 +267,13 @@ int doNuclAssembly(LocalParameters &par) {
                         }
 
                         unsigned int fragLen = targetSeqLen - (dbEndPos + 1);
+
+                        if (query.size() + fragLen >= par.maxSeqLen) {
+                            Debug(Debug::WARNING) << "Ignore extension because of length limitation for sequence: " \
+                                                  << queryKey << ". Max length allowed would be " << par.maxSeqLen << "\n";
+                            break;
+                        }
+
                         std::string fragment;
                         if (useReverse[targetId]) {
                             char *cfragment = getNuclRevFragment(targetSeq, fragLen, (NucleotideMatrix *) subMat);
