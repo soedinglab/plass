@@ -189,7 +189,7 @@ private:
         cycleCheck = true;
         dbMode = false;
 
-        multiNumIterations = MultiParam<int>(12, 20);
+        multiNumIterations = MultiParam<int>(5, 5);
         multiKmerSize = MultiParam<int>(14, 22);
         multiAlnLenThr = MultiParam<int>(0, 0);
         multiSeqIdThr = MultiParam<float>(0.97, 0.97);

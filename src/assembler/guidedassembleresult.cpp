@@ -310,8 +310,7 @@ int doguidedassembleresult(LocalParameters &par) {
 
                 nuclQuerySeqLen = nuclQuery.length();
                 nuclQuerySeq = (char *) nuclQuery.c_str();
-                
-                break;
+
                 // update alignments
                 for(size_t alnIdx = 0; alnIdx < tmpNuclAlignments.size(); alnIdx++){
 
