@@ -15,13 +15,13 @@ LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<struct Command> commands = {
         // Plass workflows
         {"assemble",             assemble,            &localPar.assembleworkflow, COMMAND_MAIN,
-                "Assemble protein sequences by iterative greedy overlap assembly",
+                "Assemble protein sequences by iterative greedy overlap assembly => Plass",
                 NULL,
                 "Martin Steinegger <martin.steinegger@mpibpc.mpg.de> ",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         {"guided_nuclassemble",         guidedNuclAssemble,            &localPar.guidedNuclAssembleworkflow, COMMAND_MAIN,
-                "Assemble nucleotide sequences by iterative greedy overlap assembly using protein and nucleotide information (experimental)",
+                "Assemble nucleotide sequences by iterative greedy overlap assembly using protein and nucleotide information => PenguiN",
                 NULL,
                 "Annika Jochheim <annika.jochheim@mpibpc.mpg.de>",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",

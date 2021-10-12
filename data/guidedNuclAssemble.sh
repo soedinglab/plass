@@ -168,7 +168,7 @@ if notExists "${TMP_PATH}/nuclassembly.dbtype"; then
     "$MMSEQS" nuclassemble "${TMP_PATH}/guided_assembly.merged" "${TMP_PATH}/nuclassembly" "${TMP_PATH}/nuclassembly_tmp" ${NUCL_ASM_PAR}
 fi
 
-# redundancy reduction by using linclust
+# redundancy reduction using linclust
 if notExists "${TMP_PATH}/nuclassembly_rep.dbtype"; then
 
     CLUST_INPUT="${TMP_PATH}/nuclassembly"
