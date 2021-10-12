@@ -168,7 +168,7 @@ if notExists "${OUT_FILE}.dbtype"; then
     fi
 fi
 
-if [ ! -n "${DB_MODE}" ]; then
+if [ -z "${DB_MODE}" ]; then
 
     if notExists "${TMP_PATH}/assembly_h.dbtype"; then
         # shellcheck disable=SC2086
