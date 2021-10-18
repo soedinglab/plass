@@ -314,7 +314,6 @@ int doguidedassembleresult(LocalParameters &par) {
                 // update alignments
                 for(size_t alnIdx = 0; alnIdx < tmpNuclAlignments.size(); alnIdx++){
 
-                    std::cout << "update tmp alignments" << std::endl;
                     unsigned int tId = nuclSequenceDbr->getId(tmpNuclAlignments[alnIdx].dbKey);
                     unsigned int tSeqLen = nuclSequenceDbr->getSeqLen(tId);
                     char *tSeq = nuclSequenceDbr->getData(tId, thread_idx);
