@@ -223,7 +223,11 @@ if [ -n "$REMOVE_TMP" ]; then
     rm -f "${TMP_PATH_GUIDED_ASSEMBLY}/aln_"*
     rm -f "${TMP_PATH_GUIDED_ASSEMBLY}/assembly_"*
     "$MMSEQS" rmdb "${TMP_PATH}/guided_assembly.merged"
-    rm -f "${TMP_PATH}/nuclassembly"*
+    "$MMSEQS" rmdb "${TMP_PATH}/nuclassembly"
+    "$MMSEQS" rmdb "${TMP_PATH}/nuclassembly_rep"
+    "$MMSEQS" rmdb "${TMP_PATH}/nuclassembly_rep_h"
+    rm -f "${TMP_PATH}/nuclassembly_cycle.index"
+    rm -f "${TMP_PATH}/nuclassembly_rep_cycle.index"
     "$MMSEQS" rmdb "${TMP_PATH}/clu"
     rm -f "${TMP_PATH}/guidedNuclAssemble.sh"
 fi
