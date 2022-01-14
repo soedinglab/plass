@@ -19,12 +19,16 @@ The catalogues can be downloaded [here](http://wwwuser.gwdg.de/~compbiol/plass/c
 We provide a [HH-suite3](https://github.com/soedinglab/hh-suite) database called "BFD" containing sequences from the Metaclust, SRC, MERC and Uniport at [here](https://bfd.mmseqs.com/).
  
 ### Install Plass
-Plass can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version. Plass requires a 64-bit Linux/MacOS system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set.
+Plass can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version. Plass requires a 64-bit Linux/MacOS system (check with `uname -a | grep x86_64`) with at least the SSE2 instruction set.
 
      # install from bioconda
      conda install -c conda-forge -c bioconda plass 
-     # latest static linux build
-     wget https://mmseqs.com/plass/plass-static_sse41.tar.gz; tar xvfz plass-static_sse41.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
+     # static build with AVX2 (fastest)
+     wget https://mmseqs.com/plass/plass-linux-avx2.tar.gz; tar xvfz plass-linux-avx2.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
+     # static build with SSE4.1
+     wget https://mmseqs.com/plass/plass-linux-sse41.tar.gz; tar xvfz plass-linux-sse41.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
+     # static build with SSE2 (slowest, for very old systems)
+     wget https://mmseqs.com/plass/plass-linux-sse2.tar.gz; tar xvfz plass-linux-sse2.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
  
 
 ## How to assemble
