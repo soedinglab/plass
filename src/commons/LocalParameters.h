@@ -41,6 +41,7 @@ public:
     bool cycleCheck;
     bool chopCycle;
     bool dbMode;
+    bool keepTarget;
 
     MultiParam<int> multiNumIterations;
     MultiParam<int> multiKmerSize;
@@ -60,6 +61,7 @@ public:
     PARAMETER(PARAM_MULTI_MIN_SEQ_ID)
     PARAMETER(PARAM_MULTI_MIN_ALN_LEN)
     PARAMETER(PARAM_DB_MODE)
+    PARAMETER(PARAM_KEEP_TARGET)
     
 private:
     LocalParameters() :
@@ -80,11 +82,13 @@ private:
             PARAM_MULTI_K(PARAM_MULTI_K_ID, "-k", "k-mer length", "k-mer length (0: automatically set to optimum)", typeid(MultiParam<int>), (void *) &multiKmerSize, "", MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
             PARAM_MULTI_MIN_SEQ_ID(PARAM_MULTI_MIN_SEQ_ID_ID, "--min-seq-id", "Seq. id. threshold", "Overlap sequence identity threshold [0.0, 1.0]", typeid(MultiParam<float>), (void *) &multiSeqIdThr, "", MMseqsParameter::COMMAND_ALIGN),
             PARAM_MULTI_MIN_ALN_LEN(PARAM_MULTI_MIN_ALN_LEN_ID, "--min-aln-len", "Min alignment length", "Minimum alignment length (range 0-INT_MAX)", typeid(MultiParam<int>), (void *) &multiAlnLenThr, "", MMseqsParameter::COMMAND_ALIGN),
-            PARAM_DB_MODE(PARAM_DB_MODE_ID, "--db-mode", "Input is database", "Input is database", typeid(bool), (void *) &dbMode, "", MMseqsParameter::COMMAND_EXPERT){
+            PARAM_DB_MODE(PARAM_DB_MODE_ID, "--db-mode", "Input is database", "Input is database", typeid(bool), (void *) &dbMode, "", MMseqsParameter::COMMAND_EXPERT),
+            PARAM_KEEP_TARGET(PARAM_KEEP_TARGET_ID, "--keep-target", "Keep target sequences for the next iteration", "Keep target sequences", typeid(bool), (void*) &keepTarget, "", MMseqsParameter::COMMAND_MISC){
 
         // assembleresult
         assembleresults.push_back(&PARAM_MIN_SEQ_ID);
         assembleresults.push_back(&PARAM_MAX_SEQ_LEN);
+        assembleresults.push_back(&PARAM_KEEP_TARGET);
         assembleresults.push_back(&PARAM_THREADS);
         assembleresults.push_back(&PARAM_V);
         assembleresults.push_back(
@@ -158,6 +162,7 @@ private:
         // guidedassembleresults
         guidedassembleresults.push_back(&PARAM_MIN_SEQ_ID);
         guidedassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
+        guidedassembleresults.push_back(&PARAM_KEEP_TARGET);
         guidedassembleresults.push_back(&PARAM_RESCORE_MODE);
         guidedassembleresults.push_back(&PARAM_THREADS);
         guidedassembleresults.push_back(&PARAM_V);
@@ -188,6 +193,7 @@ private:
         chopCycle = true;
         cycleCheck = true;
         dbMode = false;
+        keepTarget = true;
 
         multiNumIterations = MultiParam<int>(5, 5);
         multiKmerSize = MultiParam<int>(14, 22);

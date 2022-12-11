@@ -353,10 +353,10 @@ int doguidedassembleresult(LocalParameters &par) {
         //   bool couldExtend =  (wasExtended[id] & 0x10);
         bool isNotContig =  !(wasExtended[id] & 0x20);
 //        bool wasNotUsed =  !(wasExtended[id] & 0x40);
-//        bool wasNotExtended =  !(wasExtended[id] & 0x80);
+        bool wasNotExtended =  !(wasExtended[id] & 0x80);
         //    bool wasUsed    =  (wasExtended[id] & 0x40);
         //if(isNotContig && wasNotExtended ){
-        if (isNotContig){
+        if (isNotContig && (par.keepTarget || wasNotExtended)){
             char *querySeqData = nuclSequenceDbr->getData(id, thread_idx);
             unsigned int queryLen = nuclSequenceDbr->getEntryLen(id) - 1; //skip null byte
             nuclResultWriter.writeData(querySeqData, queryLen, nuclSequenceDbr->getDbKey(id), thread_idx);
