@@ -148,9 +148,16 @@ if [ -n "$PREV_CYCLE_ALL" ]; then
 fi
 
 # select only assembled sequences
-if notExists "${RESULT}_only_assembled.index"; then
-    awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT}.index" "${SOURCE}.index" > "${RESULT}_tmp.index"
-    awk '$3 > $6 { print }' "${RESULT}_tmp.index" > "${RESULT}_only_assembled.index"
+if [ -n "${OUTPUT_ONLY_EXTENDED_CONTIGS}" ]; then
+    echo "OUTPUT ONLY EXTENDED CONTIGS"
+
+    if notExists "${RESULT}_only_assembled.index"; then
+        awk 'NR == FNR { f[$1] = $0; next } $1 in f { print f[$1], $0 }' "${RESULT}.index" "${SOURCE}.index" > "${RESULT}_tmp.index"
+        awk '$3 > $6 { print }' "${RESULT}_tmp.index" > "${RESULT}_only_assembled.index"
+    fi
+else
+    echo "OUTPUT ALL CONTIGS"
+    cat "${RESULT}.index" > "${RESULT}_only_assembled.index"
 fi
 
 # select only sequences fullfilling a minimum length threshold

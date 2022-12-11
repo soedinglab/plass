@@ -35,6 +35,7 @@ public:
     int filterProteins;
     int deleteFilesInc;
     int minContigLen;
+    int contigOutputMode;
     float clustSeqIdThr;
     float clustCovThr;
     float proteinFilterThreshold;
@@ -52,6 +53,7 @@ public:
     PARAMETER(PARAM_PROTEIN_FILTER_THRESHOLD)
     PARAMETER(PARAM_DELETE_TMP_INC)
     PARAMETER(PARAM_MIN_CONTIG_LEN)
+    PARAMETER(PARAM_CONTIG_OUTPUT_MODE)
     PARAMETER(PARAM_CLUST_MIN_SEQ_ID_THR)
     PARAMETER(PARAM_CLUST_C)
     PARAMETER(PARAM_CYCLE_CHECK)
@@ -62,7 +64,11 @@ public:
     PARAMETER(PARAM_MULTI_MIN_ALN_LEN)
     PARAMETER(PARAM_DB_MODE)
     PARAMETER(PARAM_KEEP_TARGET)
-    
+
+
+    // contig output
+    static const int OUTPUT_ALL_CONTIGS = 0;
+    static const int OUTPUT_ONLY_EXTENDED_CONTIGS = 1;
 private:
     LocalParameters() :
             Parameters(),
@@ -74,6 +80,7 @@ private:
             PARAM_PROTEIN_FILTER_THRESHOLD(PARAM_PROTEIN_FILTER_THRESHOLD_ID,"--protein-filter-threshold", "Protein Filter Threshold", "filter proteins lower than threshold [0.0,1.0]",typeid(float), (void *) &proteinFilterThreshold, "^0(\\.[0-9]+)?|1(\\.0+)?$"),
             PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID,"--delete-tmp-inc", "Delete temporary files incremental", "Delete temporary files incremental [0,1]",typeid(int), (void *) &deleteFilesInc, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
             PARAM_MIN_CONTIG_LEN(PARAM_MIN_CONTIG_LEN_ID, "--min-contig-len", "Minimum contig length", "Minimum length of assembled contig to output", typeid(int), (void *) &minContigLen, "^[1-9]{1}[0-9]*$"),
+            PARAM_CONTIG_OUTPUT_MODE(PARAM_CONTIG_OUTPUT_MODE_ID, "--contig-output-mode", "Contig output mode", "Type of contigs:\n0: all\n1: only extended", typeid(int), (void *) &contigOutputMode, "^[0-1]{1}"),
             PARAM_CLUST_MIN_SEQ_ID_THR(PARAM_CLUST_MIN_SEQ_ID_THR_ID,"--clust-min-seq-id", "Clustering seq. id. threshold","Seq. id. threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)",typeid(float), (void *) &clustSeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
             PARAM_CLUST_C(PARAM_CLUST_C_ID,"--clust-min-cov", "Clustering coverage threshold","Coverage threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)",typeid(float), (void *) &clustCovThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
             PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID,"--cycle-check", "Check for circular sequences", "Check for circular sequences (avoid over extension of circular or long repeated regions) ",typeid(bool), (void *) &cycleCheck, "", MMseqsParameter::COMMAND_MISC),
@@ -153,6 +160,7 @@ private:
 
         nuclassembleworkflow.push_back(&PARAM_CYCLE_CHECK);
         nuclassembleworkflow.push_back(&PARAM_MIN_CONTIG_LEN);
+        nuclassembleworkflow.push_back(&PARAM_CONTIG_OUTPUT_MODE);
         nuclassembleworkflow.push_back(&PARAM_NUM_ITERATIONS);
         nuclassembleworkflow.push_back(&PARAM_DB_MODE);
         nuclassembleworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
@@ -190,6 +198,7 @@ private:
         clustSeqIdThr = 0.97;
         clustCovThr = 0.99;
         minContigLen = 1000;
+        contigOutputMode = 1;
         chopCycle = true;
         cycleCheck = true;
         dbMode = false;

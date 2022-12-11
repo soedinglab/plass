@@ -107,6 +107,11 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("MIN_CONTIG_LEN", SSTR(par.minContigLen).c_str());
 
+    if (par.contigOutputMode == LocalParameters::OUTPUT_ONLY_EXTENDED_CONTIGS)
+        cmd.addVariable("OUTPUT_ONLY_EXTENDED_CONTIGS", "1");
+    else
+        cmd.addVariable("OUTPUT_ONLY_EXTENDED_CONTIGS", NULL);
+
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
 
