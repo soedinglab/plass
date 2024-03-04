@@ -74,7 +74,7 @@ Both tools can be distributed over several homogeneous computers. However the TM
 
 
 ### Compile from source
-Compiling from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the PLASS binary will be located in the `build/bin` directory.
+Compiling from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the PLASS and PenguiN binaries will be located in the `build/bin` directory.
 
       git clone https://github.com/soedinglab/plass.git
       cd plass
