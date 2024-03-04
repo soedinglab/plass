@@ -17,7 +17,7 @@
 #endif
 
 
-#define HIT_RATE_THRESHOLD 0.24
+#define HIT_RATE_THRESHOLD 0.2
 // threshold to distinguish cyclic/terminal redundant genomes from random hits on linear genomes
 // chosen based on analysis on ftp://ftp.ncbi.nlm.nih.gov/refseq/release/viral/ (last modified 7/11/19)
 // verified for kmerSize = 22
@@ -211,6 +211,27 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
 
             }
 
+            /*unsigned int maxDiagHits=0;
+            unsigned int maxDiag=0;
+            for (unsigned int d = 0; d < 2 * thirdSeqLen; d++) {
+                if (diagHits[d] > maxDiagHits) {
+                    unsigned int diag = d + thirdSeqLen;
+
+                    maxDiagHits = diagHits[d];
+                    maxDiag = diag;
+                }
+            }
+
+            if (maxDiagHits > 0) { // do rescoring
+                unsigned int matches = 0;
+                unsigned int diaglen = seqLen - maxDiag;
+                for (unsigned int i=0; i < diaglen; i++) {
+                    if (nuclSeq[i] == nuclSeq[i + maxDiag])
+                        matches += 1;
+                }
+            }*/
+
+
             /* calculate hit rate on diagonal bands */
             unsigned int splitDiagonal = 0;
 
@@ -230,6 +251,7 @@ int cyclecheck(int argc, const char **argv, const Command& command) {
                         }
 
                         float diagbandHitRate = static_cast<float>(diagbandHits) / (diaglen - kmerSize + 1);
+                        //std::cout << diagbandHitRate << std::endl;
                         if (diagbandHitRate > HIT_RATE_THRESHOLD) {
                             splitDiagonal = diag;
                             break;
