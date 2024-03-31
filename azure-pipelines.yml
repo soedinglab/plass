@@ -164,6 +164,7 @@ jobs:
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build plass
+          lipo -create -arch x86_64 "build/build_sse41/src/penguin" -arch x86_64h "build/build_avx2/src/penguin" -arch arm64 "build/build_arm64/src/penguin" -output "build/penguin"
         displayName: Build Plass
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
@@ -185,7 +186,7 @@ jobs:
     pool:
       vmImage: 'Ubuntu-20.04'
     dependsOn:
-      - build_macos_1015
+      - build_macos_11
       - build_ubuntu_2004
       - build_ubuntu_cross_2004
     steps:
