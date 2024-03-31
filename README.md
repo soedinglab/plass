@@ -1,18 +1,16 @@
-This repository contains two methods to assemble short read sequencing data, in particular Illumina data: [Plass](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#plass---protein-level-assembler) and [PenguiN](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#penguin---Protein-guided-Nucleotide-Assembler) 
-
-# PLASS - Protein-Level ASSembler
+# PLASS and PenguiN assembler
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/plass.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/plass)
 [![BioContainer Pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fmmseqs.com%2Fbiocontainer.php%3Fcontainer%3Dplass)](https://biocontainers.pro/#/tools/plass)
 [![Build Status](https://travis-ci.org/soedinglab/plass.svg?branch=master)](https://travis-ci.org/soedinglab/plass)
 [![DOI](https://zenodo.org/badge/118119513.svg)](https://zenodo.org/badge/latestdoi/118119513)
 
+Plass (Protein-Level ASSembler) is a software to assemble protein sequences from short read sequencing data, while PenguiN (Protein guided nucleotide assembler) assembles DNA/RNA contigs. Both are build to assemble data from complex metagenomic datasets. This software is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS and is designed to run on multiple cores. 
 
-Plass (Protein-Level ASSembler) is a software to assemble short read sequencing data on a protein level. The main purpose of Plass is the assembly of complex metagenomic datasets. It assembles 10 times more protein residues in soil metagenomes than Megahit. Plass is GPL-licensed open source software that is implemented in C++ and available for Linux and macOS. The software is designed to run on multiple cores. Plass was used to create a Soil Reference Catalog (SRC) and a Marine Eukaryotic Reference Catalog (MERC).
+[Plass:](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#plass---protein-level-assembler) [Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, doi: doi.org/10.1038/s41592-019-0437-4 (2019)](https://www.nature.com/articles/s41592-019-0437-4).
 
-[Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, doi: doi.org/10.1038/s41592-019-0437-4 (2019)](https://www.nature.com/articles/s41592-019-0437-4).
+[PenguiN:](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#penguin---Protein-guided-Nucleotide-Assembler) [Jochheim A, Jochheim FE, Kolodyazhnaya A, Morice E, Steinegger M, Soeding J. Strain-resolved de-novo metagenomic assembly of viral genomes and microbial 16S rRNAs. bioRxiv (2024)](https://www.biorxiv.org/content/10.1101/2024.03.29.587318v1)
 
 <p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/.github/plass.png" height="256" /></p>
-
 
 ### Soil Reference Catalog (SRC) and Marine Eukaryotic Reference Catalog (MERC)
 SRC was created by assembling 640 soil metagenome samples. MERC was assembled from the the metatranscriptomics datasets created by the TARA ocean expedition. Both catalogues were redundancy reduced to 90% sequence identity at 90% coverage.
