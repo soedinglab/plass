@@ -330,7 +330,7 @@ jobs:
              plass-linux-ppc64le-POWER9.tar.gz
           curl --retry 5 --retry-all-errors -X POST \
             -F file[]=@plass-osx-universal.tar.gz -F signature[]=@plass-osx-universal.tar.gz.sig \
-            -F file[]=@plass-linux-sse2.tar.gz.tar.gz -F signature[]=@plass-linux-sse2.tar.gz.sig \
+            -F file[]=@plass-linux-sse2.tar.gz -F signature[]=@plass-linux-sse2.tar.gz.sig \
             -F file[]=@plass-linux-sse41.tar.gz  -F signature[]=@plass-linux-sse41.tar.gz.sig \
             -F file[]=@plass-linux-avx2.tar.gz -F signature[]=@plass-linux-avx2.tar.gz.sig \
             -F file[]=@plass-linux-arm64.tar.gz -F signature[]=@plass-linux-arm64.tar.gz.sig \
