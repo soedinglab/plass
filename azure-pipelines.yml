@@ -199,7 +199,7 @@ jobs:
       - task: DownloadPipelineArtifact@1
         inputs:
           artifactName: penguin-darwin-universal
-          targetPath: $(Build.SourcesDirectory)/penguin/bin
+          targetPath: $(Build.SourcesDirectory)/plass/bin
       - script: |
           chmod +x "${BUILD_SOURCESDIRECTORY}/plass/bin/plass"
           chmod +x "${BUILD_SOURCESDIRECTORY}/plass/bin/penguin"
