@@ -159,9 +159,6 @@ jobs:
     steps:
       - checkout: self
       - script: |
-          sudo xcode-select -s "/Applications/Xcode_12.2.app"
-        displayName: Use Xcode 12.2
-      - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build plass
           lipo -create -arch x86_64 "build/build_sse41/src/penguin" -arch x86_64h "build/build_avx2/src/penguin" -arch arm64 "build/build_arm64/src/penguin" -output "build/penguin"
