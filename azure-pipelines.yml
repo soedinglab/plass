@@ -334,7 +334,7 @@ jobs:
             -F file[]=@plass-linux-sse41.tar.gz  -F signature[]=@plass-linux-sse41.tar.gz.sig \
             -F file[]=@plass-linux-avx2.tar.gz -F signature[]=@plass-linux-avx2.tar.gz.sig \
             -F file[]=@plass-linux-arm64.tar.gz -F signature[]=@plass-linux-arm64.tar.gz.sig \
-            -F file[]=@plass-linux-ppc64le-POWER8.tar.gz -F signature[]=@plass-linux-arm64.tar.gz.sig \
+            -F file[]=@plass-linux-ppc64le-POWER8.tar.gz -F signature[]=@plass-linux-ppc64le-POWER8.tar.gz.sig \
             -F file[]=@plass-linux-ppc64le-POWER9.tar.gz -F signature[]=@plass-linux-ppc64le-POWER9.tar.gz.sig \
             -F identifier="plass" -F directory="${BUILD_SOURCEVERSION}" \
               https://mmseqs.com/upload
