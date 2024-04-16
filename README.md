@@ -7,7 +7,7 @@ Plass (Protein-Level ASSembler) and PenguiN (Protein guided nucleotide assembler
 
 [Plass:](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#plass---protein-level-assembler) [Steinegger M, Mirdita M and Soeding J. Protein-level assembly increases protein sequence recovery from metagenomic samples manyfold. Nature Methods, doi: doi.org/10.1038/s41592-019-0437-4 (2019)](https://www.nature.com/articles/s41592-019-0437-4).
 
-[PenguiN:](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#penguin---Protein-guided-Nucleotide-Assembler) [Jochheim A, Jochheim FE, Kolodyazhnaya A, Morice E, Steinegger M, Soeding J. Strain-resolved de-novo metagenomic assembly of viral genomes and microbial 16S rRNAs. bioRxiv (2024)](https://www.biorxiv.org/content/10.1101/2024.03.29.587318v1)
+[PenguiN:](https://github.com/soedinglab/plass/tree/master?tab=readme-ov-file#penguin---Protein-guided-Nucleotide-Assembler) [Jochheim A, Jochheim FA, Kolodyazhnaya A, Morice E, Steinegger M, Soeding J. Strain-resolved de-novo metagenomic assembly of viral genomes and microbial 16S rRNAs. bioRxiv (2024)](https://www.biorxiv.org/content/10.1101/2024.03.29.587318v1)
 
 <p align="center"><img src="https://raw.githubusercontent.com/soedinglab/plass/master/.github/plass.png" height="256" /></p>
 
