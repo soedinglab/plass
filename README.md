@@ -18,7 +18,7 @@ The catalogues can be downloaded [here](http://wwwuser.gwdg.de/~compbiol/plass/c
 We provide a [HH-suite3](https://github.com/soedinglab/hh-suite) database called "BFD" containing sequences from the Metaclust, SRC, MERC and Uniport at [here](https://bfd.mmseqs.com/).
 
 # PenguiN - Protein-guided Nucleotide assembler
-PenguiN a software to assemble short read sequencing data on a nucleotide level. In a first step it assembles coding sequences using the information from the translated protein sequences. In a second step it links them across non-coding regions. The main purpose of PenguiN is the assembly of complex metagenomic and metatranscriptomic datasets. It was especially tested for the assembly of viral genomes as well as 16S rRNA gene seqeunces. It assembles 3-40 times more complete viral genomes and six times as many 16S rRNA sequences than state of the art assemblers like Megahit and the SPAdes variants.
+PenguiN a software to assemble short read sequencing data on a nucleotide level. In a first step it assembles coding sequences using the information from the translated protein sequences. In a second step it links them across non-coding regions. The main purpose of PenguiN is the assembly of complex metagenomic and metatranscriptomic datasets. It was especially tested for the assembly of viral genomes as well as 16S rRNA gene sequences. It assembles 3-40 times more complete viral genomes and six times as many 16S rRNA sequences than state of the art assemblers like Megahit and the SPAdes variants.
 
 ### Install Plass and PenguiN
 Our software can be install via [conda](https://github.com/conda-forge/miniforge) or as statically compiled binaries. It requires a 64-bit Linux or macOS system.
