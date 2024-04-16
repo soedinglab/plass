@@ -157,6 +157,8 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
     bool addBacktrace = par.addBacktrace;
     par.addBacktrace = true;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
+    cmd.addVariable("PROTEIN_ALN_2_NUCL_PAR", par.createParameterString(par.proteinaln2nucl).c_str());
+
 
     // # 3. Assembly: Extend by left and right extension
     par.seqIdThr = par.multiSeqIdThr.nucleotides;
