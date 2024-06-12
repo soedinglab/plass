@@ -103,6 +103,7 @@ while [ $STEP -lt $NUM_IT ]; do
 
     # 3. Ungapped alignment protein 2 nucl
     if notExists "${TMP_PATH_GUIDED_ASSEMBLY}/aln_nucl_$STEP.done"; then
+        # shellcheck disable=SC2086
         "$MMSEQS" proteinaln2nucl "$INPUT_NUCL" "$INPUT_NUCL" "$INPUT_AA" "$INPUT_AA" "${TMP_PATH_GUIDED_ASSEMBLY}/aln_$STEP" "${TMP_PATH_GUIDED_ASSEMBLY}/aln_nucl_$STEP" ${PROTEIN_ALN_2_NUCL_PAR} \
             || fail "Ungapped alignment 2 nucl step died"
         deleteIncremental "$PREV_ALN_NUCL"
